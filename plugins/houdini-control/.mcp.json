@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "houdini": {
+      "command": "uv",
+      "args": ["run", "--locked", "--directory", "${PLUGIN_ROOT}", "server/main.py"],
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "unreal-control",
+  "version": "0.1.0",
+  "description": "Control a local Unreal Engine session, execute Python, and inspect scene dependencies.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "unreal",
+    "3d",
+    "dcc",
+    "scene-inspection"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/unreal-setup/SKILL.md",
+      "interface": {
+        "displayName": "Bubble Unreal Engine",
+        "shortDescription": "Unreal Engine 脚本执行与场景检查",
+        "longDescription": "Install the Unreal Engine 5.5 bridge with your permission, connect automatically after Unreal Engine restarts, inspect direct Asset Registry dependencies, and run requested Python scripts.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 Unreal Engine 并查看当前场景",
+          "检查场景中的缺失贴图和引用"
+        ],
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg"
+      }
+    }
+  }
+}

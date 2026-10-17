@@ -16,7 +16,7 @@ import tempfile
 import tokenize
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.2.2"
+VERSION = "0.2.3"
 OWNER = "bubble-maya-control"
 FILES = ("bridge.py", "bubble_maya_plugin.py")
 MANIFEST = "installation.json"

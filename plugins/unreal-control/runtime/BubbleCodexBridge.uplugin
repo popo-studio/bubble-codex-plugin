@@ -1,0 +1,14 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Bubble Codex Bridge",
+  "Description": "User-authorized local Python bridge for the Unreal Editor.",
+  "Category": "Editor",
+  "CreatedBy": "popo-studio",
+  "EnabledByDefault": true,
+  "CanContainContent": true,
+  "Plugins": [
+    { "Name": "PythonScriptPlugin", "Enabled": true, "TargetAllowList": ["Editor"] }
+  ]
+}

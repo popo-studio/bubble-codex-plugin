@@ -1,11 +1,79 @@
 {
   "name": "bubble-plugins",
-  "interface": { "displayName": "Bubble Plugins" },
+  "interface": {
+    "displayName": "Bubble Plugins"
+  },
   "plugins": [
     {
       "name": "maya-control",
-      "source": { "source": "local", "path": "./plugins/maya-control" },
-      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "source": {
+        "source": "local",
+        "path": "./plugins/maya-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "nuke-control",
+      "source": {
+        "source": "local",
+        "path": "./plugins/nuke-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "houdini-control",
+      "source": {
+        "source": "local",
+        "path": "./plugins/houdini-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "max-control",
+      "source": {
+        "source": "local",
+        "path": "./plugins/max-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "unreal-control",
+      "source": {
+        "source": "local",
+        "path": "./plugins/unreal-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "unity-control",
+      "source": {
+        "source": "local",
+        "path": "./plugins/unity-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
       "category": "Productivity"
     }
   ]

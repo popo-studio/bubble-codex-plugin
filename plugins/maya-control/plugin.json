@@ -1,11 +1,18 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "maya-control",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Control a local Autodesk Maya session, execute Python or MEL, and inspect scene dependencies.",
-  "author": { "name": "popo-studio" },
+  "author": {
+    "name": "popo-studio"
+  },
   "repository": "https://github.com/popo-studio/bubble-codex-plugin",
-  "keywords": ["maya", "3d", "dcc", "scene-inspection"],
+  "keywords": [
+    "maya",
+    "3d",
+    "dcc",
+    "scene-inspection"
+  ],
   "extensions": {
     "com.openai": {
       "onboardingSkill": "./skills/maya-setup/SKILL.md",
@@ -15,8 +22,16 @@
         "longDescription": "Install the Maya 2027 bridge with your permission, connect automatically after Maya restarts, inspect scene resources, and run requested Python or MEL scripts.",
         "developerName": "popo-studio",
         "category": "Productivity",
-        "capabilities": ["Read", "Write"],
-        "defaultPrompt": ["连接 Maya 并查看当前场景", "检查场景中的缺失贴图和引用"]
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 Maya 并查看当前场景",
+          "检查场景中的缺失贴图和引用"
+        ],
+        "logo": "./assets/icon.png",
+        "composerIcon": "./assets/icon.png"
       }
     }
   }

@@ -1,0 +1,32 @@
+{
+  "name": "unity-control",
+  "version": "0.1.0",
+  "description": "Control a local Unity Editor project, invoke existing C# editor methods and inspect loaded scene references.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Unity",
+    "shortDescription": "Unity 编辑器控制与场景检查",
+    "longDescription": "Install an Editor-only package into an explicitly selected Unity 6 project with consent. Inspect loaded scenes, invoke existing static C# methods and run menu commands.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "列出 Unity 项目和场景",
+      "检查当前 Unity 场景的丢失脚本和引用"
+    ],
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/unity-setup/SKILL.md"
+    }
+  }
+}

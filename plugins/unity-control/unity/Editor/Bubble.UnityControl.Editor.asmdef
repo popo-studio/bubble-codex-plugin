@@ -1,0 +1,6 @@
+{
+  "name": "Bubble.UnityControl.Editor",
+  "rootNamespace": "Bubble.UnityControl",
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

@@ -1,0 +1,45 @@
+# Bubble Unreal Engine
+
+连接本机 Unreal Editor 5.5，执行用户请求的 Python、读取地图/项目状态，检查直接资源包依赖。安装目标是单个项目，运行时使用 Unreal 自带 Python；外部 MCP 使用 Python 3.10+ 和 `uv run --locked`。
+
+## 安装与连接
+
+在 Codex 安装后，说“连接 Unreal 项目”，提供 `.uproject` 的完整路径。助手预览文件变化，经同意后创建 `项目/Plugins/BubbleCodexBridge/`。这是默认启用的项目内容插件，声明 `PythonScriptPlugin` 的 Editor 依赖；**不修改 `.uproject`、Engine 目录或现有项目启动脚本**。若项目明确禁用相关插件，先由用户在 Unreal Plugins 设置启用，再安装。
+
+默认保存工作并重启项目，`Content/Python/init_unreal.py` 自动加载本地桥接。已经启用 Python 且不想重启时，可在 Unreal Python 控制台执行安装返回的 `no_restart_code`。Python 尚未启用时，不能靠该代码跳过首次启用所需的重启。已运行旧桥接的更新仍须重启。
+
+`unreal_uninstall_bridge` 默认预览，获得确认后只删除拥有且未被改动的文件，保留用户文件和生成缓存。重启停止现有桥接；仅卸载 Codex 插件不会删除项目里的接入文件。
+
+## 多实例和工具
+
+`unreal_list_sessions(scene=...)` 展示地图、项目全路径、修改状态、版本和 PID。可用 `.uproject` 文件名/去扩展名/完整路径、地图 `.umap` 文件名/路径或 `/Game/Maps/Map` 包名精确匹配；同一项目开多个进程、同名地图或不可达会话时先列出编号选择。用户无须知道端口。选中后传 PID，写前检查地图/项目是否改变，不会在失败后切换另一实例。
+
+- `unreal_scene_info`：当前地图包、对应 `/Game` 地图文件、项目、选择和脏包。
+- `unreal_inspect_scene(package=None)`：默认已保存地图，也可指定 `/Game/Props/Chair`。读取 Asset Registry 的直接软/硬包依赖，不加载、保存、重新扫描或修复资产。
+- `unreal_execute_python`：主线程执行，预置 `unreal`，用 `result` 返回值，捕获 Python 标准输出和错误。
+
+依赖扫描尚未完成或根包未注册时返回 `complete=false`。未解析依赖是 registry 警告，不等于磁盘文件缺失。检查不覆盖传递依赖、外部源文件、资产加载错误、完整打包验证或修复。未保存地图必须先指定一个已保存的资源包。
+
+每个编辑器进程使用随机回环端口、独立 token、PID 发现文件；网络线程排队，Slate tick 在主线程执行。队列超时取消未开始任务，已执行脚本可能部分生效，不自动重试。任意 Python 拥有完整用户权限。桥接面向交互编辑器，跳过 commandlet、`-unattended`、游戏和服务器进程，不用于打包游戏或 PIE 游戏世界。
+
+## 验证与验收
+
+自动测试覆盖回环双实例路由、令牌隔离、过期任务、文件名/项目歧义、安装预览/回滚/卸载/用户改动冲突和资源检查边界；真实 MCP SDK stdio 测试覆盖 8 个工具。
+
+本机 **UE 5.5.4 原生 PythonScript commandlet** 已在仓库临时项目中验证：项目插件和 Python 依赖自动发现、`init_unreal.py` 运行、commandlet 不开启监听、原生场景信息/Asset Registry 查询、Python 返回 42，读取前后场景状态不变。交互式编辑器 Slate 主线程、重启连接和真实生产项目仍需用户验收。
+
+```powershell
+uv run --locked --directory plugins/unreal-control python -m unittest discover -s tests -v
+uv run --locked --directory plugins/unreal-control tests/stdio_smoke.py
+```
+
+`tests/native_smoke.py` 需通过 UE PythonScript commandlet 在隔离项目运行，环境变量 `BUBBLE_UNREAL_NATIVE_RESULT` 指定临时结果文件，项目先安装本插件。不要对生产项目运行测试。
+
+## 官方 API 依据
+
+- [Epic：Editor Python、项目/插件 Python 路径与 init_unreal.py](https://dev.epicgames.com/documentation/en-us/unreal-engine/scripting-the-unreal-editor-using-python)
+- [Epic：5.5 主线程 tick / shutdown 回调](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/module/unreal?application_version=5.5)
+- [Epic：Asset Registry 查询](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/AssetRegistry?application_version=5.5)
+- [Epic：只读脏包查询](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorLoadingAndSavingUtils?application_version=5.5)
+
+实现另核对了本机 UE 5.5 的 `PythonScriptPlugin.cpp`、`UnrealEditorSubsystem.h`、`EditorActorSubsystem.h` 与 `BlueprintPathsLibrary.h`。

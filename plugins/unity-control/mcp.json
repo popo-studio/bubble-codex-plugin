@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "unity": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--locked",
+        "--directory",
+        "${PLUGIN_ROOT}",
+        "server/main.py"
+      ],
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}

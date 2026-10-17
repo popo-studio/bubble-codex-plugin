@@ -1,0 +1,38 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "max-control",
+  "version": "0.1.0",
+  "description": "Control a local Autodesk 3ds Max session, execute Python and MAXScript, and inspect scene dependencies.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "max",
+    "3d",
+    "dcc",
+    "scene-inspection"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/max-setup/SKILL.md",
+      "interface": {
+        "displayName": "Bubble 3ds Max",
+        "shortDescription": "3ds Max 脚本执行与场景检查",
+        "longDescription": "Install the 3ds Max 2025/2026 bridge with your permission, connect automatically after 3ds Max restarts, inspect Bitmaptexture maps and scene XRefs, and run requested Python and MAXScript scripts.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 3ds Max 并查看当前场景",
+          "检查场景中的缺失贴图和引用"
+        ],
+        "logo": "./assets/icon.png",
+        "composerIcon": "./assets/icon.png"
+      }
+    }
+  }
+}

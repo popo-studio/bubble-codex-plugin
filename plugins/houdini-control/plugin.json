@@ -1,0 +1,38 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "houdini-control",
+  "version": "0.1.0",
+  "description": "Control a local Houdini session, execute Python, and inspect scene dependencies.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "houdini",
+    "3d",
+    "dcc",
+    "scene-inspection"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/houdini-setup/SKILL.md",
+      "interface": {
+        "displayName": "Bubble Houdini",
+        "shortDescription": "Houdini 脚本执行与场景检查",
+        "longDescription": "Install the Houdini 20.5 bridge with your permission, connect automatically after Houdini restarts, inspect scene resources, and run requested Python scripts.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 Houdini 并查看当前场景",
+          "检查场景中的缺失贴图和引用"
+        ],
+        "logo": "./assets/icon.png",
+        "composerIcon": "./assets/icon.png"
+      }
+    }
+  }
+}
