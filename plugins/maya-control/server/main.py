@@ -3,10 +3,30 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 from client import list_sessions, request
+from installation import installation_status, install_bridge, uninstall_bridge
 
 mcp = FastMCP("Bubble Maya Control")
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 SCRIPT = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True)
+INSTALL = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+
+
+@mcp.tool(annotations=READ)
+def maya_installation_status(maya_version: str = "2027") -> dict:
+    """Read-only inspection of user-level Maya installation, paths, conflicts and proposed changes. Works with Maya closed. Honors MAYA_APP_DIR; supports Maya2027 only."""
+    return installation_status(maya_version)
+
+
+@mcp.tool(annotations=INSTALL)
+def maya_install_bridge(maya_version: str = "2027", confirmed: bool = False) -> dict:
+    """Install/update a native Maya plug-in and managed userSetup.py startup block. Default false previews without writes. Set confirmed=true only after the user has authorized these persistent file changes and automatic local bridge startup; a general inquiry is not consent. Preserves other startup code and backs it up. Then ask user to restart Maya, or offer returned code for current-session loading. Never restarts Maya or changes scenes."""
+    return install_bridge(maya_version, confirmed)
+
+
+@mcp.tool(annotations=INSTALL)
+def maya_uninstall_bridge(maya_version: str = "2027", confirmed: bool = False) -> dict:
+    """Remove only owned unmodified Maya runtime files and exact managed startup block. Default false previews without writes. Set true only with user consent to removal. Preserves unrelated files and backups; refuses conflicts. Restart Maya to stop the already running bridge. Does not uninstall the Codex plugin."""
+    return uninstall_bridge(maya_version, confirmed)
 
 
 @mcp.tool(annotations=READ)

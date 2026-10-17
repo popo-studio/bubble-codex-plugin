@@ -14,35 +14,36 @@ Codex → stdio MCP 服务（独立 Python）
 - 系统安装独立的 Python 3.10+ 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)，并让启动 Codex 的环境能找到 `uv`。不要把 `mayapy.exe` 当作 MCP 虚拟环境的基础解释器。
 - 安装本仓库的 Bubble Maya 插件。首次运行服务时，uv 下载依赖，需要网络；依赖只进入插件独立环境，不进入 Maya。
 
-## 启动 Maya 桥接
+## 初次连接：安装后重启
 
-在 Maya 的 **Script Editor → Python** 中执行。下面路径对应此仓库；如果安装在其他位置，改为实际插件目录下的 `maya` 文件夹：
+安装 Codex 里的 **Bubble Maya** 后运行初始设置，或说“帮我安装 Maya 桥接插件”。默认不需要复制代码：
 
-```python
-import sys
-bridge_path = r"D:\Workspace\Bubble\bubble-codex-plugins\plugins\maya-control\maya"
-if bridge_path not in sys.path:
-    sys.path.insert(0, bridge_path)
-import bubble_maya_bridge
-bubble_maya_bridge.start()
-```
+1. Codex 检查安装状态，展示 **Maya 2027** 的安装位置和启动配置变更。
+2. 你同意后，安装器将独立运行文件复制到 Maya 用户目录，备份原有 `userSetup.py` 并追加本插件的启动块。其他启动代码保持原样，不需要管理员权限。
+3. 安装完成后，**保存场景并自行重启 Maya**。桥接插件在 Maya 初始化后自动加载，以后每次启动都会连接。
+4. 回到 Codex 说“检查 Maya 连接”，查询成功后即可使用。
 
-可以将这段代码选中后拖到 Maya Shelf，方便每次打开 Maya 后连接。桥接启动是当前 Maya 进程内的操作，不会修改 `userSetup.py`。
+默认 Windows 目标为系统“文档”目录下的 `maya/2027/scripts/bubble_maya_runtime/`。安装器尊重 `MAYA_APP_DIR` 和系统文档目录重定向，以预览中显示的绝对路径为准。运行文件不引用 Codex 的版本缓存，因此更新或清理缓存不会使已安装的 Maya 插件丢失。
 
-关闭桥接：
+Maya 的启动脚本检查或安全插件加载可能出现确认提示。核对是 Bubble Maya 后按 Maya 的界面处理；安装器不会关闭这些安全设置，也不会自动关闭或保存你的 Maya 场景。
 
-```python
-bubble_maya_bridge.stop()
-```
+### 暂时不想重启
 
-更新桥接源码后，在 Maya 中先停止再重新加载：
+告诉 Codex“先不重启，给我立即连接代码”。安装器会生成指向**已安装副本**的加载代码，在 Maya 的 **Script Editor → Python** 执行一次即可。以后启动仍会自动加载。
 
-```python
-import importlib
-bubble_maya_bridge.stop()
-importlib.reload(bubble_maya_bridge)
-bubble_maya_bridge.start()
-```
+如果当前进程已加载旧版桥接，更新运行文件后仍建议重启；立即加载代码不会强制热替换正在工作的旧桥接。
+
+### 只想临时连接，不安装
+
+也可以告诉 Codex“不要安装，只临时连接”。它会根据当前插件路径提供原来的 `bubble_maya_bridge.start()` 代码。这种方式不修改 Maya 启动文件，本次 Maya 退出后连接结束。手动停止临时桥接使用 `bubble_maya_bridge.stop()`。
+
+## 更新与卸载
+
+更新 Codex 插件后运行初始设置，先预览再确认更新 Maya 端文件，重启 Maya 后生效。
+
+说“卸载 Maya 桥接插件”可以预览并确认卸载。卸载仅移除本插件管理的文件和启动块，保留其他启动代码及备份；如果检测到文件被手工修改，会报告冲突而不是强行覆盖。已在运行的桥接可能持续到 Maya 退出。
+
+移除 Codex 插件不会自动删除 Maya 端安装。需要完全移除时，先完成 Maya 桥接卸载，再移除 Codex 插件。
 
 ## 使用
 
@@ -60,6 +61,9 @@ bubble_maya_bridge.start()
 | `maya_inspect_scene` | 只读场景资源检查 |
 | `maya_execute_python` | 执行 Python，返回输出及 `result` 变量 |
 | `maya_execute_mel` | 执行 MEL 并返回结果 |
+| `maya_installation_status` | 查看 Maya 端安装状态和路径 |
+| `maya_install_bridge` | 默认只预览；用户同意后安装或更新 |
+| `maya_uninstall_bridge` | 默认只预览；用户同意后卸载 |
 
 多开 Maya 时通过 `pid` 指定目标，避免修改错误的场景。Python 示例：
 
@@ -83,9 +87,10 @@ result = {"selection": cmds.ls(selection=True, long=True)}
 | 现象 | 处理 |
 | --- | --- |
 | Codex 找不到 `uv` | 在终端执行 `uv --version`；安装或修正 PATH 后重启 Codex |
-| 没有会话 | 在目标 Maya 的 Python 页签执行启动代码 |
+| 没有会话 | 运行初始设置检查安装；安装完成后重启 Maya，或选择立即加载代码 |
 | 出现多个会话 | 根据 PID、版本和场景选择目标 |
-| 连接失败 | 确认 Maya 仍运行，停止并重启桥接，再查询状态 |
+| 连接失败 | 确认目标 Maya 正在运行，检查启动脚本或插件确认提示，再查询状态 |
+| 安装冲突 | 保留现场，根据报错检查已修改的托管文件，不要删除整个 scripts 目录 |
 | 超时 | 关闭 Maya 模态对话框，等待主线程空闲；检查操作是否已完成 |
 | 插件安装后工具未出现 | 重新加载或新开一个启用该插件的聊天 |
 
@@ -97,12 +102,13 @@ result = {"selection": cmds.ls(selection=True, long=True)}
 uv run --directory plugins/maya-control python -m unittest discover -s tests -v
 uv run --directory plugins/maya-control python tests/stdio_smoke.py
 & 'C:/Program Files/Autodesk/Maya2027/bin/mayapy.exe' plugins/maya-control/tests/mayapy_smoke.py
+& 'C:/Program Files/Autodesk/Maya2027/bin/mayapy.exe' plugins/maya-control/tests/maya_plugin_smoke.py
 ```
 
 `uv.lock` 固定依赖版本，插件启动使用 `uv run --locked`。`mayapy_smoke.py` 在独立进程和临时场景中测试真实 Maya API，不依赖 GUI，也不会打开现有用户场景。
 
-2026-10-17 验证记录：16 项回归测试通过；6 个工具的 MCP stdio → 模拟桥接通信通过；Maya 2027 standalone 下的引用、UDIM、缺失贴图、Python/MEL、选择及场景修改状态保持测试通过。插件清单、兼容配置与技能 YAML 检查通过。
+安装测试使用临时 Maya 用户目录，不会修改开发者真实的 Maya 启动配置。原生插件生命周期通过独立 `mayapy` 验证；batch 模式不启动监听器。
 
-尚未完成 Codex 实际安装和 Maya GUI 内的连接验收。自动化测试不能替代这两项。上线前在一个空白测试场景中完成：连接 → 读取场景 → 创建测试立方体 → 读取确认 → 手动撤销/清理 → 停止桥接。不要用生产场景测试任意脚本。
+自动化测试不能替代 Maya GUI 启动验收。上线前在测试环境中完成：预览 → 同意安装 → 重启 Maya → 读取场景 → 确认连接 → 预览卸载 → 同意卸载。还应验证“不重启，立即加载”的分支。不要用生产场景测试任意脚本。
 
-相关官方文档：[Maya 2027 线程与 Python](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Scripting/files/GUID-9B5AECBB-B212-4C92-959A-22599760E91A.htm)、[MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)。
+相关官方文档：[Maya Python 初始化](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Scripting/files/GUID-640C1383-3FB8-410F-AE18-987A812B5914.htm)、[Maya 2027 线程与 Python](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Scripting/files/GUID-9B5AECBB-B212-4C92-959A-22599760E91A.htm)、[Maya 安全设置](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Customizing/files/GUID-2176117C-6998-4802-9F9F-1417DF41C661.htm)、[MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)。

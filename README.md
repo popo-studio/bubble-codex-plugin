@@ -25,7 +25,7 @@ plugins/
 | Git 引用 | 留空 |
 | 稀疏路径 | 留空 |
 
-添加后安装 **Bubble Maya**。连接步骤见 [Maya 插件说明](plugins/maya-control/README.md)。CLI 等价操作：
+添加后安装 **Bubble Maya**，运行其初始设置。Codex 会先展示 Maya 安装位置，获得同意后安装桥接插件；保存场景并重启 Maya 后自动连接。不想重启时可以选择复制一次加载代码。连接步骤见 [Maya 插件说明](plugins/maya-control/README.md)。CLI 等价操作：
 
 ```powershell
 codex plugin marketplace add 'D:\Workspace\Bubble\bubble-codex-plugins'
@@ -38,18 +38,18 @@ codex plugin add maya-control@bubble-plugins
 
 | 字段 | 内容 |
 | --- | --- |
-| 来源 | `popo-studio/bubble-codex-plugin` |
+| 来源 | `git@github.com:popo-studio/bubble-codex-plugin.git` |
 | Git 引用 | `main` |
 | 稀疏路径 | 留空 |
 
 不要照抄截图里的 `plugins/codex`，那只是示例。这个仓库需要同时包含根目录的市场清单和 `plugins/` 下的插件。私有仓库需要本机 Git 有访问权限。
 
 ```powershell
-codex plugin marketplace add popo-studio/bubble-codex-plugin --ref main
+codex plugin marketplace add git@github.com:popo-studio/bubble-codex-plugin.git --ref main
 codex plugin add maya-control@bubble-plugins
 ```
 
-更新源码时同时提高插件的两个清单中的版本号，提交并推送；然后刷新市场、更新插件并重新加载对应聊天。Maya 中的桥接脚本也要重新加载，必要时重启 Maya。
+更新源码时同时提高插件的两个清单及 Python 项目中的版本号，更新锁文件后提交并推送；然后刷新市场、更新插件并重新加载对应聊天。运行初始设置预览并确认 Maya 端更新，再重启 Maya。卸载 Codex 插件前，可先运行 Maya 桥接卸载流程，撤销自动启动。
 
 ## 增加其他插件
 

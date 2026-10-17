@@ -15,4 +15,4 @@ Use the bundled `maya` MCP server. Read `../../README.md` when setup or troubles
 6. Never automatically retry a script after a timeout or dropped connection. The operation may already have executed. Inspect state first and explain uncertain completion; Maya cannot safely interrupt arbitrary running Python/MEL.
 7. Treat UDIM/sequence matches as evidence that some files exist, not proof that all expected tiles or frames are present. Unloaded references and unhandled renderer-specific nodes need separate investigation.
 
-If there is no session, invoke the setup workflow in `../maya-setup/SKILL.md`. Do not silently enable network listeners, edit userSetup.py, or change global Maya preferences. Do not expose or print discovery-file tokens.
+If there is no session, invoke the setup workflow in `../maya-setup/SKILL.md`: preview a user-level installation, obtain consent, install, then recommend restarting Maya. Offer a Script Editor snippet only as the optional no-restart or temporary path. Do not silently enable startup behavior or edit Maya preferences outside the installation workflow. Do not expose or print discovery-file tokens.
