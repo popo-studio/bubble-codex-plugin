@@ -8,7 +8,7 @@ import stat
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 OWNER = "bubble-unity-control"
 PACKAGE = "com.bubble.codex-control"
 FILES = ("package.json", "Editor/BubbleUnityBridge.cs", "Editor/Bubble.UnityControl.Editor.asmdef")

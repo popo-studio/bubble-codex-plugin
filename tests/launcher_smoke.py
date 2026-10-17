@@ -39,7 +39,9 @@ async def check_plugin(source, workspace, uv):
     params = StdioServerParameters(
         command=uv,
         args=[arg.replace("${PLUGIN_ROOT}", str(package)) for arg in config["args"]],
-        cwd=config["cwd"],
+        # Codex's default cwd is the installed plugin root. Deliberately start
+        # uv there to catch regressions where only the Python child moves out.
+        cwd=config.get("cwd", str(package)),
         env={**os.environ, "PYTHONPATH": str(probe), "BUBBLE_LAUNCH_PROBE": str(probe)},
     )
     async with stdio_client(params) as first_streams:

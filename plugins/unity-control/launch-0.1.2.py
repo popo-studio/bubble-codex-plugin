@@ -8,8 +8,10 @@ Do not use `uv run server/main.py` for a deployed plugin: it creates .venv
 inside the package, whose Python/DLL handles prevent Windows uninstallation.
 The versioned script filename selects a different cached environment for each
 release, so updates cannot rewrite dependencies loaded by an older server.
-The manifest sets the working directory to the filesystem root for both uv
-and Python, so neither process holds the removable plugin directory open.
+Codex starts uv in the plugin directory; uv --directory / immediately leaves
+that directory before starting Python. Both processes then use a filesystem
+root, so neither holds the removable plugin directory open. Do not set a
+manifest cwd outside the plugin: Codex may reject the entire server entry.
 """
 import os
 from pathlib import Path

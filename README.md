@@ -64,6 +64,10 @@ uv run --locked python -m unittest discover -s tests -v
 uv run --locked tests/stdio_smoke.py
 ```
 
-本次结果见 [验证记录](VALIDATION.md)。其他插件的具体验证命令和实机验证限制见各自 README。测试只使用临时配置/项目；网络测试需允许本机回环连接。不要提交虚拟环境、用户场景、会话令牌或软件用户配置。
+本次结果见 [验证记录](VALIDATION.md)。其他插件的具体验证命令和实机验证限制见各自 README。单元测试和软件宿主测试使用临时配置/项目；网络测试需允许本机回环连接。不要提交虚拟环境、用户场景、会话令牌或软件用户配置。
+
+发布前还需用 **桌面应用实际使用的 Codex 后端** 验证插件加载。`tests/codex_plugin_smoke.py --codex <codex.exe绝对路径>` 默认只读取插件，检查六个 MCP 服务及旧版 `cwd` 故障对照。加 `--install` 后会实际安装或更新六个 Codex 插件，创建不持久化的测试会话，发现工具并调用只读的实例列表；结束时卸载原先未安装的插件，保留已有插件的更新。它不安装软件侧桥接、不运行模型回合。此项会修改 Codex 插件安装状态，应在已授权的测试环境执行。
+
+`tests/launcher_smoke.py` 另验证服务从插件目录启动后迁出，并在连接期间删除临时插件副本。两种测试都需要通过，独立 MCP SDK 的测试无法替代 Codex 插件加载测试。
 
 更新时同步两个插件清单、Python 项目版本、软件侧版本和锁文件，并将启动脚本及相邻锁文件命名为新版本的 `launch-<version>.py` 与 `launch-<version>.py.lock`，同步两份 MCP 配置中的路径。版本化脚本让新旧服务使用独立的依赖环境。市场格式依据 [OpenAI 插件打包文档](https://developers.openai.com/plugins/build/plugins)。

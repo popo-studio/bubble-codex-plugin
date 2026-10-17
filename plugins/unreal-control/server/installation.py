@@ -7,7 +7,7 @@ import stat
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 OWNER = "bubble-unreal-control"
 
 

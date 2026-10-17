@@ -1,4 +1,27 @@
-# Windows 卸载修复验证
+# Codex 插件工具加载修复验证
+
+日期：2026-10-17。Maya 0.2.5；其他五个插件 0.1.2。使用桌面应用实际运行的 Codex 后端 `0.163.0-alpha.10.2`。
+
+根因对照：真实 `plugin/read` 对 `cwd: "/"` 和 `cwd: "C:/"` 返回空的 MCP 列表，技能仍可见；删除 `cwd` 或使用插件内路径后识别 Maya 服务。新版六插件移除两份 MCP 清单里的 `cwd`，保留启动器中的目录迁移。
+
+`tests/codex_plugin_smoke.py --codex <桌面后端绝对路径> --install` 已实跑，严格断言版退出 0：
+
+| 插件 | Codex 发现的工具数 | 安装后只读调用 |
+| --- | ---: | --- |
+| Maya | 9 | `maya_list_sessions` 成功 |
+| Nuke | 8 | `nuke_list_sessions` 成功 |
+| Houdini | 8 | `houdini_list_sessions` 成功 |
+| 3ds Max | 9 | `max_list_sessions` 成功 |
+| Unreal | 8 | `unreal_list_sessions` 成功 |
+| Unity | 9 | `unity_list_sessions` 成功 |
+
+测试通过 Codex 的 `plugin/install` 安装，核对安装版本，创建 ephemeral 会话，通过 `mcpServerStatus/list` 发现工具并核对插件来源，再通过 `mcpServer/tool/call` 调用。六个业务结果均为 `ok: true`、`data` 为列表。没有启动模型回合，也没有安装或修改软件端桥接。测试后通过官方卸载接口移除了原先未安装的五个插件，核对 `installed: false`；原已安装的 Maya 保留为 0.2.5。
+
+另通过 223 项单元/市场测试，3 项因 Windows 符号链接权限跳过；无失败。六插件的运行中目录删除回归全部通过：从插件目录启动两代服务，12 个真实 MCP 进程迁出工作目录后，仍能删除临时插件副本并继续响应。生产变更、测试与说明经过独立审查。
+
+本轮验证覆盖 Codex 后端的真实安装、工具加载、只读调用和卸载接口，不等于验证全部 GUI 点击路径或创作软件内操作；原生软件验收限制仍见下表。
+
+# Windows 卸载修复验证（上一版）
 
 日期：2026-10-17。Maya 0.2.4；其他五个插件 0.1.1。
 

@@ -70,7 +70,7 @@ namespace Bubble.UnityControl
             if (!closed || EditorApplication.isPlayingOrWillChangePlaymode) return;
             if (Application.platform != RuntimePlatform.WindowsEditor)
             {
-                Debug.LogWarning("Bubble Unity 0.1.1 supports Windows Editor only; bridge was not started.");
+                Debug.LogWarning("Bubble Unity 0.1.2 supports Windows Editor only; bridge was not started.");
                 return;
             }
             if (Application.isBatchMode && Environment.GetEnvironmentVariable("BUBBLE_UNITY_ALLOW_BATCH") != "1") return;

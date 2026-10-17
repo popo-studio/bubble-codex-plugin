@@ -1,6 +1,6 @@
 {
   "name": "max-control",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Control local 3ds Max, execute Python and MAXScript, and inspect scene dependencies.",
   "author": {
     "name": "popo-studio"

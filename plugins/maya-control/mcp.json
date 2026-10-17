@@ -12,9 +12,8 @@
         "/",
         "--locked",
         "--script",
-        "${PLUGIN_ROOT}/launch-0.2.4.py"
-      ],
-      "cwd": "/"
+        "${PLUGIN_ROOT}/launch-0.2.5.py"
+      ]
     }
   }
 }

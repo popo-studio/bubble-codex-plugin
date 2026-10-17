@@ -89,7 +89,9 @@ class MarketplaceTests(unittest.TestCase):
                         "--directory", "/", "--locked", "--script",
                         "${PLUGIN_ROOT}/launch-" + version + ".py",
                     ])
-                    self.assertEqual(config["cwd"], "/")
+                    # Codex rejects a declared plugin cwd outside the package.
+                    # uv itself changes directory before starting the server.
+                    self.assertNotIn("cwd", config)
                     launch_lock = tomllib.loads((folder / f"launch-{version}.py.lock").read_text(encoding="utf-8"))
                     self.assertEqual(launch_lock["manifest"]["requirements"], [{"name": "mcp", "specifier": ">=1.28,<2"}])
                     self.assertEqual(
