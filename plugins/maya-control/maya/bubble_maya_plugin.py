@@ -44,7 +44,7 @@ def initializePlugin(plugin):
     global _active, _exit_callback
     from maya import cmds, utils
     from maya.api import OpenMaya
-    OpenMaya.MFnPlugin(plugin, "Bubble", "0.2.1", "Any")
+    OpenMaya.MFnPlugin(plugin, "Bubble", "0.2.2", "Any")
     _active = True
     if not cmds.about(batch=True):
         _exit_callback = OpenMaya.MSceneMessage.addCallback(OpenMaya.MSceneMessage.kMayaExiting, _stop)

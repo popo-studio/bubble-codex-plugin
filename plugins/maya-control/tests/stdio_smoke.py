@@ -16,7 +16,11 @@ import bubble_maya_bridge as bridge
 
 
 async def main():
-    server = bridge.Bridge(lambda op, args: {"operation": op, "echo": args}, lambda fn: fn())
+    def dispatch(operation, arguments):
+        if operation == "scene_info":
+            return {"path": "D:/projects/hero.ma", "modified": False, "maya_version": "2027"}
+        return {"operation": operation, "echo": arguments}
+    server = bridge.Bridge(dispatch, lambda fn: fn())
     worker = threading.Thread(target=server.serve_forever, daemon=True)
     worker.start()
     try:
@@ -38,6 +42,13 @@ async def main():
                         payload = json.loads(response.content[0].text)
                         assert payload["ok"], payload
                         assert server.token not in response.content[0].text
+                    response = await session.call_tool("maya_list_sessions", {"scene": "HERO.ma"})
+                    assert not response.isError, response
+                    payload = json.loads(response.content[0].text)
+                    assert payload["selection"]["status"] == "unique", payload
+                    assert payload["selection"]["selected_pid"] == 123, payload
+                    assert payload["data"][0]["scene_name"] == "hero.ma", payload
+                    assert server.token not in response.content[0].text
                     assert not Path(directory, "maya-user").exists(), "Unconfirmed install previews must not write"
                     print(json.dumps({"ok": True, "tools": sorted(names), "transport": "stdio -> loopback TCP fake Maya"}))
     finally:

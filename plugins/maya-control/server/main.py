@@ -2,7 +2,8 @@
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
-from client import list_sessions, request
+from client import request
+from discovery import discover_sessions
 from installation import installation_status, install_bridge, uninstall_bridge
 
 mcp = FastMCP("Bubble Maya Control")
@@ -30,9 +31,9 @@ def maya_uninstall_bridge(maya_version: str = "2027", confirmed: bool = False) -
 
 
 @mcp.tool(annotations=READ)
-def maya_list_sessions() -> dict:
-    """List local Maya bridge sessions without exposing authentication secrets. Files may be stale."""
-    return list_sessions()
+def maya_list_sessions(scene: str | None = None) -> dict:
+    """List readable live Maya scenes, filenames/full paths, unsaved/modified status and version. Optional scene matches an exact filename, extensionless stem or full path (case-insensitive); only unique complete results return selected_pid. Duplicate/unsaved/unreachable scenes require user choice; never guess or use partial-name matches. Only bridge-discovered processes appear. Read-only; retains no selection. Keep the chosen PID and recheck its scene before writes."""
+    return discover_sessions(scene)
 
 
 @mcp.tool(annotations=READ)
