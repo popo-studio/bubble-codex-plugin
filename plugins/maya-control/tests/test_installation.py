@@ -164,6 +164,49 @@ class InstallationTests(unittest.TestCase):
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_native_namespace_without_file_starts_from_host_load_path(self):
+        source = ROOT / "maya" / "bubble_maya_plugin.py"
+        with tempfile.TemporaryDirectory(prefix="bubble native 路径 ") as temporary:
+            directory = Path(temporary)
+            native_path = directory / "bubble_maya_plugin.py"
+            native_path.write_bytes(source.read_bytes())
+            (directory / "bridge.py").write_text(
+                "started = False\nstopped = False\n"
+                "def start():\n    global started\n    started = True\n"
+                "def stop():\n    global stopped\n    stopped = True\n", encoding="utf-8")
+            for reported_path in (native_path, directory):
+                with self.subTest(load_path=str(reported_path)):
+                    plugin = types.ModuleType("native_namespace_without_file")
+                    exec(compile(source.read_bytes(), str(source), "exec"), plugin.__dict__)
+                    self.assertNotIn("__file__", plugin.__dict__)
+                    queue, warnings, removed, path_calls = [], [], [], []
+                    def load_path():
+                        path_calls.append(True)
+                        return str(reported_path)
+                    cmds = types.SimpleNamespace(about=lambda **kw: False, warning=warnings.append)
+                    maya = types.ModuleType("maya")
+                    maya.cmds = cmds
+                    maya.utils = types.SimpleNamespace(executeDeferred=queue.append)
+                    maya_api = types.ModuleType("maya.api")
+                    maya_api.OpenMaya = types.SimpleNamespace(
+                        MFnPlugin=lambda *args: types.SimpleNamespace(loadPath=load_path),
+                        MSceneMessage=types.SimpleNamespace(kMayaExiting=1, addCallback=lambda *args: 99),
+                        MMessage=types.SimpleNamespace(removeCallback=removed.append))
+                    with patch.dict(sys.modules, {"maya": maya, "maya.api": maya_api}):
+                        plugin.initializePlugin(None)
+                        self.assertIsNone(plugin._bridge)
+                        self.assertEqual(len(queue), 1)
+                        queue.pop()()
+                        self.assertEqual(warnings, [])
+                        self.assertEqual(path_calls, [True])
+                        bridge = plugin._bridge
+                        self.assertTrue(bridge.started)
+                        self.assertEqual(Path(bridge.__file__), directory / "bridge.py")
+                        plugin.uninitializePlugin(None)
+                        self.assertTrue(bridge.stopped)
+                        self.assertIsNone(plugin._bridge_path)
+                        self.assertEqual(removed, [99])
+
     def test_unload_cancels_deferred_start_and_batch_does_not_listen(self):
         spec = importlib.util.spec_from_file_location("test_native_plugin", ROOT / "maya" / "bubble_maya_plugin.py")
         plugin = importlib.util.module_from_spec(spec)
@@ -171,7 +214,7 @@ class LifecycleTests(unittest.TestCase):
         queue, removed = [], []
         cmds = types.SimpleNamespace(about=lambda **kw: False)
         utils = types.SimpleNamespace(executeDeferred=queue.append)
-        api = types.SimpleNamespace(MFnPlugin=lambda *a: None,
+        api = types.SimpleNamespace(MFnPlugin=lambda *a: types.SimpleNamespace(loadPath=lambda: str(ROOT / "maya" / "bubble_maya_plugin.py")),
             MSceneMessage=types.SimpleNamespace(kMayaExiting=1, addCallback=lambda *a: 99),
             MMessage=types.SimpleNamespace(removeCallback=removed.append))
         maya = types.ModuleType("maya")

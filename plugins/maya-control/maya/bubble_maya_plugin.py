@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 
 _bridge = None
+_bridge_path = None
 _active = False
 _exit_callback = None
 
@@ -22,8 +23,9 @@ def _start():
         previous = sys.modules.get("bubble_maya_bridge")
         if previous is not None and getattr(previous, "_bridge", None) is not None:
             previous.stop()
-        path = Path(__file__).with_name("bridge.py")
-        spec = importlib.util.spec_from_file_location("_bubble_maya_installed_bridge", path)
+        if _bridge_path is None:
+            raise RuntimeError("Maya did not provide the installed bridge location")
+        spec = importlib.util.spec_from_file_location("_bubble_maya_installed_bridge", _bridge_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         module.start()
@@ -41,10 +43,23 @@ def _stop(*args):
 
 
 def initializePlugin(plugin):
-    global _active, _exit_callback
+    global _active, _exit_callback, _bridge_path
     from maya import cmds, utils
     from maya.api import OpenMaya
-    OpenMaya.MFnPlugin(plugin, "Bubble", "0.2.5", "Any")
+    plugin_fn = OpenMaya.MFnPlugin(plugin, "Bubble", "0.2.6", "Any")
+    # Maya's native Python plug-in loader can execute without defining __file__.
+    # Capture its authoritative location while the MObject is available; the
+    # deferred callback must not infer a path from the working directory.
+    loaded_path = Path(plugin_fn.loadPath())
+    if not loaded_path.is_absolute():
+        raise RuntimeError("Maya returned a non-absolute plug-in load path")
+    if loaded_path.is_file():
+        directory = loaded_path.parent
+    elif loaded_path.is_dir():
+        directory = loaded_path
+    else:
+        raise RuntimeError("Maya plug-in load path does not exist: %s" % loaded_path)
+    _bridge_path = directory / "bridge.py"
     _active = True
     if not cmds.about(batch=True):
         _exit_callback = OpenMaya.MSceneMessage.addCallback(OpenMaya.MSceneMessage.kMayaExiting, _stop)
@@ -52,10 +67,11 @@ def initializePlugin(plugin):
 
 
 def uninitializePlugin(plugin):
-    global _active, _exit_callback
+    global _active, _exit_callback, _bridge_path
     from maya.api import OpenMaya
     _active = False
     _stop()
+    _bridge_path = None
     if _exit_callback is not None:
         OpenMaya.MMessage.removeCallback(_exit_callback)
         _exit_callback = None

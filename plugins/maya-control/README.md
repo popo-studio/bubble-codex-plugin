@@ -104,6 +104,7 @@ result = {"selection": cmds.ls(selection=True, long=True)}
 | 安装冲突 | 保留现场，根据报错检查已修改的托管文件，不要删除整个 scripts 目录 |
 | 超时 | 关闭 Maya 模态对话框，等待主线程空闲；检查操作是否已完成 |
 | 插件安装后工具未出现 | 重新加载或新开一个启用该插件的聊天 |
+| `Bubble Maya bridge failed to start: name '__file__' is not defined` | 旧版原生插件假定 Maya 提供 `__file__`；0.2.6 改为使用 Maya API 返回的加载路径。更新 Codex 插件后，预览并更新软件侧桥接，再保存工作、重启 Maya。仅更新 Codex 缓存不足以修复已安装的旧桥接 |
 
 ## 开发验证
 
