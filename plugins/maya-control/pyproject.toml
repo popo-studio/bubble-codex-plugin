@@ -1,6 +1,6 @@
 [project]
 name = "bubble-maya-control"
-version = "0.2.3"
+version = "0.2.4"
 description = "Local authenticated Maya bridge for Codex"
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.28,<2"]

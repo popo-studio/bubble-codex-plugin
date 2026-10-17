@@ -1,4 +1,4 @@
-"""MCP stdio entrypoint: uv run --directory <plugin-root> server/main.py."""
+"""MCP stdio entrypoint; deployed plugins start through the versioned launcher."""
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 

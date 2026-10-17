@@ -25,7 +25,7 @@
 
 也可以使用本地仓库 `D:\Workspace\Bubble\bubble-codex-plugins` 作为来源，Git 引用留空。仓库需同时包含 `.agents/plugins/marketplace.json` 与 `plugins/`，不要填写截图示例中的 `plugins/codex`。SSH 来源需要本机 Git 有仓库访问权限。
 
-在市场中安装所需插件，再请求“连接 Nuke”或“连接这个 Unity 项目”。Codex 端需要 `uv` 和 Python ≥3.10；Python 依赖由各插件的 `uv.lock` 锁定。
+在市场中安装所需插件，再请求“连接 Nuke”或“连接这个 Unity 项目”。Codex 端需要 `uv` 和 Python ≥3.10；安装后的服务通过 `launch-<version>.py` 启动，依赖由相邻的 `.py.lock` 锁定，运行环境位于插件目录外。开发环境依赖由 `uv.lock` 锁定。
 
 ## 首次连接
 
@@ -36,7 +36,7 @@
 
 每个实例使用独立随机本机端口、令牌和 PID。关闭或超时后不自动切到另一个窗口，也不自动重复执行写操作。列表只包含已加载桥接的实例；不可达记录会明确显示，不假定窗口已经关闭。
 
-桥接独立于 Codex 插件缓存。更新市场插件后，需要再次预览并确认软件侧更新。卸载 Codex 插件不会自动删除软件侧桥接，应先运行该插件的卸载流程；用户修改过的文件会报告冲突并保留。
+桥接独立于 Codex 插件缓存。更新市场插件后，需要再次预览并确认软件侧更新。卸载 Codex 插件不会自动删除软件侧桥接，应先运行该插件的卸载流程；用户修改过的文件会报告冲突并保留。完整流程及 Windows 缓存占用处理见 [更新与卸载](UPDATING.md)。
 
 ## 验收
 
@@ -66,4 +66,4 @@ uv run --locked tests/stdio_smoke.py
 
 本次结果见 [验证记录](VALIDATION.md)。其他插件的具体验证命令和实机验证限制见各自 README。测试只使用临时配置/项目；网络测试需允许本机回环连接。不要提交虚拟环境、用户场景、会话令牌或软件用户配置。
 
-更新时同步两个插件清单、Python 项目版本、锁文件和软件侧版本。市场格式依据 [OpenAI 插件打包文档](https://developers.openai.com/plugins/build/plugins)。
+更新时同步两个插件清单、Python 项目版本、软件侧版本和锁文件，并将启动脚本及相邻锁文件命名为新版本的 `launch-<version>.py` 与 `launch-<version>.py.lock`，同步两份 MCP 配置中的路径。版本化脚本让新旧服务使用独立的依赖环境。市场格式依据 [OpenAI 插件打包文档](https://developers.openai.com/plugins/build/plugins)。

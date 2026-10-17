@@ -18,3 +18,13 @@ Uninstall uses `unity_uninstall_bridge` preview, then `confirmed=True` when auth
 If the user declines installation, explain that this Unity integration needs an Editor package; there is no temporary arbitrary-C# console built into Unity. They can manually add the bundled `unity` directory as the embedded package, but this is still a persistent project change and needs the same permission. Do not install an unrelated console or modify packages to work around a refusal.
 
 Do not reveal tokens or session-file contents. Discovery records are under the user's `.bubble-unity/sessions` directory (or `BUBBLE_UNITY_SESSION_DIR`). Only bridged Editors appear. Stale records after a crash can be unreachable; that does not authorize selecting a different Editor. A read-only status failure is a connection diagnosis, never evidence that earlier mutation did not run.
+
+## 更新与完整卸载
+
+用户请求更新/检查版本时，即使已经连接，也要调用 `unity_installation_status`，核对软件版本或明确项目路径、`installed_version`、`available_version` 和实际 changes。先展示差异；得到用户同意后才用 `unity_install_bridge(confirmed=true)` 更新。没有文件变化不重复安装。安装记录是磁盘状态，不能证明运行中的旧桥接已重新加载；提示保存工作并重启，或使用本软件明确支持的刷新方式，然后重新发现原目标实例。
+
+GitHub 推送只发布源码。Codex 端需刷新已注册的 Git 插件市场，随后重新加载聊天/必要时重启 Codex；不要假定现有 MCP 进程已经更新，也不要把插件市场更新当作软件端桥接已更新。
+
+用户说“卸载插件”但范围不明时，区分只移除 Codex 集成与完整移除软件接入。完整移除应先在插件工具仍可用时预览并授权 `unity_uninstall_bridge`，提醒重启/刷新停止已加载的桥接，再移除 Codex 插件。保留用户改动、备份和其他文件。软件端卸载授权不自动扩展到其他项目或软件版本。
+
+若旧版 Codex 缓存删除报 Windows 拒绝访问，定位明确属于该插件旧缓存的 MCP 进程；获得停止这些连接的授权后再停止并重试卸载。不要终止 Maya/其他创作软件、所有 Python 进程，或删除整个 Codex 缓存。卸载 Codex 插件不会自动删除软件端配置。

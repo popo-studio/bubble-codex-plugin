@@ -28,6 +28,9 @@ class MarketplaceTests(unittest.TestCase):
                 self.assertTrue((folder / "README.md").is_file())
                 self.assertTrue((folder / "server/main.py").is_file())
                 self.assertTrue((folder / "uv.lock").is_file())
+                version = read_json(folder / "plugin.json")["version"]
+                self.assertTrue((folder / f"launch-{version}.py").is_file())
+                self.assertTrue((folder / f"launch-{version}.py.lock").is_file())
 
     def test_manifest_parity_and_local_references(self):
         for name in sorted(NAMES):
@@ -80,9 +83,20 @@ class MarketplaceTests(unittest.TestCase):
                     self.assertEqual(config["type"], "stdio")
                     self.assertEqual({k: v for k, v in config.items() if k != "type"}, overlay[server_name])
                     self.assertEqual(config["command"], "uv")
-                    self.assertIn("--locked", config["args"])
-                    self.assertIn("${PLUGIN_ROOT}", config["args"])
-                    self.assertEqual(config["cwd"], "${PLUGIN_ROOT}")
+                    version = read_json(folder / "plugin.json")["version"]
+                    self.assertEqual(config["args"], [
+                        "run", "--no-project", "--no-config",
+                        "--directory", "/", "--locked", "--script",
+                        "${PLUGIN_ROOT}/launch-" + version + ".py",
+                    ])
+                    self.assertEqual(config["cwd"], "/")
+                    launch_lock = tomllib.loads((folder / f"launch-{version}.py.lock").read_text(encoding="utf-8"))
+                    self.assertEqual(launch_lock["manifest"]["requirements"], [{"name": "mcp", "specifier": ">=1.28,<2"}])
+                    self.assertEqual(
+                        {p["name"]: p["version"] for p in launch_lock["package"]},
+                        {p["name"]: p["version"] for p in tomllib.loads((folder / "uv.lock").read_text(encoding="utf-8"))["package"]
+                         if not p["name"].startswith("bubble-")},
+                    )
                 skills = list((folder / "skills").glob("*/SKILL.md"))
                 self.assertGreaterEqual(len(skills), 2)
                 for skill in skills:

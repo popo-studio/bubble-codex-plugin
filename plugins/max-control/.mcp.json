@@ -2,8 +2,17 @@
   "mcpServers": {
     "max": {
       "command": "uv",
-      "args": ["run", "--locked", "--directory", "${PLUGIN_ROOT}", "server/main.py"],
-      "cwd": "${PLUGIN_ROOT}"
+      "args": [
+        "run",
+        "--no-project",
+        "--no-config",
+        "--directory",
+        "/",
+        "--locked",
+        "--script",
+        "${PLUGIN_ROOT}/launch-0.1.1.py"
+      ],
+      "cwd": "/"
     }
   }
 }

@@ -123,3 +123,7 @@ uv run --directory plugins/maya-control python tests/stdio_smoke.py
 自动化测试不能替代 Maya GUI 启动验收。上线前在测试环境中完成：预览 → 同意安装 → 重启 Maya → 读取场景 → 确认连接 → 预览卸载 → 同意卸载。还应验证“不重启，立即加载”的分支。不要用生产场景测试任意脚本。
 
 相关官方文档：[Maya Python 初始化](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Scripting/files/GUID-640C1383-3FB8-410F-AE18-987A812B5914.htm)、[Maya 2027 线程与 Python](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Scripting/files/GUID-9B5AECBB-B212-4C92-959A-22599760E91A.htm)、[Maya 安全设置](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Customizing/files/GUID-2176117C-6998-4802-9F9F-1417DF41C661.htm)、[MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)。
+
+## 更新和卸载的两层范围
+
+GitHub 发布后需刷新已注册的 Codex 插件市场，并重新加载聊天或重启 Codex。软件/项目中的桥接独立保存，需预览差异、经同意后更新，再重启或使用该软件支持的刷新方式。完整卸载请先通过本插件工具卸载软件端桥接，再从 Codex 移除插件；只卸载 Codex 插件会保留软件端配置。Windows 旧版缓存被占用时，先停掉明确属于该插件的旧 MCP 进程，再重试，勿关闭创作软件或批量删除配置。

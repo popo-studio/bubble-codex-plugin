@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "max-control",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Control a local Autodesk 3ds Max session, execute Python and MAXScript, and inspect scene dependencies.",
   "author": {
     "name": "popo-studio"

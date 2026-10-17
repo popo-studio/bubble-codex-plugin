@@ -43,3 +43,7 @@ uv run --locked --directory plugins/unreal-control tests/stdio_smoke.py
 - [Epic：只读脏包查询](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorLoadingAndSavingUtils?application_version=5.5)
 
 实现另核对了本机 UE 5.5 的 `PythonScriptPlugin.cpp`、`UnrealEditorSubsystem.h`、`EditorActorSubsystem.h` 与 `BlueprintPathsLibrary.h`。
+
+## 更新和卸载的两层范围
+
+GitHub 发布后需刷新已注册的 Codex 插件市场，并重新加载聊天或重启 Codex。软件/项目中的桥接独立保存，需预览差异、经同意后更新，再重启或使用该软件支持的刷新方式。完整卸载请先通过本插件工具卸载软件端桥接，再从 Codex 移除插件；只卸载 Codex 插件会保留软件端配置。Windows 旧版缓存被占用时，先停掉明确属于该插件的旧 MCP 进程，再重试，勿关闭创作软件或批量删除配置。

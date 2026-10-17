@@ -6,12 +6,15 @@
       "command": "uv",
       "args": [
         "run",
-        "--locked",
+        "--no-project",
+        "--no-config",
         "--directory",
-        "${PLUGIN_ROOT}",
-        "server/main.py"
+        "/",
+        "--locked",
+        "--script",
+        "${PLUGIN_ROOT}/launch-0.1.1.py"
       ],
-      "cwd": "${PLUGIN_ROOT}"
+      "cwd": "/"
     }
   }
 }
