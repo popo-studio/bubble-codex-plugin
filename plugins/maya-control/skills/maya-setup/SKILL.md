@@ -13,7 +13,7 @@ Read `../../README.md` when details are needed. Use the bundled installation too
 2. For an absent or outdated installation, call `maya_install_bridge` with `confirmed=false` to get a read-only preview. Show the target version, installation directory, and startup-file change in plain language. Explain that the bridge will start automatically with Maya and listens only on this machine.
 3. Obtain the user's permission to install and enable that startup behavior before calling `confirmed=true`. Existing explicit consent for these displayed changes is sufficient; do not ask twice. Installing the Codex plugin alone is not permission to change Maya startup files. Previewing must never write files.
 4. On success, tell the user: “安装完成。请保存场景并重启 Maya，之后会自动连接。” Do not close, restart, or save Maya for them. Distinguish files installed from a live connection verified.
-5. After restart, call `maya_list_sessions`, `maya_status`, and `maya_scene_info`. Verify the target PID/version/scene before claiming that the connection works. If multiple sessions exist, identify the intended one.
+5. After restart, call `maya_list_sessions`. For multiple records, use explicit PIDs to query each reachable process with `maya_status` and `maya_scene_info`; show PID, version, and full scene path so the user can identify the target. Records from crashed processes may be stale. Verify the intended PID/version/scene before claiming a connection, and retain that explicit PID for subsequent calls. Never switch to a different process after a failure.
 
 ## Optional: connect without restarting
 
@@ -24,6 +24,7 @@ If they decline installation entirely but want a temporary connection, resolve t
 ## Update, removal, and errors
 
 - Updating the Codex plugin does not silently update Maya's installed files. Preview the runtime update, honor user consent, and recommend restarting Maya to load the new version. Do not hot-reload a running bridge automatically.
+- The installation belongs to a Maya version's user profile, not to one PID: all future Maya 2027 instances using that profile load the installed runtime. Install/update/removal does not stop other running instances. Explain this scope when relevant; never restart or close any instance automatically.
 - For removal, preview `maya_uninstall_bridge` with `confirmed=false`, then act with `confirmed=true` only when removal is authorized. Remove only owned installation files and the managed startup block. Preserve other startup code and backups. A running bridge may remain until Maya exits.
 - Report conflicts or edited managed files as conflicts. Never bypass the installer's ownership checks or delete unrelated folders to force a reinstall.
 - Maya security settings can restrict startup scripts or ask the user to approve plugin code. Explain any observed prompt; do not weaken their security preferences.

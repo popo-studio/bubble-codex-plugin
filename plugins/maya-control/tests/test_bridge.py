@@ -213,5 +213,93 @@ class ClientIntegrationTests(unittest.TestCase):
         self.assertEqual(calls, ["execute_python"])
 
 
+class MultiInstanceIntegrationTests(unittest.TestCase):
+    """Two real loopback listeners model separate Maya processes, without Maya."""
+
+    def setUp(self):
+        runtime = ROOT / ".test-runtime"
+        runtime.mkdir(exist_ok=True)
+        self.directory = tempfile.TemporaryDirectory(prefix="multi-maya-", dir=runtime)
+        self.addCleanup(self.directory.cleanup)
+        self.env = patch.dict(os.environ, {"BUBBLE_MAYA_SESSION_DIR": self.directory.name})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+        self.servers, self.threads, self.metadata, self.calls = {}, {}, {}, {}
+        for pid in (123, 456):
+            self.calls[pid] = []
+            def dispatch(operation, arguments, pid=pid):
+                self.calls[pid].append((operation, arguments))
+                return {"pid": pid, "operation": operation, "arguments": arguments}
+            server = bridge.Bridge(dispatch, lambda fn: fn())
+            self.servers[pid] = server
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            self.threads[pid] = worker
+            worker.start()
+            self.addCleanup(self.stop_instance, pid)
+            self.metadata[pid] = {"protocol": 1, "pid": pid, "host": "127.0.0.1",
+                                  "port": server.server_address[1], "token": server.token}
+            self.write_metadata(pid, self.metadata[pid])
+
+    def write_metadata(self, pid, value):
+        Path(self.directory.name, "%s.json" % pid).write_text(json.dumps(value), encoding="utf-8")
+
+    def stop_instance(self, pid):
+        server = self.servers.pop(pid, None)
+        if server is not None:
+            server.closed.set()
+            server.shutdown()
+            server.server_close()
+            self.threads.pop(pid).join(timeout=5)
+
+    def test_explicit_pid_routes_all_operations_only_to_selected_instance(self):
+        self.assertNotEqual(self.metadata[123]["port"], self.metadata[456]["port"])
+        self.assertNotEqual(self.metadata[123]["token"], self.metadata[456]["token"])
+        listing = client.list_sessions()
+        self.assertEqual({item["pid"] for item in listing["data"]}, {123, 456})
+        for value in self.metadata.values():
+            self.assertNotIn(value["token"], json.dumps(listing))
+        for operation, arguments in (("scene_info", {}),
+                                     ("execute_python", {"code": "result = 'selected Maya'"}),
+                                     ("execute_mel", {"code": 'print("selected Maya");'})):
+            ambiguous = client.request(operation, arguments)
+            self.assertEqual(ambiguous["error"]["code"], "session_selection")
+        self.assertEqual(self.calls, {123: [], 456: []})
+        for pid in (123, 456):
+            other = 456 if pid == 123 else 123
+            for operation, arguments in (("scene_info", {}),
+                                         ("execute_python", {"code": "result = %s" % pid}),
+                                         ("execute_mel", {"code": "print(%s);" % pid})):
+                other_before = list(self.calls[other])
+                selected_before = len(self.calls[pid])
+                response = client.request(operation, arguments, pid=pid)
+                self.assertEqual(response, {"ok": True, "data": {"pid": pid, "operation": operation, "arguments": arguments}})
+                self.assertEqual(len(self.calls[pid]), selected_before + 1)
+                self.assertEqual(self.calls[other], other_before)
+
+    def test_other_instance_token_cannot_authorize_selected_instance(self):
+        self.write_metadata(123, {**self.metadata[123], "token": self.metadata[456]["token"]})
+        response = client.request("execute_python", {"code": "result = 42"}, pid=123)
+        self.assertEqual(response["error"]["code"], "unauthorized")
+        self.assertEqual(self.calls, {123: [], 456: []})
+        self.assertEqual(client.request("scene_info", pid=456)["data"]["pid"], 456)
+        self.assertEqual(self.calls[123], [])
+
+    def test_closed_or_stale_selection_never_falls_back_to_live_instance(self):
+        self.stop_instance(123)
+        for pid in (123, 999):
+            if pid == 999:
+                self.write_metadata(pid, {**self.metadata[123], "pid": pid})
+            response = client.request("execute_mel", {"code": 'print("must not reach survivor");'}, pid=pid)
+            self.assertEqual(response["error"]["code"], "connection_error")
+            self.assertFalse(response["error"]["execution_uncertain"])
+            self.assertEqual(self.calls, {123: [], 456: []})
+            self.assertEqual(client.request("scene_info")["error"]["code"], "session_selection")
+        self.assertEqual(client.request("scene_info", pid=987)["error"]["code"], "session_selection")
+        self.assertEqual(self.calls, {123: [], 456: []})
+        self.assertEqual(client.request("scene_info", pid=456)["data"]["pid"], 456)
+        self.assertEqual(self.calls[123], [])
+        self.assertEqual(self.calls[456], [("scene_info", {})])
+
+
 if __name__ == "__main__":
     unittest.main()
