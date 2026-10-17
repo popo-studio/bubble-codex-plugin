@@ -1,0 +1,12 @@
+{
+  "name": "bubble-plugins",
+  "interface": { "displayName": "Bubble Plugins" },
+  "plugins": [
+    {
+      "name": "maya-control",
+      "source": { "source": "local", "path": "./plugins/maya-control" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

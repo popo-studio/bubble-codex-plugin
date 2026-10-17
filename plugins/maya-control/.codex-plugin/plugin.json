@@ -1,0 +1,18 @@
+{
+  "name": "maya-control",
+  "version": "0.1.0",
+  "description": "Control local Maya, execute Python or MEL, and inspect scene dependencies.",
+  "author": { "name": "popo-studio" },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Maya",
+    "shortDescription": "Maya 脚本执行与场景检查",
+    "longDescription": "Connect to local Maya 2027, inspect scene resources, and run requested Python or MEL scripts through an authenticated local bridge.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["连接 Maya 并查看当前场景", "检查场景中的缺失贴图和引用"]
+  },
+  "extensions": { "com.openai": { "onboardingSkill": "./skills/maya-setup/SKILL.md" } }
+}

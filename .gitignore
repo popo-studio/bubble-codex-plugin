@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.cache/
+.test-runtime/
+.env
+.env.*
+!.env.example
+dist/
+*.log
+.bubble-maya/
+.omc/
