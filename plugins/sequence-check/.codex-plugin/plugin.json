@@ -1,0 +1,31 @@
+{
+  "name": "sequence-check",
+  "version": "0.1.0",
+  "description": "Read-only bounded local image sequence and EXR quality checks.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Sequence Check",
+    "shortDescription": "图像序列、EXR 与渲染结果检查",
+    "longDescription": "Read-only bounded image sequence QC with real pixel decoding, missing frames, EXR channels and suspected black/repeated frames.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "检查渲染序列的缺帧和损坏文件",
+      "检查 EXR 通道与分辨率是否一致"
+    ],
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/sequence-setup/SKILL.md"
+    }
+  }
+}

@@ -8,7 +8,8 @@ import unittest
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity")}
+NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity", "deadline")} | {
+    "sequence-check", "asset-package", "plugin-doctor"}
 
 
 def read_json(path):
@@ -93,7 +94,15 @@ class MarketplaceTests(unittest.TestCase):
                     # uv itself changes directory before starting the server.
                     self.assertNotIn("cwd", config)
                     launch_lock = tomllib.loads((folder / f"launch-{version}.py.lock").read_text(encoding="utf-8"))
-                    self.assertEqual(launch_lock["manifest"]["requirements"], [{"name": "mcp", "specifier": ">=1.28,<2"}])
+                    project = tomllib.loads((folder / "pyproject.toml").read_text(encoding="utf-8"))
+                    launcher = (folder / f"launch-{version}.py").read_text(encoding="utf-8")
+                    metadata = launcher.split("# /// script\n", 1)[1].split("# ///", 1)[0]
+                    script = tomllib.loads("\n".join(line.removeprefix("# ") for line in metadata.splitlines()))
+                    self.assertEqual(sorted(script["dependencies"]), sorted(project["project"]["dependencies"]))
+                    self.assertEqual(script["requires-python"], project["project"]["requires-python"])
+                    declared_names = {re.sub(r"[-_.]+", "-", re.match(r"[A-Za-z0-9_.-]+", item).group()).lower()
+                                      for item in script["dependencies"]}
+                    self.assertEqual({p["name"] for p in launch_lock["manifest"]["requirements"]}, declared_names)
                     self.assertEqual(
                         {p["name"]: p["version"] for p in launch_lock["package"]},
                         {p["name"]: p["version"] for p in tomllib.loads((folder / "uv.lock").read_text(encoding="utf-8"))["package"]

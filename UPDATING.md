@@ -33,9 +33,13 @@ Codex 插件与软件端桥接是分开安装的。即使会话已经连接，�
 
 ## 卸载范围
 
+Deadline、Sequence Check、Asset Package、Plugin Doctor 没有软件侧桥接，直接通过 Codex 卸载即可。不会修改或删除农场任务、已生成的交付包、用户图片、日志以及 uv 共享缓存。它们也沿用版本化启动器与包外依赖环境，发布检查包括运行中卸载。
+
 **只移除 Codex 集成**：在 Codex 卸载对应插件，或使用 `codex plugin remove maya-control@bubble-plugins` 等精确选择器。此操作删除 Codex 安装缓存和注册状态，不等于删除 Maya 用户配置或 Unreal/Unity 项目里的桥接。
 
 **完整移除**：
+
+以下步骤适用于六个 DCC 插件。
 
 1. 保留 Codex 插件可用时，先请求卸载所选软件/项目中的桥接。
 2. `*_uninstall_bridge(confirmed=false)` 展示范围；用户确认后设为 `true`。只删除拥有且未被改动的文件，保留备份、生成元数据和其他用户内容。

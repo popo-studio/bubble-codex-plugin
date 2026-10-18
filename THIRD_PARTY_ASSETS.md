@@ -12,3 +12,5 @@
 | unity-control | `Unity 6000.1.0f1: Editor/Data/Resources/UnityPlayerIcon.png` | `4545a1113d7d08b48bfea5276ca9a2d5121a9e5dbebb130f2296589b89790513` |
 
 3ds Max 图标引用于 [Autodesk 官方产品页](https://www.autodesk.com.cn/products/3ds-max/overview)。来源核对日期：2026-10-17。各插件 assets/SOURCE.md 随包保留。
+
+Deadline、Sequence Check、Asset Package、Plugin Doctor 的 `assets/icon.svg` 为本项目原创功能图标，未使用厂商标识。

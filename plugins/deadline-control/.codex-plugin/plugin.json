@@ -1,0 +1,32 @@
+{
+  "name": "deadline-control",
+  "version": "0.1.0",
+  "description": "Inspect Deadline 10 jobs and safely preview and confirm submission or selected task retry.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Deadline",
+    "shortDescription": "Deadline 任务诊断、提交与重试",
+    "longDescription": "Inspect your existing Deadline 10 farm, diagnose job reports, preview submissions and retry selected tasks after confirmation.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "检查 Deadline 连接和失败任务",
+      "预览渲染任务提交"
+    ],
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/deadline-inspect/SKILL.md"
+    }
+  }
+}

@@ -91,7 +91,8 @@ async def main():
     temp_parent = ROOT / ".test-runtime"
     temp_parent.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="launcher-", dir=temp_parent) as directory:
-        for source in sorted((ROOT / "plugins").glob("*-control")):
+        catalog = json.loads((ROOT / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
+        for source in sorted(ROOT / "plugins" / row["name"] for row in catalog["plugins"]):
             await asyncio.wait_for(check_plugin(source, Path(directory), uv), timeout=180)
 
 

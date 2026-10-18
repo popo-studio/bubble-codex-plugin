@@ -1,0 +1,37 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "deadline-control",
+  "version": "0.1.0",
+  "description": "Inspect Deadline 10 jobs and safely preview and confirm submission or selected task retry.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "deadline",
+    "render-farm",
+    "production"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/deadline-inspect/SKILL.md",
+      "interface": {
+        "displayName": "Bubble Deadline",
+        "shortDescription": "Deadline 任务诊断、提交与重试",
+        "longDescription": "Inspect your existing Deadline 10 farm, diagnose job reports, preview submissions and retry selected tasks after confirmation.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "检查 Deadline 连接和失败任务",
+          "预览渲染任务提交"
+        ],
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg"
+      }
+    }
+  }
+}

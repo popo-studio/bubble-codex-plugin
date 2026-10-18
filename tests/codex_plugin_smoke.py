@@ -21,6 +21,15 @@ import time
 
 
 ROOT = Path(__file__).resolve().parents[1]
+STATUS_TOOLS = {"deadline-control": "deadline_status", "sequence-check": "sequence_status",
+                "asset-package": "package_status", "plugin-doctor": "doctor_status"}
+
+
+def server_name(name):
+    config = json.loads((ROOT / "plugins" / name / ".mcp.json").read_text(encoding="utf-8"))
+    names = list(config["mcpServers"])
+    assert len(names) == 1, (name, "expected one MCP server")
+    return names[0]
 
 
 class AppServer:
@@ -108,7 +117,7 @@ def plugin_read(server, catalog, name):
     })["plugin"]
 
 
-def assert_session_result(response, app):
+def assert_session_result(response, app, session_list=True):
     """Check the application result without exposing scene paths or tokens."""
     assert isinstance(response.get("content"), list), (app, "missing MCP content")
     assert not response.get("isError"), (app, "MCP tool reported an error")
@@ -125,15 +134,16 @@ def assert_session_result(response, app):
                     payload = candidate
                     break
     assert isinstance(payload, dict), (app, "missing application result")
-    assert payload.get("ok") is True, (app, "session discovery failed")
-    assert isinstance(payload.get("data"), list), (app, "invalid session list")
+    assert payload.get("ok") is True, (app, "read-only probe failed")
+    if session_list:
+        assert isinstance(payload.get("data"), list), (app, "invalid session list")
 
 
 def check_loader(server, catalog, entries, workspace):
     details = {}
     for entry in entries:
         name = entry["name"]
-        expected = name.removesuffix("-control")
+        expected = server_name(name)
         detail = plugin_read(server, catalog, name)
         assert detail["mcpServers"] == [expected], (name, detail["mcpServers"])
         assert len(detail["skills"]) >= 2, name
@@ -191,7 +201,7 @@ def check_installed_runtime(server, catalog, entries, details, workspace):
         ephemeral_id = thread["thread"]["id"]
         for entry in entries:
             name = entry["name"]
-            app = name.removesuffix("-control")
+            app = server_name(name)
             status = server.request("mcpServerStatus/list", {
                 "threadId": ephemeral_id, "serverName": app,
                 "detail": "toolsAndAuthOnly",
@@ -200,13 +210,13 @@ def check_installed_runtime(server, catalog, entries, details, workspace):
             assert row is not None, (app, "not registered")
             assert row.get("pluginId") == details[name]["summary"]["id"], (app, "wrong plugin source")
             assert not row.get("toolsError"), (app, row.get("toolsError"))
-            tool = f"{app}_list_sessions"
+            tool = STATUS_TOOLS.get(name, f"{app}_list_sessions")
             tools = row["tools"]
             assert any(t.get("name") == tool for t in tools.values()), (app, list(tools))
             response = server.request("mcpServer/tool/call", {
                 "threadId": ephemeral_id, "server": app, "tool": tool, "arguments": {},
             }, timeout=60)
-            assert_session_result(response, app)
+            assert_session_result(response, app, session_list=name not in STATUS_TOOLS)
             print(f"PASS {name}: Codex listed {len(tools)} tools and called {tool}", flush=True)
     finally:
         # Exercise official uninstall while the test runtime may still hold its

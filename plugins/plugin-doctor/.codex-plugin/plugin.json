@@ -1,0 +1,31 @@
+{
+  "name": "plugin-doctor",
+  "version": "0.1.0",
+  "description": "Read-only Bubble package, runtime and bridge checks with guided repair, update and uninstall workflows.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Plugin Doctor",
+    "shortDescription": "插件、桥接与连接故障诊断",
+    "longDescription": "Read-only Bubble package, runtime and bridge checks with guided repair, update and uninstall workflows.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "检查 Bubble 插件是否正常",
+      "诊断 Maya 桥接连接失败"
+    ],
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/plugin-diagnosis/SKILL.md"
+    }
+  }
+}

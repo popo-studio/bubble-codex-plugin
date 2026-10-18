@@ -1,0 +1,37 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "asset-package",
+  "version": "0.1.0",
+  "description": "Preview, package and verify explicit local asset dependencies.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "assets",
+    "delivery",
+    "dependencies"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/asset-package/SKILL.md",
+      "interface": {
+        "displayName": "Bubble Asset Package",
+        "shortDescription": "素材依赖检查、交付打包与完整性验证",
+        "longDescription": "Preview explicit dependencies and copy them to a new delivery folder with SHA256 verification. No scene rewriting.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "检查并打包这些素材依赖",
+          "验证交付包是否完整"
+        ],
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg"
+      }
+    }
+  }
+}
