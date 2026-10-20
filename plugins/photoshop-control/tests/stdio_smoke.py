@@ -16,7 +16,7 @@ async def main():
         async with ClientSession(read,write) as session:
             await session.initialize()
             names={t.name for t in (await session.list_tools()).tools}
-            assert names=={'photoshop_installation_status','photoshop_install_bridge','photoshop_uninstall_bridge','photoshop_list_sessions','photoshop_scene_info','photoshop_inspect_document','photoshop_execute_script','photoshop_create_document','photoshop_open_file','photoshop_activate_document'}
+            assert names=={'photoshop_installation_status','photoshop_install_bridge','photoshop_uninstall_bridge','photoshop_list_sessions','photoshop_scene_info','photoshop_inspect_document','photoshop_execute_script','photoshop_create_document','photoshop_open_file','photoshop_activate_document','photoshop_save_document','photoshop_export_document','photoshop_close_document','photoshop_resize_image','photoshop_resize_canvas','photoshop_crop_document','photoshop_rotate_document','photoshop_create_layer','photoshop_update_layer','photoshop_duplicate_layer','photoshop_delete_layer','photoshop_translate_layer','photoshop_select_layer'}
             async def call(name,args={}):
                 result=await session.call_tool(name,args)
                 assert not result.isError,result

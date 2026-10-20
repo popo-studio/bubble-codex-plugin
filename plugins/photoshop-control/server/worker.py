@@ -6,6 +6,7 @@ import os
 import sys
 import time
 from native import discover, select, failure
+from operations import build, LAYER_HELPERS
 
 SERIALIZER = r'''function encode(v) { if(v===null||v===undefined)return "null"; if(typeof v==="string")return '"'+v.replace(/[\\"\u0000-\u001f]/g,function(c){var n=c.charCodeAt(0).toString(16);return "\\u"+("0000"+n).slice(-4);})+'"';if(typeof v==="number")return isFinite(v)?String(v):"null";if(typeof v==="boolean")return String(v);var a=[],i;if(v instanceof Array){for(i=0;i<v.length;i++)a.push(encode(v[i]));return "["+a.join(",")+"]";}if(typeof v==="object"){for(i in v)if(v.hasOwnProperty(i))a.push(encode(i)+":"+encode(v[i]));return "{"+a.join(",")+"}";}return encode(String(v));}'''
 DOCS = r'''function docInfo(d){var p=null;try{p=d.fullName.fsName;}catch(e){}return {id:d.id,name:d.name,path:p,saved:d.saved,width:Number(d.width.as("px")),height:Number(d.height.as("px")),mode:String(d.mode)};}'''
@@ -48,7 +49,7 @@ def source(request):
             raise ValueError("document_id must be a positive integer")
         check = f'if(!app.documents.length||app.activeDocument.id!=={target})throw new Error("Selected document is no longer active; reselect with the user before continuing");'
         if op == "inspect_document":
-            body = f'var d=null;for(var j=0;j<app.documents.length;j++)if(app.documents[j].id==={target})d=app.documents[j];if(d===null)throw new Error("Selected document is closed");var count=0;function layers(ls){{var a=[];for(var i=0;i<ls.length&&count<2000;i++){{count++;var l=ls[i],o={{name:l.name,visible:l.visible,typename:l.typename}};if(l.typename==="LayerSet")o.layers=layers(l.layers);a.push(o);}}return a;}}var r=docInfo(d);r.layers=layers(d.layers);r.layer_limit=2000;r.layer_count_returned=count;r.truncated=count>=2000;return r;'
+            body = f'var d=null;for(var j=0;j<app.documents.length;j++)if(app.documents[j].id==={target})d=app.documents[j];if(d===null)throw new Error("Selected document is closed");var count=0;function layers(ls){{var a=[];for(var i=0;i<ls.length&&count<2000;i++){{count++;var l=ls[i],o=layerInfo(l);if(l.typename==="LayerSet")o.layers=layers(l.layers);a.push(o);}}return a;}}var r=docInfo(d);r.active_layer_id=d.activeLayer.id;r.layers=layers(d.layers);r.layer_limit=2000;r.layer_count_returned=count;r.truncated=count>=2000;return r;'
         elif op == "activate_document":
             body = f'var d=null;for(var j=0;j<app.documents.length;j++)if(app.documents[j].id==={target})d=app.documents[j];if(d===null)throw new Error("Selected document is closed");app.activeDocument=d;return docInfo(d);'
         elif op == "execute_script":
@@ -57,12 +58,12 @@ def source(request):
                 raise ValueError("code must contain 1–250000 characters")
             body = check + 'return eval(' + json.dumps(code, ensure_ascii=True) + ');'
         else:
-            raise ValueError("Unsupported operation")
+            body = check + build(op, request)
     deadline = request.get('expires_at', time.time() + 20)
     if not isinstance(deadline, (int, float)) or deadline <= time.time():
         raise ValueError('Request expired before Photoshop execution; not executed')
     body = 'if(new Date().getTime()>' + str(int(deadline * 1000)) + ')throw new Error("Request expired before Photoshop execution; not executed");' + body
-    return '(function(){' + SERIALIZER + DOCS + 'try{return encode({ok:true,data:(function(){' + body + '})()});}catch(e){return encode({ok:false,error:{code:"photoshop_script_error",message:String(e)}});}})();'
+    return '(function(){' + SERIALIZER + DOCS + LAYER_HELPERS + 'try{return encode({ok:true,data:(function(){' + body + '})()});}catch(e){return encode({ok:false,error:{code:"photoshop_script_error",message:String(e)}});}})();'
 
 
 def execute(request):

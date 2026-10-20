@@ -1,14 +1,24 @@
 """Photoshop tools through the existing Windows COM automation server."""
 import json
+import atexit
+import tempfile
 from pathlib import Path
 import subprocess
 import sys
 import time
 from typing import Literal
-from pydantic import StrictInt, StrictFloat
+from pydantic import StrictInt, StrictFloat, StrictBool
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from native import discover, installations, failure, select
+
+# A running server must survive package update/removal. Snapshot only owned Python
+# source at startup into an external temporary directory, never into the plugin.
+_worker_runtime = tempfile.TemporaryDirectory(prefix="bubble-photoshop-worker-")
+atexit.register(_worker_runtime.cleanup)
+for _name in ("native.py", "worker.py", "operations.py"):
+    (Path(_worker_runtime.name) / _name).write_bytes(Path(__file__).with_name(_name).read_bytes())
+_worker_path = str(Path(_worker_runtime.name) / "worker.py")
 
 mcp = FastMCP("Bubble Photoshop Control")
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -21,7 +31,7 @@ def call(operation, session_id=None, timeout=20, **kwargs):
     try:
         selected = select(discover(), session_id)
         request = {"operation":operation, "session_id":selected["session_id"], "expires_at":time.time()+timeout, **kwargs}
-        result = subprocess.run([sys.executable, "-B", str(Path(__file__).with_name("worker.py"))], input=json.dumps(request), capture_output=True, text=True, timeout=timeout, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        result = subprocess.run([sys.executable, "-B", _worker_path], input=json.dumps(request), capture_output=True, text=True, timeout=timeout, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         if result.returncode:
             return failure("worker_failed", "COM worker failed; operation may have partially executed. Do not retry automatically. " + result.stderr[-2000:])
         return json.loads(result.stdout)
@@ -109,6 +119,84 @@ def photoshop_open_file(path: str, session_id: str, timeout: float = 30) -> dict
 def photoshop_activate_document(document_id: StrictInt, session_id: str, timeout: float = 20) -> dict:
     """Activate the explicitly chosen existing document ID within the selected session and return its properties. Does not save/close documents. Use before JSX when its intended document is not active; never substitute another document."""
     return call("activate_document", session_id, timeout, document_id=document_id)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_save_document(document_id: StrictInt, session_id: str, path: str, overwrite: StrictBool = False, timeout: float = 30) -> dict:
+    """Save the active selected document as a layered PSD at an absolute path. Changes this document's associated save path. Parent directory must exist. Existing file overwrite requires explicit authorization and overwrite=True; default refuses. No automatic retry."""
+    return call("save_document",session_id,timeout,document_id=document_id,path=path,overwrite=overwrite)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_export_document(document_id: StrictInt, session_id: str, path: str, format: Literal["png","jpeg"] = "png", quality: StrictInt = 10, overwrite: StrictBool = False, timeout: float = 30) -> dict:
+    """Export an RGB 8-bit PNG or JPEG from a temporary duplicate; source document/layers are preserved. JPEG quality 0–12; only duplicate is flattened. Absolute matching extension, existing parent and explicit overwrite authorization required. Finally closes duplicate and restores source active document. No retry after errors/timeouts."""
+    return call("export_document",session_id,timeout,document_id=document_id,path=path,format=format,quality=quality,overwrite=overwrite)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_close_document(document_id: StrictInt, session_id: str, discard_changes: StrictBool = False, timeout: float = 20) -> dict:
+    """Close the selected active document. Refuse unsaved changes unless the user authorized discarding them and discard_changes=True. Does not save automatically or quit Photoshop."""
+    return call("close_document",session_id,timeout,document_id=document_id,discard_changes=discard_changes)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_resize_image(document_id: StrictInt, session_id: str, width: StrictInt, height: StrictInt, resolution: StrictFloat | None = None, timeout: float = 30) -> dict:
+    """Resample selected active image with bicubic interpolation to explicit pixel dimensions (1–30000; max 100 million pixels). Optional resolution 1–1200 ppi; omitted preserves it. Does not save."""
+    return call("resize_image",session_id,timeout,document_id=document_id,width=width,height=height,resolution=resolution)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_resize_canvas(document_id: StrictInt, session_id: str, width: StrictInt, height: StrictInt, anchor: Literal["center","top_left","top","top_right","left","right","bottom_left","bottom","bottom_right"] = "center", timeout: float = 30) -> dict:
+    """Change active selected canvas pixel dimensions without resampling. Shrinking crops content; explain before use. Width/height 1–30000, max 100 million pixels. Explicit anchor controls placement. Does not save."""
+    return call("resize_canvas",session_id,timeout,document_id=document_id,width=width,height=height,anchor=anchor)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_crop_document(document_id: StrictInt, session_id: str, left: StrictFloat, top: StrictFloat, right: StrictFloat, bottom: StrictFloat, timeout: float = 30) -> dict:
+    """Crop selected active document to finite pixel bounds within the current canvas. Right>left, bottom>top; changes may remove content. Does not save."""
+    return call("crop_document",session_id,timeout,document_id=document_id,left=left,top=top,right=right,bottom=bottom)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_rotate_document(document_id: StrictInt, session_id: str, angle: StrictFloat, timeout: float = 30) -> dict:
+    """Rotate selected active canvas by finite angle -360..360 degrees, using Photoshop's rotateCanvas. May change dimensions/resample content. Does not save."""
+    return call("rotate_document",session_id,timeout,document_id=document_id,angle=angle)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_create_layer(document_id: StrictInt, session_id: str, kind: Literal["pixel","group","text"] = "pixel", name: str = "Layer", text: str = "Text", font_size: StrictFloat = 48, timeout: float = 20) -> dict:
+    """Create a pixel layer, group or text layer in selected active document. Text size is points (1–1296); returns stable layer_id. No implicit document selection or save."""
+    return call("create_layer",session_id,timeout,document_id=document_id,kind=kind,name=name,text=text,font_size=font_size)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_update_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, name: str | None = None, visible: StrictBool | None = None, opacity: StrictFloat | None = None, text: str | None = None, font_size: StrictFloat | None = None, timeout: float = 20) -> dict:
+    """Update an explicit stable layer ID belonging to active selected document. At least one property required: name, visible, opacity 0–100, text contents or font_size 1–1296 points (text layers only). Does not save."""
+    return call("update_layer",session_id,timeout,document_id=document_id,layer_id=layer_id,name=name,visible=visible,opacity=opacity,text=text,font_size=font_size)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_duplicate_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, name: str | None = None, timeout: float = 20) -> dict:
+    """Duplicate the explicit layer within the selected active document; optional new name. Returns a new stable layer_id. Does not save."""
+    return call("duplicate_layer",session_id,timeout,document_id=document_id,layer_id=layer_id,name=name)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_delete_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, timeout: float = 20) -> dict:
+    """Delete the explicitly authorized layer ID from the selected active document. Destructive; never infer layer identity from index or current selection. Does not save."""
+    return call("delete_layer",session_id,timeout,document_id=document_id,layer_id=layer_id)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_translate_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, x: StrictFloat, y: StrictFloat, timeout: float = 20) -> dict:
+    """Translate explicit layer by x/y pixel offsets (-30000..30000) inside the active selected document. Does not resize or save; locked/background layers may reject changes."""
+    return call("translate_layer",session_id,timeout,document_id=document_id,layer_id=layer_id,x=x,y=y)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_select_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, timeout: float = 20) -> dict:
+    """Select the explicit stable layer ID belonging to the active selected document. Does not change document selection, content, or save."""
+    return call("select_layer",session_id,timeout,document_id=document_id,layer_id=layer_id)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Bubble Photoshop 0.2.1
+# Bubble Photoshop 0.3.0
 
 Windows Photoshop control through its native COM automation. Install this plugin in Codex, open Photoshop normally, and list sessions. **No Creative Cloud Desktop, UPIA, UXP Developer Tool, CCX, panel, pairing code, or Photoshop-side files are required.** The plugin never changes Adobe licensing, security, COM registration, startup or user documents during setup.
 
@@ -23,6 +23,14 @@ Windows Photoshop control through its native COM automation. Install this plugin
 | photoshop_create_document | Create and activate a new unsaved RGB/grayscale document, including from an empty session |
 | photoshop_open_file | Open and activate an absolute existing PSD/PSB or supported raster image; scripts rejected |
 | photoshop_activate_document | Activate an explicit existing document ID |
+| photoshop_save_document | Save active selected document as layered PSD; overwrite defaults false |
+| photoshop_export_document | Export PNG/JPEG from a temporary duplicate, preserving the source |
+| photoshop_close_document | Close selected document; refuse dirty documents unless discard is authorized |
+| photoshop_resize_image / resize_canvas | Resize pixels or canvas with explicit pixel units |
+| photoshop_crop_document / rotate_document | Crop pixel bounds or rotate the selected document |
+| photoshop_create_layer / update_layer | Create pixel/group/text layers; edit properties and text size in points |
+| photoshop_duplicate_layer / delete_layer | Duplicate or delete by stable layer ID |
+| photoshop_translate_layer / select_layer | Move by pixel offsets or select an explicit layer |
 | photoshop_execute_script | Execute user-authorized JSX with explicit session and active document ID |
 
 Scripts can affect Photoshop and files beyond the selected document. The ID guard is not a sandbox. Use create_document or open_file when the session is empty; use activate_document to select the intended existing document before JSX. Script execution itself retains its active-document guard. These native tools are preferred to UI automation. Each operation runs in a bounded worker. A timeout stops the worker but may not cancel the Photoshop operation: never automatically retry.
@@ -41,3 +49,11 @@ Install/update the Codex plugin from the Bubble marketplace. No additional Photo
 - [Microsoft GetActiveObject](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-runtime-interopservices-marshal-getactiveobject)
 
 Software icon provenance: `assets/`.
+
+## Standard editing safeguards
+
+All edits require the explicit session and active document ID. Inspect returns stable `layer_id` and `active_layer_id`, including background ID zero where Photoshop exposes it; never use layer indices as identity. Layer IDs must resolve inside that document. Layer locking/native restrictions remain enforced by Photoshop.
+
+Save changes the current document path to a layered PSD. Export converts only a temporary duplicate to RGB 8-bit; JPEG flattens only that duplicate, which is closed in finally while the original is restored active. Absolute output paths need an existing parent directory and matching extension. Existing output is refused unless `overwrite=True` is explicitly authorized, with checks in Python and immediately before native save. These checks do not promise atomic exclusion against another program concurrently writing the same path.
+
+A running MCP server snapshots its worker source into an owned external temporary directory at startup. Updating/removing the package does not break that server's workers. The snapshot is cleaned up when the server exits; no source/worker files are installed into Photoshop.

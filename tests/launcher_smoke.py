@@ -81,6 +81,15 @@ async def check_plugin(source, workspace, uv):
                     assert not package.exists()
                     assert (await first.list_tools()).tools == first_tools.tools
                     assert (await second.list_tools()).tools == second_tools.tools
+                    # Opt-in native check: listing cached tool definitions alone
+                    # cannot detect subprocesses reopening removed source files.
+                    if source.name == "photoshop-control" and os.environ.get("BUBBLE_PS_NATIVE") == "1":
+                        for client in (first, second):
+                            response = await client.call_tool("photoshop_scene_info", {})
+                            assert not response.isError, response
+                            payload = json.loads(response.content[0].text)
+                            assert payload.get("ok"), payload
+                        print("PASS Photoshop: both deleted-package runtimes call real COM workers")
     print(f"PASS {source.name}: separate release runtimes; deleted live package; both still respond")
 
 
