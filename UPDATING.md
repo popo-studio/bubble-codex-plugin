@@ -31,11 +31,15 @@ Codex 插件与软件端桥接是分开安装的。即使会话已经连接，�
 
 `installed_version` 表示磁盘安装记录，不保证当前进程已经加载该版本。重启/刷新后重新发现实例，并核对场景或项目；不得在断开后自动切换其他窗口或重放脚本。
 
-## PR / PS 的 Adobe UXP 生命周期
+## Photoshop 原生直连生命周期
 
-PR / PS 的桥接由 Adobe 管理。更新 Codex 包后，还需通过 setup 工具预览并授权调用 UPIA 安装随包新版 `.ccx`。仓库构建的是 ZIP 格式候选包，尚未取得本机 Adobe 安装验收；可选传入 UDT 生成的匹配包。工具核对包的 ID、版本及内容；只有 Adobe 返回可辨认的安装证据才报告已安装，源文件或打包文件存在不是证据。没有 UPIA 时提示安装 Creative Cloud Desktop / 官方部署工具，不修改 Adobe 私有目录。
+Photoshop 0.2.0 起使用 Windows 原生 COM，更新或卸载 Codex 插件即可；不会往 Photoshop 写入面板、用户脚本或注册表，不需要 Creative Cloud / UPIA。正在执行的脚本可能在请求超时后继续完成，应检查结果而非自动重放。0.1.0 的旧 UXP 面板若用户曾自行安装，属于独立 Adobe 安装，需单独通过其原有官方途径移除；新插件不删除 Adobe 私有目录。
 
-卸载使用官方 UPIA 或 Creative Cloud Desktop 的 Manage Plugins，精确选择 Bubble Premiere / Bubble Photoshop。若命令输出无法可靠识别，工具保留未知状态并引导官方界面确认，不猜测删除目录。关闭面板后当前连接结束；Codex MCP 退出后本地通信服务结束。重启/更新后用新连接码配对，原请求不会转交新会话或自动重放。
+## PR 的 Adobe UXP 生命周期
+
+PR 的桥接由 Adobe 管理。更新 Codex 包后，还需通过 setup 工具预览并授权调用 UPIA 安装随包新版 `.ccx`。仓库构建的是 ZIP 格式候选包，尚未取得本机 Adobe 安装验收；可选传入 UDT 生成的匹配包。工具核对包的 ID、版本及内容；只有 Adobe 返回可辨认的安装证据才报告已安装，源文件或打包文件存在不是证据。没有 UPIA 时提示安装 Creative Cloud Desktop / 官方部署工具，不修改 Adobe 私有目录。
+
+卸载使用官方 UPIA 或 Creative Cloud Desktop 的 Manage Plugins，精确选择 Bubble Premiere。若命令输出无法可靠识别，工具保留未知状态并引导官方界面确认，不猜测删除目录。关闭面板后当前连接结束；Codex MCP 退出后本地通信服务结束。重启/更新后用新连接码配对，原请求不会转交新会话或自动重放。
 
 ## 卸载范围
 

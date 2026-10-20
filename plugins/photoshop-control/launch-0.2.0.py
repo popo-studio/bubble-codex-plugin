@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["mcp>=1.28,<2"]
+# dependencies = ["mcp>=1.28,<2", "pywin32>=311; sys_platform == 'win32'"]
 # ///
 """Run with uv's locked script environment outside the installed plugin folder.
 

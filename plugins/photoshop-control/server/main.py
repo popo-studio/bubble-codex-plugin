@@ -1,71 +1,95 @@
-"""Photoshop UXP tools; no ExtendScript, arbitrary eval or automatic host install."""
-import atexit
-import threading
+"""Photoshop tools through the existing Windows COM automation server."""
+import json
+from pathlib import Path
+import subprocess
+import sys
+import time
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from broker import Broker, failure
-from installation import installation_status, install_bridge, uninstall_bridge
+from native import discover, installations, failure, select
 
 mcp = FastMCP("Bubble Photoshop Control")
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True)
-_broker = None
-_lock = threading.Lock()
 
-def broker():
-    global _broker
-    with _lock:
-        if _broker is None:
-            _broker = Broker("photoshop")
-            atexit.register(_broker.close)
-        return _broker
 
-def call(operation, args, session_id, timeout):
-    if _broker is None:
-        return failure("not_paired", "Generate a pairing code and connect the Photoshop UXP panel first")
-    return _broker.request(operation, args, session_id, timeout)
+def call(operation, session_id=None, timeout=20, **kwargs):
+    if not 0 < timeout <= 120:
+        return failure("invalid_timeout", "timeout must be in (0, 120]")
+    try:
+        selected = select(discover(), session_id)
+        request = {"operation":operation, "session_id":selected["session_id"], "expires_at":time.time()+timeout, **kwargs}
+        result = subprocess.run([sys.executable, "-B", str(Path(__file__).with_name("worker.py"))], input=json.dumps(request), capture_output=True, text=True, timeout=timeout, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        if result.returncode:
+            return failure("worker_failed", "COM worker failed; operation may have partially executed. Do not retry automatically. " + result.stderr[-2000:])
+        return json.loads(result.stdout)
+    except subprocess.TimeoutExpired:
+        return failure("timeout_outcome_unknown", "Worker timed out and was stopped. Photoshop may still be executing or may have completed the request. Inspect state before any retry; never retry automatically.")
+    except Exception as exc:
+        return failure("connection_error", str(exc))
+
 
 @mcp.tool(annotations=READ)
-def photoshop_installation_status(package_path: str | None = None) -> dict:
-    """Inspect Photoshop/Adobe installer and optional absolute .ccx package_path. Does not install or launch applications."""
-    return installation_status(package_path)
+def photoshop_installation_status() -> dict:
+    """Read version-specific native COM registrations. Windows only. Does not install, launch, or change Photoshop. No Creative Cloud, UPIA, developer tools or PS-side bridge needed."""
+    return {"ok":True,"data":{"platform":sys.platform,"installations":installations(),"transport":"Windows native COM","software_bridge_required":False,"software_files_installed":[],"note":"Install the Codex plugin and open Photoshop normally. Existing native COM registration is required; no registration or software installation is performed."}}
 
-@mcp.tool(annotations=WRITE)
-def photoshop_install_bridge(confirmed: bool = False, package_path: str | None = None) -> dict:
-    """Preview official UXP installation with the included candidate CCX, or optional absolute package_path for a release-matching CCX. Packaging is not native Adobe validation; confirmed=True only after user authorizes displayed package/Adobe installation changes. Adobe may show confirmation. Never auto-restart Photoshop or silently enable developer mode. This is separate from Codex plugin installation."""
-    return install_bridge(confirmed=confirmed, package_path=package_path)
 
-@mcp.tool(annotations=WRITE)
+@mcp.tool(annotations=READ)
+def photoshop_install_bridge(confirmed: bool = False) -> dict:
+    """Compatibility/status tool: native COM requires no Photoshop-side bridge installation. Never creates an installation receipt or modifies Photoshop files."""
+    return photoshop_installation_status()
+
+
+@mcp.tool(annotations=READ)
 def photoshop_uninstall_bridge(confirmed: bool = False) -> dict:
-    """Preview removal through Adobe's official installer. True only with user authorization. Does not close Photoshop/documents. Close/disconnect panel to end a live connection. Codex plugin removal alone does not uninstall the Adobe panel."""
-    return uninstall_bridge(confirmed=confirmed)
+    """Native COM mode installs no Photoshop files. Remove the Codex plugin to remove its tools; native Photoshop registration belongs to Adobe and is never deleted. Legacy UXP panels, if manually installed, are not removed by this tool."""
+    return {"ok":True,"data":{"removed_files":[],"software_bridge_required":False,"note":"No Photoshop-side files were installed by native COM mode. Uninstall Bubble Photoshop in Codex. Any separately installed legacy UXP panel requires its own original uninstall route."}}
 
-@mcp.tool(annotations=READ)
-def photoshop_pairing() -> dict:
-    """Get a private connection code for this Codex process. User opens Bubble Photoshop panel and pastes code, then Connect. This is a credential, not executable code; never place it in logs or external messages. Keep panel open; reconnect after MCP restarts. No host changes."""
-    return broker().pairing()
 
 @mcp.tool(annotations=READ)
 def photoshop_list_sessions(document: str | None = None) -> dict:
-    """List paired Photoshop panels and open document names/paths/IDs. Optional exact filename/stem/full path match; ambiguous matches require user choice. Session UUID is panel identity, not OS PID. Only paired panels are visible; never guess another instance. Retain selected session_id and document_id and recheck before writing."""
-    if _broker is None:
-        return {"ok":True, "data":[], "selection":{"status":"unspecified", "selected":None, "matches":[]}, "note":"No panel paired with this Codex process"}
-    return _broker.sessions(document)
+    """List running Photoshop processes without launching any. Probe documents only through existing exact-version COM objects. Use session_id for all later operations. Multiple processes using the same executable are unrouteable and must be resolved by the user. document optionally matches exact path/name/stem; ambiguous or unavailable sessions prevent silent selection."""
+    try:
+        rows = discover()
+        for row in rows:
+            if row["status"] == "available":
+                info = call("scene_info", row["session_id"])
+                if info.get("ok"):
+                    row.update(info["data"])
+                else:
+                    row["status"] = "unavailable"
+                    row["error"] = info.get("error")
+        matches = []
+        for row in rows:
+            if row["status"] != "available":
+                continue
+            if document is None or any(document.casefold() in {str(d.get("name", "")).casefold(),str(d.get("path", "")).casefold(),Path(d.get("name", "")).stem.casefold()} for d in row.get("documents", [])):
+                matches.append(row["session_id"])
+        blocked = any(row["status"] != "available" for row in rows)
+        status = "incomplete" if blocked else "unique" if len(matches)==1 else "ambiguous" if matches else "none"
+        return {"ok":True,"data":rows,"selection":{"status":status,"selected":matches[0] if status=="unique" else None,"matches":matches}}
+    except Exception as exc:
+        return failure("discovery_failed", str(exc))
+
 
 @mcp.tool(annotations=READ)
 def photoshop_scene_info(session_id: str | None = None) -> dict:
-    """Read paired Photoshop version, all open documents and active document. Omit session only if exactly one exists."""
-    return call("scene_info", {}, session_id, 10)
+    """Read existing Photoshop version, open document IDs/names/paths and active document. Never launches Photoshop. Omit session only if exactly one running process is safely addressable."""
+    return call("scene_info", session_id)
+
 
 @mcp.tool(annotations=READ)
 def photoshop_inspect_document(document_id: int, session_id: str | None = None) -> dict:
-    """Read document properties and bounded layer inventory (up to 2000 layers). Does NOT verify missing fonts, linked smart objects or other dependencies. Explicit document ID prevents active-document guessing."""
-    return call("inspect_scene", {"document_id":document_id}, session_id, 15)
+    """Read explicit document properties and up to 2000 layers without changing selection. Does not audit fonts, linked objects or all file dependencies."""
+    return call("inspect_document", session_id, document_id=document_id)
+
 
 @mcp.tool(annotations=WRITE)
-def photoshop_batch_play(commands: list[dict], document_id: int, session_id: str | None = None, timeout: float = 30) -> dict:
-    """Run 1–100 user-authorized Photoshop batchPlay descriptors in executeAsModal. Selected document must still be active at execution. Descriptors are powerful and may affect other documents/application state; the ID check is not a sandbox. Explain target and destructive/save/export changes before execution. No arbitrary JS/eval/ExtendScript. File access remains subject to UXP permissions/tokens; raw paths are not guaranteed accepted. Never retry automatically after failure/timeout: partial changes may exist. timeout in (0,120]."""
-    return call("batch_play", {"commands":commands,"document_id":document_id}, session_id, timeout)
+def photoshop_execute_script(code: str, document_id: int, session_id: str, timeout: float = 30) -> dict:
+    """Execute user-authorized ExtendScript/JSX via native DoJavaScript. Requires explicit session and currently active document ID. This check is not a sandbox: code can change any document, save/export/delete files or application state. Explain intended target and writes first. Never auto-retry after any failure/timeout, since effects may already exist. No UXP/batchPlay. timeout in (0,120]."""
+    return call("execute_script", session_id, timeout, document_id=document_id, code=code)
+
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

@@ -44,6 +44,8 @@ class DiagnosticsTests(unittest.TestCase):
                 self.assertTrue(result["ok"])
                 self.assertFalse(result["data"]["executed"])
                 self.assertIn(app + "_list_sessions", " ".join(result["data"]["steps"]))
+                if app == "photoshop":
+                    self.assertIn("no Creative Cloud", " ".join(result["data"]["steps"]))
             self.assertFalse(d.sessions(app)["ok"])
 
     def test_current_package(self):
@@ -70,7 +72,7 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertIn("manifest_version_mismatch", issues)
 
     def test_cache_is_not_installation_state(self):
-        dest = self.root / "plugins/cache/test-market/plugin-doctor/0.1.1"
+        dest = self.root / "plugins/cache/test-market/plugin-doctor/0.1.2"
         shutil.copytree(ROOT, dest, ignore=shutil.ignore_patterns(".venv", "__pycache__", ".test-runtime"))
         report = d.inventory(str(self.root), str(ROOT.parents[1]))
         self.assertTrue(report["ok"], report)

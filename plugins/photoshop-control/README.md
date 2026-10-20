@@ -1,36 +1,40 @@
-# Bubble Photoshop
+# Bubble Photoshop 0.2.0
 
-Photoshop **26.2+** (2025) UXP integration. The detected Photoshop 2021 / 22.0 installation is intentionally outside this package's scope. Version 0.1.0.
+Windows Photoshop control through its native COM automation. Install this plugin in Codex, open Photoshop normally, and list sessions. **No Creative Cloud Desktop, UPIA, UXP Developer Tool, CCX, panel, pairing code, or Photoshop-side files are required.** The plugin never changes Adobe licensing, security, COM registration, startup or user documents during setup.
 
-## Architecture and operation
+## Requirements and boundaries
 
-Codex runs a stdio MCP server in uv's locked external script environment. A Photoshop UXP panel connects by authenticated HTTP to a random loopback port owned by that MCP process. User enters a private connection code in the panel; no Script Editor code, Node-in-host, CEP debug registry changes or arbitrary JavaScript eval are used.
+- Windows; an existing supported Photoshop installation with its native, version-specific COM registration. Native target tested: Photoshop 2025 / 26.2.0. Other versions are not implied tested.
+- Codex and `uv` use a locked external Python environment with `mcp` and Windows-only `pywin32`. No virtual environment is created in the deployed package.
+- Open Photoshop yourself. Discovery and requests never launch it. Only an existing COM object is used.
+- Different registered installations can be listed and explicitly selected. Two processes from the **same executable cannot be independently routed through COM** and are refused. Close extra instances yourself before connecting.
+- Native JSX is different from UXP batchPlay. There is no batchPlay API in this package.
 
-The panel must stay open. Credentials are in memory, not persistent storage. Restarting MCP requires a new pairing code. Each paired panel has a random session UUID; it is not an OS PID. Only paired panels are visible. Document names, full paths and IDs allow explicit selection across panels; duplicate/unsaved/ambiguous targets are not guessed.
+## Tools
 
-Tools inspect document properties and bounded layer lists, and run authorized batchPlay descriptors inside executeAsModal. The selected document must remain active at execution. Descriptors can still affect other documents/application state: target checks are not a permissions sandbox. No automatic mutation retry; a timeout may follow partial changes.
+| Tool | Behavior |
+| --- | --- |
+| photoshop_installation_status | Read registered installations and zero-install requirements |
+| photoshop_install_bridge | Compatibility status alias; writes no software files |
+| photoshop_uninstall_bridge | Reports no native bridge files to remove |
+| photoshop_list_sessions | List exact process identities, versions and documents |
+| photoshop_scene_info | Read document IDs and active document |
+| photoshop_inspect_document | Read a selected document and up to 2000 layers |
+| photoshop_execute_script | Execute user-authorized JSX with explicit session and active document ID |
 
-## Install / update / uninstall
+Scripts can affect Photoshop and files beyond the selected document. The ID guard is not a sandbox. First release requires an existing active document for script execution; it does not create a first blank document automatically. Each operation runs in a bounded worker. A timeout stops the worker but may not cancel the Photoshop operation: never automatically retry.
 
-The setup skill first shows installation_status and install_bridge(confirmed=false). A reproducible candidate CCX is included under adobe/ so users do not need to package source first. It follows Adobe's documented ZIP-based CCX structure, but has not been validated by UDT or a native Adobe installation in this environment. The installer checks all package contents against this release, then delegates to official Adobe tools with consent. An optional absolute package_path accepts a matching UDT-built package. Having a CCX is not proof of Adobe installation; real panel loading and pairing must be checked. Adobe UI/UXP Developer Tool steps may be required. This repository does not silently enable developer mode, change security preferences or overwrite Adobe's private plugin storage.
+## Install, update and uninstall
 
-Open the installed Bubble Photoshop panel through Photoshop's Plugins menu, obtain photoshop_pairing in Codex, paste its private code and Connect. Keep it private. Reopening a panel creates a new session identity.
+Install/update the Codex plugin from the Bubble marketplace. No additional Photoshop bridge install or restart is normally necessary. Remove the Codex plugin to remove the integration; Adobe's built-in COM support belongs to Photoshop and is left intact. Native mode does not remove legacy UXP panels installed separately. No invented enable-file or installation receipt is used.
 
-Update through the same preview/confirmed workflow; close/reopen the panel when Adobe requires. Uninstall previews before official Adobe removal without deleting source packages or Adobe private files. Removing the Codex plugin does not remove the Adobe panel; disconnect and uninstall the bridge first if both should be removed. No host is restarted or killed automatically.
+## Validation
 
-## Limits
-
-- Layer inventory is not a missing-font or linked-smart-object dependency audit.
-- No unrestricted file access permission: file-based descriptors require appropriate UXP file tokens/permissions and are not guaranteed to work with raw paths.
-- No arbitrary JS/ExtendScript execution; use documented batchPlay descriptors.
-- Automated tests use mocked Photoshop APIs and real MCP/HTTP plumbing. They do not prove native Adobe panel installation or graphical host behavior.
+`tests/test_native.py` checks routing and failure handling. `tests/stdio_smoke.py` performs **real MCP stdio to the running Photoshop COM object**, reads documents/layers and reports actual version. It needs a running Photoshop and has no simulated host. Actual Codex installation/removal is covered by the repository acceptance harness; see root `VALIDATION.md` for observed results and limits.
 
 ## References
 
-- [Adobe UXP install](https://developer.adobe.com/uxp/guides/how-to/distribution/install/)
-- [Photoshop executeAsModal](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/executeasmodal/)
-- [Photoshop batchPlay](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/batchplay/)
-- [Photoshop Document API](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/classes/document)
-- [Manifest v5 permissions](https://developer.adobe.com/photoshop/uxp/2022/guides/uxp-guide/uxp-misc/manifest-v5/)
+- [Adobe Photoshop scripting](https://helpx.adobe.com/photoshop/using/scripting.html)
+- [Microsoft GetActiveObject](https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-runtime-interopservices-marshal-getactiveobject)
 
-Icon: extracted from the locally installed Adobe Photoshop executable; Adobe trademark, used for application identification. See assets/SOURCE.md.
+Software icon provenance: `assets/`.

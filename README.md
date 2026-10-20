@@ -11,7 +11,7 @@
 | [Bubble Unreal](plugins/unreal-control/README.md) | Unreal Engine 5.5 | Editor Python | 用户指定的 Unreal 项目 |
 | [Bubble Unity](plugins/unity-control/README.md) | Unity 6 / 6000.x | 已编译 C# 静态方法 / 菜单命令 | 用户指定的 Unity 项目 |
 | [Bubble Premiere](plugins/premiere-control/README.md) | Premiere Pro 25.6+，UXP | 项目、序列、素材检查与支持的项目操作 | Adobe 官方 UXP 插件安装 |
-| [Bubble Photoshop](plugins/photoshop-control/README.md) | Photoshop 26.2+，UXP | 文档、图层检查与支持的图层操作 | Adobe 官方 UXP 插件安装 |
+| [Bubble Photoshop](plugins/photoshop-control/README.md) | Windows Photoshop 26.2+，原生 COM | 文档、图层检查与 ExtendScript | 仅安装 Codex 插件，无 PS 端桥接 |
 | [Bubble Deadline](plugins/deadline-control/README.md) | 现有 Deadline 10 客户端 | 任务查询、日志检查、预览后提交/重提 | 无软件侧桥接 |
 | [Bubble Sequence Check](plugins/sequence-check/README.md) | 本地图片序列 / EXR | 缺帧、损坏、通道、尺寸与像素异常检查 | 无软件侧桥接 |
 | [Bubble Asset Package](plugins/asset-package/README.md) | 明确的依赖路径清单 | 预览、复制到新目录、SHA256 校验 | 无软件侧桥接 |
@@ -44,13 +44,15 @@
 
 四个新插件的逐项验收见 [流程插件验收](WORKFLOW_ACCEPTANCE.md)。
 
-## PR / PS 新版连接
+## Photoshop 无额外组件连接
 
-PR / PS 使用官方 UXP 插件面板，首版不兼容本机旧 PR 2021 与 PS 2021。检测到的 PS 2025 为 26.2；PR 验收需另备 25.6 或更高版本。
+Windows Photoshop 26.2+ 使用 Adobe 自带 COM 自动化，无需 Creative Cloud、UPIA、UXP 面板、开发者工具或开发者模式。安装 Codex 插件后，打开目标 Photoshop 即可检测其版本、进程和文档。软件侧没有额外安装文件或监听服务，卸载 Codex 插件即移除该接入代码。
 
-Adobe 安装和 Codex 安装分开：随包提供从 `uxp/` 源码可复现构建的 `.ccx` 候选包，由对应 setup 工具预览、校验内容并调用 Adobe 官方 UPIA 安装。该包不是 UDT 产物，本机尚未验证 Adobe 安装器接受；也支持传入与当前源码匹配的 UDT 打包文件。缺少工具或无法确认 Adobe 安装状态时明确报告，不向 Adobe 私有目录复制文件，不自行打开开发者模式。本机尚无 UPIA，真实 Adobe 安装与 GUI 操作须在验收环境完成。
+插件绑定已注册的具体版本并核对真实安装路径，不使用可能指向旧版本的通用 ProgID。仅连接已运行的实例，不自动启动软件；同一路径出现多个 Photoshop 进程时拒绝操作，因为 COM 无法保证按 PID 选择。多个文档按明确 ID 操作，写入前重新核对目标；超时不重试。
 
-打开软件内 Bubble 面板，使用当前 Codex 插件生成的连接码配对，无需复制脚本。连接只属于当前 MCP 进程；重启/更新服务后重新配对。面板应保持打开。会话使用独立 session ID，操作还需选择文档/项目；不把面板进程当作软件 PID。多窗口或同名文件必须明确选择，断线不自动改投另一窗口，写操作超时不自动重试。
+## Premiere UXP（待验收）
+
+Premiere 仍使用 UXP 面板方案，目标 25.6+；本机 PR 2021 不支持，当前按用户要求暂停其原生验收。随包提供 ZIP 格式可复现构建的 `.ccx` 候选包，尚未通过 Adobe 原生安装验收。原有 Creative Cloud / UPIA 安装及面板连接要求仍适用于 PR，不适用于新的 Photoshop 直连方案。
 
 ## 六个 DCC 首次连接
 

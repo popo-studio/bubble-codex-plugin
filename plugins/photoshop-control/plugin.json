@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "photoshop-control",
-  "version": "0.1.0",
-  "description": "Connect Photoshop 26.2+ through an explicitly paired UXP panel; inspect documents and run authorized batchPlay actions.",
+  "version": "0.2.0",
+  "description": "Control an existing Windows Photoshop session through native COM; no Creative Cloud, panel or developer tools required.",
   "author": {
     "name": "popo-studio"
   },
@@ -19,7 +19,7 @@
       "interface": {
         "displayName": "Bubble Photoshop",
         "shortDescription": "Photoshop 文档检查与操作",
-        "longDescription": "Install the UXP panel through Adobe tools with consent, connect a selected Photoshop session, inspect documents/layers, and execute authorized batchPlay actions.",
+        "longDescription": "Discover existing Windows Photoshop sessions, inspect documents and layers, and execute authorized JSX through native COM. No Photoshop-side installation is required. Same-installation multi-process routing is explicitly refused.",
         "developerName": "popo-studio",
         "category": "Productivity",
         "capabilities": [

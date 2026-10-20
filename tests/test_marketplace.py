@@ -35,7 +35,7 @@ class MarketplaceTests(unittest.TestCase):
                 self.assertTrue((folder / f"launch-{version}.py.lock").is_file())
 
     def test_adobe_candidate_packages_match_uxp_source(self):
-        for app in ("premiere", "photoshop"):
+        for app in ("premiere",):
             folder = ROOT / "plugins" / (app + "-control")
             source = folder / "uxp"
             manifest = read_json(source / "manifest.json")
