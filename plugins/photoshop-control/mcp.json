@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "photoshop": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--no-project",
+        "--no-config",
+        "--directory",
+        "/",
+        "--locked",
+        "--script",
+        "${PLUGIN_ROOT}/launch-0.1.0.py"
+      ]
+    }
+  }
+}

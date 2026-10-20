@@ -1,6 +1,6 @@
 # Bubble Codex Plugins
 
-一个 Git 仓库维护自己的 Codex 插件市场。十个插件可独立安装：六个连接本机创作软件，另四个提供渲染管理、序列检查、素材打包和插件诊断。
+一个 Git 仓库维护自己的 Codex 插件市场。十二个插件可独立安装：八个连接本机创作软件，另四个提供渲染管理、序列检查、素材打包和插件诊断。
 
 | 插件 | 目标版本 | 执行能力 | 安装范围 |
 | --- | --- | --- | --- |
@@ -10,10 +10,12 @@
 | [Bubble 3ds Max](plugins/max-control/README.md) | Windows 3ds Max 2025/2026 | Python / MAXScript | 明确选择用户启动脚本目录 |
 | [Bubble Unreal](plugins/unreal-control/README.md) | Unreal Engine 5.5 | Editor Python | 用户指定的 Unreal 项目 |
 | [Bubble Unity](plugins/unity-control/README.md) | Unity 6 / 6000.x | 已编译 C# 静态方法 / 菜单命令 | 用户指定的 Unity 项目 |
+| [Bubble Premiere](plugins/premiere-control/README.md) | Premiere Pro 25.6+，UXP | 项目、序列、素材检查与支持的项目操作 | Adobe 官方 UXP 插件安装 |
+| [Bubble Photoshop](plugins/photoshop-control/README.md) | Photoshop 26.2+，UXP | 文档、图层检查与支持的图层操作 | Adobe 官方 UXP 插件安装 |
 | [Bubble Deadline](plugins/deadline-control/README.md) | 现有 Deadline 10 客户端 | 任务查询、日志检查、预览后提交/重提 | 无软件侧桥接 |
 | [Bubble Sequence Check](plugins/sequence-check/README.md) | 本地图片序列 / EXR | 缺帧、损坏、通道、尺寸与像素异常检查 | 无软件侧桥接 |
 | [Bubble Asset Package](plugins/asset-package/README.md) | 明确的依赖路径清单 | 预览、复制到新目录、SHA256 校验 | 无软件侧桥接 |
-| [Bubble Plugin Doctor](plugins/plugin-doctor/README.md) | Bubble 插件及六个 DCC 桥接 | 包/文件/实例诊断与维护流程入口 | 无软件侧桥接 |
+| [Bubble Plugin Doctor](plugins/plugin-doctor/README.md) | Bubble 插件及各自支持的桥接诊断 | 包/文件/实例诊断与维护流程入口 | 无软件侧桥接 |
 
 检查范围各有区别：DCC 插件检查场景与文件引用；Unreal 检查 Asset Registry 的直接依赖；Unity 检查已加载场景中的缺失脚本与序列化引用。结果会标明跳过项、截断和覆盖限制。
 
@@ -42,14 +44,22 @@
 
 四个新插件的逐项验收见 [流程插件验收](WORKFLOW_ACCEPTANCE.md)。
 
-## DCC 首次连接
+## PR / PS 新版连接
+
+PR / PS 使用官方 UXP 插件面板，首版不兼容本机旧 PR 2021 与 PS 2021。检测到的 PS 2025 为 26.2；PR 验收需另备 25.6 或更高版本。
+
+Adobe 安装和 Codex 安装分开：随包提供从 `uxp/` 源码可复现构建的 `.ccx` 候选包，由对应 setup 工具预览、校验内容并调用 Adobe 官方 UPIA 安装。该包不是 UDT 产物，本机尚未验证 Adobe 安装器接受；也支持传入与当前源码匹配的 UDT 打包文件。缺少工具或无法确认 Adobe 安装状态时明确报告，不向 Adobe 私有目录复制文件，不自行打开开发者模式。本机尚无 UPIA，真实 Adobe 安装与 GUI 操作须在验收环境完成。
+
+打开软件内 Bubble 面板，使用当前 Codex 插件生成的连接码配对，无需复制脚本。连接只属于当前 MCP 进程；重启/更新服务后重新配对。面板应保持打开。会话使用独立 session ID，操作还需选择文档/项目；不把面板进程当作软件 PID。多窗口或同名文件必须明确选择，断线不自动改投另一窗口，写操作超时不自动重试。
+
+## 六个 DCC 首次连接
 
 1. 展示具体软件版本、用户配置或项目路径和将修改的文件。
 2. 获得用户同意后安装稳定的桥接文件，默认不会直接安装。
 3. 提醒保存工作并重启对应软件。用户选择不重启时，提供该软件适用的加载代码或刷新步骤。
 4. 读取当前场景/项目，确认连接。发现多个实例时，列出文件名和项目供用户编号选择，也可直接提供文件名。重名时补充完整路径。
 
-每个实例使用独立随机本机端口、令牌和 PID。关闭或超时后不自动切到另一个窗口，也不自动重复执行写操作。列表只包含已加载桥接的实例；不可达记录会明确显示，不假定窗口已经关闭。
+上述六个 DCC 的每个实例使用独立随机本机端口、令牌和 PID。关闭或超时后不自动切到另一个窗口，也不自动重复执行写操作。列表只包含已加载桥接的实例；不可达记录会明确显示，不假定窗口已经关闭。
 
 桥接独立于 Codex 插件缓存。更新市场插件后，需要再次预览并确认软件侧更新。卸载 Codex 插件不会自动删除软件侧桥接，应先运行该插件的卸载流程；用户修改过的文件会报告冲突并保留。完整流程及 Windows 缓存占用处理见 [更新与卸载](UPDATING.md)。
 
@@ -66,7 +76,7 @@
 
 Unity 自定义脚本需先经过 Unity 编译，再调用其中的静态方法。现有项目编译错误可能阻止桥接加载。Unreal 需要内置 Python Script Plugin；项目禁用它时按设置说明处理。本机没有 3ds Max，尚未实机验证。真实 GUI 重启、多窗口和生产项目检查由用户验收，自动化测试不代替这些步骤。
 
-六个软件图标使用原始资源，四个流程插件使用原创 SVG；来源见 [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md)。本项目是独立第三方集成。
+八个软件图标使用产品资源，四个流程插件使用原创 SVG；来源见 [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md)。本项目是独立第三方集成。
 
 ## 开发与测试
 
@@ -81,7 +91,7 @@ uv run --locked tests/stdio_smoke.py
 
 本次结果见 [验证记录](VALIDATION.md)。其他插件的具体验证命令和实机验证限制见各自 README。单元测试和软件宿主测试使用临时配置/项目；网络测试需允许本机回环连接。不要提交虚拟环境、用户场景、会话令牌或软件用户配置。
 
-发布前还需用 **桌面应用实际使用的 Codex 后端** 验证插件加载。`tests/codex_plugin_smoke.py --codex <codex.exe绝对路径>` 默认只读取插件，检查十个 MCP 服务及旧版 `cwd` 故障对照。加 `--install` 后会实际安装或更新十个 Codex 插件，创建不持久化的测试会话，发现工具并调用只读的实例列表或状态；结束时卸载原先未安装的插件，保留已有插件的更新。它不安装软件侧桥接、不运行模型回合，也不提交渲染任务。此项会修改 Codex 插件安装状态，应在已授权的测试环境执行。
+发布前还需用 **桌面应用实际使用的 Codex 后端** 验证插件加载。`tests/codex_plugin_smoke.py --codex <codex.exe绝对路径>` 默认只读取插件，检查十二个 MCP 服务及旧版 `cwd` 故障对照。加 `--install` 后会实际安装或更新十二个 Codex 插件，创建不持久化的测试会话，发现工具并调用只读的实例列表或状态；结束时卸载原先未安装的插件，保留已有插件的更新。它不安装软件侧桥接、不运行模型回合，也不提交渲染任务。此项会修改 Codex 插件安装状态，应在已授权的测试环境执行。
 
 `tests/launcher_smoke.py` 另验证服务从插件目录启动后迁出，并在连接期间删除临时插件副本。两种测试都需要通过，独立 MCP SDK 的测试无法替代 Codex 插件加载测试。
 

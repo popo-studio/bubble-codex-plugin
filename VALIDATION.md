@@ -1,3 +1,22 @@
+# PR / PS 新版 UXP 插件验证
+
+日期：2026-10-20。新增 Premiere Control / Photoshop Control 0.1.0；Plugin Doctor 更新为 0.1.1。其余插件版本不变。
+
+- 本机只读读取 PE 版本：Premiere 15.0.0.41、Photoshop 22.0.0.35 和 26.2.0.140。按用户“尽量按照新版”的要求，目标为 Premiere 25.6+、Photoshop 26.2+，旧 2021 版明确报告不支持。
+- 两个插件均使用 UXP 面板，私密连接码配对当前 MCP 的随机本机端口，不复制脚本、不写 CEP 调试开关。会话 UUID 与文档 ID / 项目 GUID 分开选择，禁止断线后自动切换或重放请求。
+- PR 10 个工具：项目/序列查询、最多 1000 项素材检查、导入、重链接、保存，以及安装与配对管理。仅报告当前活动项目；不提供任意脚本、时间线编辑或导出。
+- PS 8 个工具：文档/最多 2000 层图层查询、经过 executeAsModal 的授权 batchPlay，以及安装与配对管理。modal 内重验目标、取消和期限；图层列表不等于外链、字体或依赖检查。batchPlay 描述符能力广，目标检查不是权限沙箱。
+- 安装工具验证 CCX 的插件身份、版本及全部源内容；正式安装/卸载交给 Adobe UPIA。未知输出保留 installed:null，无法确定身份或出现重名时拒绝猜测卸载，给出 Creative Cloud Manage Plugins 路径。退出码成功不等于安装已验证。
+- PR / PS 各 27 项 Python 测试通过，涵盖真实本机 HTTP、鉴权、跨软件误配对、多会话歧义、期限、断线、最多一次投递和模拟 UPIA。PR 14 项 Node 测试通过；PS host 回归断言及 5 项共享 transport 测试通过。连续连接覆盖及过期注册清理已有回归。
+- 实际 MCP stdio 与 HTTP 联调通过。PR 进一步运行生产 UXP transport 和 host adapter 配合模拟 Adobe DOM，覆盖双实例、查询、导入、保存、错误项目与断线；PS 使用模拟面板完成实际 stdio/HTTP 查询。它们都不是原生 Adobe GUI 测试。
+- 诊断中心 15 项测试中 14 通过、1 项符号链接权限跳过；根市场/候选包测试 4 项通过。候选 CCX 重建哈希一致，并核对与当前 UXP 源码逐文件一致。
+- 真实 Codex 后端实际安装十二个插件，列出 90 个工具并逐插件只读调用成功；官方接口清理原先未安装的 11 个插件，保留原有 Maya。十二个插件共 24 个实际 MCP 进程通过版本环境分离及运行中删除临时包后仍响应的检查。
+- PS、PR 及共享安装器由非原作者独立审查；诊断中心及根文档亦独立复核。审查修复配对竞态和重名卸载歧义。
+
+**实机限制**：本机无新版 PR、无 Adobe UPIA，未进行真实 Adobe 安装、卸载、UXP localhost 权限及原生宿主操作验收。随包 adobe/*.ccx 是依据 ZIP 格式可复现构建的候选包，不是 UDT 输出，也未验证被 Adobe 安装器接受。可选通过 UDT 生成与当前源码相符的包。未修改 Adobe 用户配置、注册表开关、文档或项目。
+
+构建入口：`py -3.13 scripts/build_adobe_packages.py`。安装与验收步骤见两个插件 README；先补齐 Creative Cloud/UPIA 和目标版本，再运行 setup 预览及授权安装。
+
 # 六个软件插件审计与修复
 
 日期：2026-10-20。Maya 0.2.7；Nuke、Houdini、3ds Max、Unreal、Unity 0.1.3。其余四个流程插件维持 0.1.0。

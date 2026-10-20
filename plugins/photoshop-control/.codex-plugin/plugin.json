@@ -1,0 +1,32 @@
+{
+  "name": "photoshop-control",
+  "version": "0.1.0",
+  "description": "Connect Photoshop 26.2+ through an explicitly paired UXP panel; inspect documents and run authorized batchPlay actions.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Photoshop",
+    "shortDescription": "Photoshop 文档检查与操作",
+    "longDescription": "Install the UXP panel through Adobe tools with consent, connect a selected Photoshop session, inspect documents/layers, and execute authorized batchPlay actions.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "连接 Photoshop 并查看打开的文档",
+      "检查文档图层"
+    ],
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/photoshop-setup/SKILL.md"
+    }
+  }
+}

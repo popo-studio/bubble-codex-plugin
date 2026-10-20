@@ -1,0 +1,1 @@
+Adobe Photoshop 2025 application icon. Source: C:/Program Files/Adobe/Adobe Photoshop 2025/Photoshop.exe. Extracted read-only via Win32 PrivateExtractIcons at 256x256, without image modification. Adobe trademark, for application identification.

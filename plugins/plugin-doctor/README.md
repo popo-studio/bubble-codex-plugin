@@ -16,7 +16,9 @@
 | `doctor_check_log` | 指定日志尾部最多 256 KiB 的已知错误分类；不返回原始日志 |
 | `doctor_repair_guidance` | 修复/更新/卸载步骤，不执行写操作 |
 
-支持六个 DCC 插件及 Deadline、Sequence Check、Asset Package、Plugin Doctor。各缓存版本均展示；不会把缓存存在误报为“已启用”或“工具已加载”。启用状态和实际工具发现需要 Codex 宿主确认。本地来源版本不代表远端最新版本，不自动联网刷新市场。
+支持八个软件插件及 Deadline、Sequence Check、Asset Package、Plugin Doctor。各缓存版本均展示；不会把缓存存在误报为“已启用”或“工具已加载”。启用状态和实际工具发现需要 Codex 宿主确认。本地来源版本不代表远端最新版本，不自动联网刷新市场。
+
+PR / PS 的 UXP 面板使用当前 Codex 会话内的配对连接，由对应插件的 `*_list_sessions` 查询；不使用旧 DCC 的 PID 注册目录。诊断中心可检查其 Codex 包并提供官方安装、卸载和重新配对指引。
 
 桥接完整性仅与本地安装记录比较；不验证启动脚本，不把磁盘版本当作进程已加载版本。对软件配置的完整检查仍使用对应 `*_installation_status`。只探测注册的 127.0.0.1 服务，无法连接不等于软件已关闭；多实例必须选择。软链接、重解析目录不自动遍历，应改用实际目录。
 

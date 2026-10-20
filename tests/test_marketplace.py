@@ -5,10 +5,11 @@ import re
 import struct
 import tomllib
 import unittest
+import zipfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity", "deadline")} | {
+NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity", "deadline", "premiere", "photoshop")} | {
     "sequence-check", "asset-package", "plugin-doctor"}
 
 
@@ -32,6 +33,21 @@ class MarketplaceTests(unittest.TestCase):
                 version = read_json(folder / "plugin.json")["version"]
                 self.assertTrue((folder / f"launch-{version}.py").is_file())
                 self.assertTrue((folder / f"launch-{version}.py.lock").is_file())
+
+    def test_adobe_candidate_packages_match_uxp_source(self):
+        for app in ("premiere", "photoshop"):
+            folder = ROOT / "plugins" / (app + "-control")
+            source = folder / "uxp"
+            manifest = read_json(source / "manifest.json")
+            self.assertEqual(manifest["version"], read_json(folder / "plugin.json")["version"])
+            self.assertIsInstance(manifest["host"], dict)
+            self.assertEqual(manifest["requiredPermissions"]["network"]["domains"], ["http://127.0.0.1"])
+            expected = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob("*") if p.is_file()}
+            with zipfile.ZipFile(folder / "adobe" / (manifest["id"] + ".ccx")) as archive:
+                self.assertEqual(set(archive.namelist()), set(expected))
+                self.assertEqual(len(archive.namelist()), len(expected))
+                for name, content in expected.items():
+                    self.assertEqual(archive.read(name), content, (app, name))
 
     def test_manifest_parity_and_local_references(self):
         for name in sorted(NAMES):

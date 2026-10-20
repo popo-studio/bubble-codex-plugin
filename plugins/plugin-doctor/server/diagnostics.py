@@ -12,7 +12,8 @@ import sys
 import time
 
 APPS = ("maya", "nuke", "houdini", "max", "unreal", "unity")
-PLUGINS = tuple(a + "-control" for a in APPS) + (
+ADOBE_APPS = ("premiere", "photoshop")
+PLUGINS = tuple(a + "-control" for a in (*APPS, *ADOBE_APPS)) + (
     "deadline-control", "sequence-check", "asset-package", "plugin-doctor")
 MAX_JSON = 256 * 1024
 MAX_PACKAGES = 100
@@ -68,7 +69,7 @@ def children(path, limit):
 
 
 def status():
-    return {"ok": True, "data": {"version": "0.1.0", "mode": "read-only",
+    return {"ok": True, "data": {"version": "0.1.1", "mode": "read-only",
         "python_version": sys.version.split()[0], "uv_available": bool(shutil.which("uv")),
         "supported_plugins": list(PLUGINS)},
         "note": "Disk/cache observations do not prove Codex enabled state or tool loading. Use Codex's own tool discovery for that."}
@@ -299,6 +300,12 @@ def guidance(plugin_name, action):
     if action in ("repair", "update"):
         steps = ["Inspect the exact package with doctor_check_package and use Codex tool discovery to verify runtime loading.",
             "Use the supported Codex marketplace refresh/install UI or CLI for the actual registered source; do not edit installed cache/config files."]
+    if app in ADOBE_APPS:
+        steps.extend([
+            "Use %s_installation_status to distinguish prepared UXP source/package from Adobe installation and a connected panel." % app,
+            "Use the owning plugin's setup workflow and official Adobe installer for the exact Bubble UXP package; preview before authorizing installation/removal. Never delete Adobe private plugin directories.",
+            "Adobe panel sessions use session IDs, not the DCC PID registry. Use %s_list_sessions in the paired Codex conversation; select an explicit session and document/project." % app,
+            "After updating or restarting the MCP server, obtain a fresh pairing code and reconnect the intended panel. Never switch to another application session silently."])
     if app in APPS:
         steps.append("Select the exact software profile/project, then call %s_installation_status." % app)
         tool = app + ("_uninstall_bridge" if action == "uninstall" else "_install_bridge")

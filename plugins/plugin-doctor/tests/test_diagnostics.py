@@ -36,6 +36,16 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertFalse(d.sessions("unknown")["ok"])
         self.assertFalse(d.guidance("evil", "repair")["ok"])
 
+    def test_adobe_guidance_uses_paired_session_not_pid_registry(self):
+        for app in ("premiere", "photoshop"):
+            self.assertIn(app + "-control", d.status()["data"]["supported_plugins"])
+            for action in ("repair", "update", "uninstall"):
+                result = d.guidance(app + "-control", action)
+                self.assertTrue(result["ok"])
+                self.assertFalse(result["data"]["executed"])
+                self.assertIn(app + "_list_sessions", " ".join(result["data"]["steps"]))
+            self.assertFalse(d.sessions(app)["ok"])
+
     def test_current_package(self):
         result = d.package_check(str(ROOT))
         self.assertTrue(result["ok"], result)
@@ -60,7 +70,7 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertIn("manifest_version_mismatch", issues)
 
     def test_cache_is_not_installation_state(self):
-        dest = self.root / "plugins/cache/test-market/plugin-doctor/0.1.0"
+        dest = self.root / "plugins/cache/test-market/plugin-doctor/0.1.1"
         shutil.copytree(ROOT, dest, ignore=shutil.ignore_patterns(".venv", "__pycache__", ".test-runtime"))
         report = d.inventory(str(self.root), str(ROOT.parents[1]))
         self.assertTrue(report["ok"], report)

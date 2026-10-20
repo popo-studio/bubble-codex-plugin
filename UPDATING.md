@@ -31,6 +31,12 @@ Codex 插件与软件端桥接是分开安装的。即使会话已经连接，�
 
 `installed_version` 表示磁盘安装记录，不保证当前进程已经加载该版本。重启/刷新后重新发现实例，并核对场景或项目；不得在断开后自动切换其他窗口或重放脚本。
 
+## PR / PS 的 Adobe UXP 生命周期
+
+PR / PS 的桥接由 Adobe 管理。更新 Codex 包后，还需通过 setup 工具预览并授权调用 UPIA 安装随包新版 `.ccx`。仓库构建的是 ZIP 格式候选包，尚未取得本机 Adobe 安装验收；可选传入 UDT 生成的匹配包。工具核对包的 ID、版本及内容；只有 Adobe 返回可辨认的安装证据才报告已安装，源文件或打包文件存在不是证据。没有 UPIA 时提示安装 Creative Cloud Desktop / 官方部署工具，不修改 Adobe 私有目录。
+
+卸载使用官方 UPIA 或 Creative Cloud Desktop 的 Manage Plugins，精确选择 Bubble Premiere / Bubble Photoshop。若命令输出无法可靠识别，工具保留未知状态并引导官方界面确认，不猜测删除目录。关闭面板后当前连接结束；Codex MCP 退出后本地通信服务结束。重启/更新后用新连接码配对，原请求不会转交新会话或自动重放。
+
 ## 卸载范围
 
 Deadline、Sequence Check、Asset Package、Plugin Doctor 没有软件侧桥接，直接通过 Codex 卸载即可。不会修改或删除农场任务、已生成的交付包、用户图片、日志以及 uv 共享缓存。它们也沿用版本化启动器与包外依赖环境，发布检查包括运行中卸载。

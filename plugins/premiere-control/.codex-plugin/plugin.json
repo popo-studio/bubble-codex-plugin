@@ -1,0 +1,32 @@
+{
+  "name": "premiere-control",
+  "version": "0.1.0",
+  "description": "Control Premiere Pro 25.6+ through an authenticated local UXP panel.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Premiere Pro",
+    "shortDescription": "Premiere 项目检查与素材操作",
+    "longDescription": "Pair a Premiere Pro 25.6+ UXP panel, inspect projects and offline media, import and relink media with explicit project selection.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "连接 Premiere 并列出项目",
+      "检查项目中的离线素材"
+    ],
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/premiere-setup/SKILL.md"
+    }
+  }
+}

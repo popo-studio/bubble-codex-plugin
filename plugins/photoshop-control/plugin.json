@@ -1,0 +1,38 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "photoshop-control",
+  "version": "0.1.0",
+  "description": "Connect Photoshop 26.2+ through an explicitly paired UXP panel; inspect documents and run authorized batchPlay actions.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "photoshop",
+    "3d",
+    "dcc",
+    "scene-inspection"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/photoshop-setup/SKILL.md",
+      "interface": {
+        "displayName": "Bubble Photoshop",
+        "shortDescription": "Photoshop 文档检查与操作",
+        "longDescription": "Install the UXP panel through Adobe tools with consent, connect a selected Photoshop session, inspect documents/layers, and execute authorized batchPlay actions.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 Photoshop 并查看打开的文档",
+          "检查文档图层"
+        ],
+        "logo": "./assets/icon.png",
+        "composerIcon": "./assets/icon.png"
+      }
+    }
+  }
+}

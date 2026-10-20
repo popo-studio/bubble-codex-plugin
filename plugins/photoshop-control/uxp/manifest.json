@@ -1,0 +1,38 @@
+{
+  "id": "com.popostudio.bubble.photoshop",
+  "name": "Bubble Photoshop",
+  "version": "0.1.0",
+  "main": "index.html",
+  "manifestVersion": 5,
+  "host": {
+    "app": "PS",
+    "minVersion": "26.2.0",
+    "data": {
+      "apiVersion": 2
+    }
+  },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "bubblePhotoshop",
+      "label": {
+        "default": "Bubble Photoshop"
+      },
+      "minimumSize": {
+        "width": 280,
+        "height": 200
+      },
+      "preferredDockedSize": {
+        "width": 320,
+        "height": 300
+      }
+    }
+  ],
+  "requiredPermissions": {
+    "network": {
+      "domains": [
+        "http://127.0.0.1"
+      ]
+    }
+  }
+}
