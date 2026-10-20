@@ -1,5 +1,6 @@
 """Routing, bounded execution and request invariants; native acceptance is separate."""
 import json
+import tempfile
 from pathlib import Path
 import subprocess
 import sys
@@ -63,6 +64,51 @@ class RoutingTests(unittest.TestCase):
         with self.assertRaises(ValueError):worker.source({'operation':'execute_script','document_id':1,'code':'x'*250001})
     def test_no_bridge_files_claimed(self):
         self.assertEqual(main.photoshop_uninstall_bridge(True)['data']['removed_files'],[])
+
+class DocumentOperationsTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        (Path(__file__).resolve().parents[1]/".test-runtime").mkdir(exist_ok=True)
+    def test_create_without_existing_document(self):
+        code=worker.source({'operation':'create_document','width':512,'height':512,'name':'测试图像','background':'transparent'})
+        self.assertIn('new UnitValue(512,"px")',code)
+        self.assertIn('DocumentFill.TRANSPARENT',code)
+        self.assertNotIn('app.activeDocument.id!==',code)
+        self.assertIn('new Date().getTime()>',code)
+    def test_create_grayscale(self):
+        self.assertIn('NewDocumentMode.GRAYSCALE',worker.source({'operation':'create_document','width':1,'height':2,'mode':'grayscale'}))
+    def test_create_bad_dimensions(self):
+        for value in [True,0,-1,1.5,30001,float('nan'),float('inf')]:
+            with self.assertRaises(ValueError):worker.source({'operation':'create_document','width':value,'height':1})
+    def test_create_max_pixels(self):
+        with self.assertRaises(ValueError):worker.source({'operation':'create_document','width':30000,'height':30000})
+    def test_create_bad_options(self):
+        for option in [{'resolution':True},{'resolution':float('nan')},{'resolution':float('inf')},{'resolution':0},{'resolution':1201},{'mode':'CMYK'},{'background':'foreground'},{'name':''},{'name':'x'*256},{'name':'bad\nname'}]:
+            with self.assertRaises(ValueError):worker.source({'operation':'create_document','width':1,'height':1,**option})
+    def test_open_absolute_image(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]/'.test-runtime') as directory:
+            path=Path(directory)/'test.png';path.write_bytes(b'test fixture - script generation only')
+            code=worker.source({'operation':'open_file','path':str(path)})
+        self.assertIn('new File(',code)
+        self.assertIn('app.open(f)',code)
+        self.assertNotIn('app.activeDocument.id!==',code)
+    def test_open_rejects_script_and_directory(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]/'.test-runtime') as directory:
+            for ext in ['.js','.jsx','.jsxbin','.psjs','.exe','.pdf']:
+                path=Path(directory)/('test'+ext);path.touch()
+                with self.assertRaises(ValueError):worker.source({'operation':'open_file','path':str(path)})
+            with self.assertRaises(ValueError):worker.source({'operation':'open_file','path':directory})
+    def test_open_rejects_relative_missing(self):
+        with self.assertRaises(ValueError):worker.source({'operation':'open_file','path':'foo.png'})
+        with self.assertRaises(FileNotFoundError):worker.source({'operation':'open_file','path':str(Path.cwd()/'does-not-exist-bubble.png')})
+    def test_activate_explicit_document(self):
+        code=worker.source({'operation':'activate_document','document_id':123})
+        self.assertIn('app.documents[j].id===123',code)
+        self.assertIn('app.activeDocument=d',code)
+        self.assertIn('Selected document is closed',code)
+    def test_all_new_operations_expire(self):
+        for request in [{'operation':'create_document','width':1,'height':1},{'operation':'activate_document','document_id':1}]:
+            with self.assertRaises(ValueError):worker.source({**request,'expires_at':1})
 
 class ComGuardTests(unittest.TestCase):
     def assert_rejected_before_script(self, path=r'C:\PS', version='26.2.0', discoveries=None):

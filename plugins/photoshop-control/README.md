@@ -1,4 +1,4 @@
-# Bubble Photoshop 0.2.0
+# Bubble Photoshop 0.2.1
 
 Windows Photoshop control through its native COM automation. Install this plugin in Codex, open Photoshop normally, and list sessions. **No Creative Cloud Desktop, UPIA, UXP Developer Tool, CCX, panel, pairing code, or Photoshop-side files are required.** The plugin never changes Adobe licensing, security, COM registration, startup or user documents during setup.
 
@@ -20,9 +20,12 @@ Windows Photoshop control through its native COM automation. Install this plugin
 | photoshop_list_sessions | List exact process identities, versions and documents |
 | photoshop_scene_info | Read document IDs and active document |
 | photoshop_inspect_document | Read a selected document and up to 2000 layers |
+| photoshop_create_document | Create and activate a new unsaved RGB/grayscale document, including from an empty session |
+| photoshop_open_file | Open and activate an absolute existing PSD/PSB or supported raster image; scripts rejected |
+| photoshop_activate_document | Activate an explicit existing document ID |
 | photoshop_execute_script | Execute user-authorized JSX with explicit session and active document ID |
 
-Scripts can affect Photoshop and files beyond the selected document. The ID guard is not a sandbox. First release requires an existing active document for script execution; it does not create a first blank document automatically. Each operation runs in a bounded worker. A timeout stops the worker but may not cancel the Photoshop operation: never automatically retry.
+Scripts can affect Photoshop and files beyond the selected document. The ID guard is not a sandbox. Use create_document or open_file when the session is empty; use activate_document to select the intended existing document before JSX. Script execution itself retains its active-document guard. These native tools are preferred to UI automation. Each operation runs in a bounded worker. A timeout stops the worker but may not cancel the Photoshop operation: never automatically retry.
 
 ## Install, update and uninstall
 

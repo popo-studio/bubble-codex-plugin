@@ -4,6 +4,8 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from typing import Literal
+from pydantic import StrictInt, StrictFloat
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from native import discover, installations, failure, select
@@ -89,6 +91,24 @@ def photoshop_inspect_document(document_id: int, session_id: str | None = None) 
 def photoshop_execute_script(code: str, document_id: int, session_id: str, timeout: float = 30) -> dict:
     """Execute user-authorized ExtendScript/JSX via native DoJavaScript. Requires explicit session and currently active document ID. This check is not a sandbox: code can change any document, save/export/delete files or application state. Explain intended target and writes first. Never auto-retry after any failure/timeout, since effects may already exist. No UXP/batchPlay. timeout in (0,120]."""
     return call("execute_script", session_id, timeout, document_id=document_id, code=code)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_create_document(session_id: str, width: StrictInt, height: StrictInt, name: str = "Untitled", resolution: StrictFloat = 72, mode: Literal["RGB", "grayscale"] = "RGB", background: Literal["white", "transparent"] = "white", timeout: float = 30) -> dict:
+    """Create and activate an unsaved document in the explicitly selected session, including when no documents exist. Width/height are 1–30000 pixels, at most 100 million pixels total; resolution 1–1200 ppi. RGB/grayscale, white/transparent only. Returns document ID; never saves or overwrites a file. Do not retry automatically after errors/timeouts."""
+    return call("create_document", session_id, timeout, width=width, height=height, name=name, resolution=resolution, mode=mode, background=background)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_open_file(path: str, session_id: str, timeout: float = 30) -> dict:
+    """Open/activate an absolute existing PSD/PSB or supported raster image in the explicitly selected session, even with no open documents. Script files and unsupported formats are rejected. Does not save/overwrite files. Photoshop may require format/profile interaction; timeout does not cancel its operation. Never auto-retry."""
+    return call("open_file", session_id, timeout, path=path)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_activate_document(document_id: StrictInt, session_id: str, timeout: float = 20) -> dict:
+    """Activate the explicitly chosen existing document ID within the selected session and return its properties. Does not save/close documents. Use before JSX when its intended document is not active; never substitute another document."""
+    return call("activate_document", session_id, timeout, document_id=document_id)
 
 
 if __name__ == "__main__":

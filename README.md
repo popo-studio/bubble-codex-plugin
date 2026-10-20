@@ -11,7 +11,7 @@
 | [Bubble Unreal](plugins/unreal-control/README.md) | Unreal Engine 5.5 | Editor Python | 用户指定的 Unreal 项目 |
 | [Bubble Unity](plugins/unity-control/README.md) | Unity 6 / 6000.x | 已编译 C# 静态方法 / 菜单命令 | 用户指定的 Unity 项目 |
 | [Bubble Premiere](plugins/premiere-control/README.md) | Premiere Pro 25.6+，UXP | 项目、序列、素材检查与支持的项目操作 | Adobe 官方 UXP 插件安装 |
-| [Bubble Photoshop](plugins/photoshop-control/README.md) | Windows Photoshop 26.2+，原生 COM | 文档、图层检查与 ExtendScript | 仅安装 Codex 插件，无 PS 端桥接 |
+| [Bubble Photoshop](plugins/photoshop-control/README.md) | Windows Photoshop 26.2+，原生 COM | 创建、打开、切换文档，图层检查与 ExtendScript | 仅安装 Codex 插件，无 PS 端桥接 |
 | [Bubble Deadline](plugins/deadline-control/README.md) | 现有 Deadline 10 客户端 | 任务查询、日志检查、预览后提交/重提 | 无软件侧桥接 |
 | [Bubble Sequence Check](plugins/sequence-check/README.md) | 本地图片序列 / EXR | 缺帧、损坏、通道、尺寸与像素异常检查 | 无软件侧桥接 |
 | [Bubble Asset Package](plugins/asset-package/README.md) | 明确的依赖路径清单 | 预览、复制到新目录、SHA256 校验 | 无软件侧桥接 |
@@ -45,6 +45,8 @@
 四个新插件的逐项验收见 [流程插件验收](WORKFLOW_ACCEPTANCE.md)。
 
 ## Photoshop 无额外组件连接
+
+0.2.1 可在没有文档时直接通过插件创建画布或打开文件，并按文档 ID 切换活动文档。创建、打开、切换、检查及已授权的脚本操作优先使用插件，无需 Computer Use。发布后应执行 `codex plugin marketplace upgrade bubble-plugins` 更新 Git 市场副本，再安装新版插件；刷新详情页不代表 Git 副本已经更新。
 
 Windows Photoshop 26.2+ 使用 Adobe 自带 COM 自动化，无需 Creative Cloud、UPIA、UXP 面板、开发者工具或开发者模式。安装 Codex 插件后，打开目标 Photoshop 即可检测其版本、进程和文档。软件侧没有额外安装文件或监听服务，卸载 Codex 插件即移除该接入代码。
 

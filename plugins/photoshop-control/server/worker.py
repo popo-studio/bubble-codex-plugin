@@ -1,5 +1,7 @@
 """One request per isolated COM worker. Never launches Photoshop."""
 import json
+import math
+from pathlib import Path
 import os
 import sys
 import time
@@ -13,6 +15,33 @@ def source(request):
     op = request["operation"]
     if op == "scene_info":
         body = 'var ds=[];for(var i=0;i<app.documents.length;i++)ds.push(docInfo(app.documents[i]));return {version:app.version,documents:ds,active_document_id:app.documents.length?app.activeDocument.id:null};'
+    elif op == "create_document":
+        width, height = request.get("width"), request.get("height")
+        for label, value in [("width", width), ("height", height)]:
+            if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 30000:
+                raise ValueError(label + " must be an integer from 1 to 30000 pixels")
+        if width * height > 100000000:
+            raise ValueError("Document must not exceed 100 million pixels")
+        resolution = request.get("resolution", 72)
+        if isinstance(resolution, bool) or not isinstance(resolution, (float, int)) or not math.isfinite(resolution) or not 1 <= resolution <= 1200:
+            raise ValueError("resolution must be a finite number from 1 to 1200 pixels per inch")
+        name = request.get("name", "Untitled")
+        if not isinstance(name, str) or not name.strip() or len(name) > 255 or any(ord(c) < 32 for c in name):
+            raise ValueError("name must contain 1 to 255 characters without control characters")
+        mode = {"RGB":"RGB", "grayscale":"GRAYSCALE"}.get(request.get("mode", "RGB"))
+        background = {"white":"WHITE", "transparent":"TRANSPARENT"}.get(request.get("background", "white"))
+        if mode is None or background is None:
+            raise ValueError("mode must be RGB or grayscale; background must be white or transparent")
+        body = f'var d=app.documents.add(new UnitValue({width},"px"),new UnitValue({height},"px"),{resolution},{json.dumps(name)},NewDocumentMode.{mode},DocumentFill.{background});return docInfo(d);'
+    elif op == "open_file":
+        path = request.get("path")
+        if not isinstance(path, str) or not Path(path).is_absolute():
+            raise ValueError("path must be an absolute existing image file path")
+        path = Path(path).resolve(strict=True)
+        supported = {".psd", ".psb", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".webp", ".exr", ".hdr", ".tga", ".dpx"}
+        if not path.is_file() or path.suffix.lower() not in supported:
+            raise ValueError("Only existing PSD/PSB or supported image files may be opened; script files are not allowed")
+        body = 'var f=new File(' + json.dumps(str(path), ensure_ascii=True) + ');if(!f.exists)throw new Error("Selected file no longer exists");return docInfo(app.open(f));'
     else:
         target = request["document_id"]
         if isinstance(target, bool) or not isinstance(target, int) or target < 1:
@@ -20,6 +49,8 @@ def source(request):
         check = f'if(!app.documents.length||app.activeDocument.id!=={target})throw new Error("Selected document is no longer active; reselect with the user before continuing");'
         if op == "inspect_document":
             body = f'var d=null;for(var j=0;j<app.documents.length;j++)if(app.documents[j].id==={target})d=app.documents[j];if(d===null)throw new Error("Selected document is closed");var count=0;function layers(ls){{var a=[];for(var i=0;i<ls.length&&count<2000;i++){{count++;var l=ls[i],o={{name:l.name,visible:l.visible,typename:l.typename}};if(l.typename==="LayerSet")o.layers=layers(l.layers);a.push(o);}}return a;}}var r=docInfo(d);r.layers=layers(d.layers);r.layer_limit=2000;r.layer_count_returned=count;r.truncated=count>=2000;return r;'
+        elif op == "activate_document":
+            body = f'var d=null;for(var j=0;j<app.documents.length;j++)if(app.documents[j].id==={target})d=app.documents[j];if(d===null)throw new Error("Selected document is closed");app.activeDocument=d;return docInfo(d);'
         elif op == "execute_script":
             code = request.get("code")
             if not isinstance(code, str) or not code.strip() or len(code) > 250000:
