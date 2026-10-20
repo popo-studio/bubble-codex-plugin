@@ -17,6 +17,23 @@ class Node:
     def knob(self, key): return types.SimpleNamespace(value=lambda: self.path_) if key=='file' else None
 
 class HostTests(unittest.TestCase):
+    def test_printf_frames_follow_minimum_width_and_sign(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for frame in (-10000, -1, 0, 10000):
+                name = "shot.%04d.exr" % frame
+                file = Path(directory, name)
+                file.touch()
+                report = bridge.inspect_scene(self.fake(directory, [Node("Read1", "shot.%04d.exr")]))
+                self.assertEqual(report["missing_files"], [], name)
+                file.unlink()
+            for name in ("shot.1.exr", "shot.00001.exr", "shot.-01.exr"):
+                file = Path(directory, name)
+                file.touch()
+                self.assertFalse(bridge.path_status("shot.%04d.exr", directory)["exists"], name)
+                file.unlink()
+            Path(directory, "shot.0001.exr").touch()
+            self.assertFalse(bridge.path_status("shot.%099999999999999999999d.exr", directory)["exists"])
+
     def fake(self, directory, nodes=()):
         root=types.SimpleNamespace(name=lambda: 'Root', knob=lambda key: types.SimpleNamespace(value=lambda: directory))
         return types.SimpleNamespace(root=lambda: root, modified=lambda: True, NUKE_VERSION_STRING='15.1v5', selectedNodes=lambda: [], allNodes=lambda **kw: nodes, frame=lambda: 1, GUI=False)

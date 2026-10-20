@@ -27,6 +27,34 @@ class HostTests(unittest.TestCase):
         self.assertEqual(len(report['warnings']),1)
         self.assertEqual(report['missing_path_candidates'],[])
 
+    def test_houdini_frame_padding_allows_negative_and_overwidth_frames(self):
+        for token in ('$F4', '${F4}', '%04d'):
+            for frame in (-10000, -1, 0, 10000):
+                with self.subTest(token=token, frame=frame), tempfile.TemporaryDirectory() as directory:
+                    Path(directory, 'seq.%04d.exr' % frame).touch()
+                    report = bridge.inspect_scene(self.fake(directory, [(None, '$HIP/seq.' + token + '.exr')]))
+                    self.assertTrue(report['references'][0]['exists'], report)
+        for suffix in ('1', '00001', '-01'):
+            with self.subTest(invalid_padding=suffix), tempfile.TemporaryDirectory() as directory:
+                Path(directory, 'seq.' + suffix + '.exr').touch()
+                report = bridge.inspect_scene(self.fake(directory, [(None, '$HIP/seq.$F4.exr')]))
+                self.assertFalse(report['references'][0]['exists'])
+
+    def test_unpadded_negative_and_space_padded_frames(self):
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, 'seq.-1.exr').touch()
+            Path(directory, 'space.  -1.exr').touch()
+            for token in ('$F', '${F}', '%d'):
+                report = bridge.inspect_scene(self.fake(directory, [(None, '$HIP/seq.' + token + '.exr')]))
+                self.assertTrue(report['references'][0]['exists'], report)
+            self.assertTrue(bridge.path_status(str(Path(directory, 'space.%4d.exr')))['exists'])
+            with self.assertRaises(ValueError):
+                bridge.path_status(str(Path(directory, 'seq.%1000000000d.exr')))
+            Path(directory, 'seq.0001.exr').touch()
+            report = bridge.inspect_scene(self.fake(directory, [(None, '$HIP/seq.%099999999999999999999d.exr')]))
+            self.assertEqual(len(report['warnings']), 1)
+            self.assertEqual(report['missing_path_candidates'], [])
+
     def test_python_result_and_headless_refused(self):
         with patch.dict(sys.modules,{'hou':self.fake('')}):
             self.assertEqual(bridge.dispatch('execute_python',{'code':'result = 42'})['result'],42)

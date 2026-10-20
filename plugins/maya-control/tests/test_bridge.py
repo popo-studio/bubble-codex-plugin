@@ -123,6 +123,36 @@ class BridgeTests(unittest.TestCase):
 
 
 class InspectionTests(unittest.TestCase):
+    def test_failed_start_closes_bound_socket(self):
+        maya = types.ModuleType("maya")
+        maya.cmds = types.SimpleNamespace(about=lambda **kwargs: False)
+        maya.utils = types.SimpleNamespace(executeDeferred=lambda fn: None)
+        server = bridge.Bridge(lambda *args: None, lambda fn: None)
+        self.addCleanup(server.server_close)
+        with patch.dict(sys.modules, {"maya": maya}), patch.object(bridge, "Bridge", return_value=server):
+            with patch.object(Path, "mkdir", side_effect=PermissionError("profile denied")):
+                with self.assertRaises(PermissionError):
+                    bridge.start()
+        self.assertEqual(server.socket.fileno(), -1)
+        self.assertIsNone(bridge._bridge)
+
+    def test_printf_frames_follow_minimum_width_and_sign(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cmds = FakeCmds(directory)
+            for frame in (-10000, -1, 0, 10000):
+                name = "shot.%04d.exr" % frame
+                file = Path(directory, name)
+                file.touch()
+                self.assertTrue(bridge.path_status("shot.%04d.exr", cmds)["exists"], name)
+                file.unlink()
+            for name in ("shot.1.exr", "shot.00001.exr", "shot.-01.exr"):
+                file = Path(directory, name)
+                file.touch()
+                self.assertFalse(bridge.path_status("shot.%04d.exr", cmds)["exists"], name)
+                file.unlink()
+            Path(directory, "shot.0001.exr").touch()
+            self.assertFalse(bridge.path_status("shot.%099999999999999999999d.exr", cmds)["exists"])
+
     def test_patterns_and_literal_missing_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             cmds = FakeCmds(directory)

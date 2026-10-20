@@ -7,7 +7,7 @@ import stat
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 OWNER = "bubble-unreal-control"
 
 
@@ -116,7 +116,7 @@ def _operate(location, confirmed=False, uninstall=False):
         state = None
         if manifest.exists():
             state = json.loads(manifest.read_text(encoding="utf-8"))
-            if not isinstance(state, dict) or state.get("owner") != OWNER or set(state.get("files", {})) != set(files):
+            if not isinstance(state, dict) or state.get("owner") != OWNER or not isinstance(state.get("files"), dict) or set(state["files"]) != set(files):
                 raise ValueError("Invalid ownership manifest; refusing changes")
             for name, digest in state["files"].items():
                 if not paths[name].is_file() or _digest(paths[name].read_bytes()) != digest:

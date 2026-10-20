@@ -102,6 +102,7 @@ def path_status(path, project="", sequence=False):
     matches = list(tokens.finditer(source))
     is_pattern = bool(matches)
     glob_parts, regex_parts, offset = [], [], 0
+    printf_tokens = []
     for match in matches:
         literal, token = source[offset:match.start()], match.group().lower()
         glob_parts.extend([glob.escape(literal), "*"])
@@ -111,8 +112,13 @@ def path_status(path, project="", sequence=False):
             numeric = r"u[0-9]+_v[0-9]+"
         elif token.startswith("#"):
             numeric = r"[0-9]{%d}" % len(token)
-        elif token.startswith("%") and token[1:-1].lstrip("0"):
-            numeric = r"[0-9]{%d}" % int(token[1:-1])
+        elif token.startswith("%"):
+            # printf width is a minimum and includes a possible minus sign.
+            # Validate the captured value against formatting below, so shorter
+            # unpadded names and over-padded small values do not match.
+            name = "printf_%d" % len(printf_tokens)
+            printf_tokens.append((name, token))
+            numeric = r"(?P<%s> *-?[0-9]+)" % name
         else:
             numeric = r"[0-9]+"
         regex_parts.extend([re.escape(literal), numeric])
@@ -120,7 +126,22 @@ def path_status(path, project="", sequence=False):
     glob_parts.append(glob.escape(source[offset:]))
     regex_parts.append(re.escape(source[offset:]))
     expected = re.compile("".join(regex_parts))
-    exists = any(os.path.isfile(p) and expected.fullmatch(os.path.normcase(os.path.normpath(p))) for p in glob.iglob("".join(glob_parts))) if is_pattern else os.path.isfile(expanded)
+    def matches_pattern(candidate):
+        match = expected.fullmatch(os.path.normcase(os.path.normpath(candidate)))
+        if match is None or not os.path.isfile(candidate):
+            return False
+        for name, token in printf_tokens:
+            value = match.group(name)
+            width = token[1:-1].lstrip("0") or "0"
+            size = str(len(value))
+            # Scene paths are input: never allocate their requested padding
+            # before proving it can fit this actual candidate filename.
+            if len(width) > len(size) or (len(width) == len(size) and width > size):
+                return False
+            if token % int(value) != value:
+                return False
+        return True
+    exists = any(matches_pattern(p) for p in glob.iglob("".join(glob_parts))) if is_pattern else os.path.isfile(expanded)
     return {"resolved_path": expanded, "exists": exists, "pattern": is_pattern}
 
 

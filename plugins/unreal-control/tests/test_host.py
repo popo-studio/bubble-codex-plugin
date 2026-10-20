@@ -2,7 +2,7 @@ from pathlib import Path
 import sys
 import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "runtime"))
@@ -10,6 +10,19 @@ import bubble_unreal_bridge as bridge
 
 
 class HostTests(unittest.TestCase):
+    def test_failed_shutdown_registration_removes_tick_before_retry(self):
+        tick = object()
+        unregister = Mock()
+        unreal = types.SimpleNamespace(
+            register_slate_post_tick_callback=lambda callback: tick,
+            register_python_shutdown_callback=Mock(side_effect=RuntimeError("registration failed")),
+            unregister_slate_post_tick_callback=unregister)
+        with patch.dict(sys.modules, {"unreal": unreal}), patch.object(bridge._host, "is_interactive", return_value=True):
+            with self.assertRaisesRegex(RuntimeError, "registration failed"):
+                bridge._host.install_dispatcher(lambda: None)
+        unregister.assert_called_once_with(tick)
+        self.assertIsNone(bridge._host._tick)
+
     def test_commandlet_and_game_modes_are_not_interactive(self):
         for command in ("-run=pythonscript", "-RUN=Cook", "-game", "-server", "-unattended"):
             unreal = types.SimpleNamespace(is_editor=lambda: True,

@@ -81,7 +81,12 @@ def install_dispatcher(stop):
                 break
             callback()
     _tick = unreal.register_slate_post_tick_callback(drain)
-    _shutdown = unreal.register_python_shutdown_callback(stop)
+    try:
+        _shutdown = unreal.register_python_shutdown_callback(stop)
+    except Exception:
+        unreal.unregister_slate_post_tick_callback(_tick)
+        _tick = None
+        raise
     return _queue.put_nowait
 
 

@@ -63,6 +63,31 @@ class InstallationTests(unittest.TestCase):
         installation.uninstall_bridge(str(self.project), True)
         self.install()
 
+    def test_uninstall_after_project_version_change(self):
+        self.install()
+        version = self.project / "ProjectSettings/ProjectVersion.txt"
+        version.write_text("m_EditorVersion: 7000.0.0f1\n")
+        self.assertFalse(installation.install_bridge(str(self.project), True)["ok"])
+        result = installation.uninstall_bridge(str(self.project), True)
+        self.assertTrue(result["ok"], result)
+        self.assertFalse((self.target / "package.json").exists())
+        self.assertEqual(version.read_text(), "m_EditorVersion: 7000.0.0f1\n")
+
+    def test_uninstall_preserves_later_declared_dependency_and_warns(self):
+        self.install()
+        manifest = self.project / "Packages/manifest.json"
+        original = json.dumps({"dependencies": {installation.PACKAGE: "file:elsewhere"}})
+        manifest.write_text(original)
+        preview = installation.uninstall_bridge(str(self.project))
+        self.assertTrue(preview["ok"], preview)
+        self.assertIn("may load", preview["warning"])
+        self.assertTrue((self.target / "package.json").exists())
+        result = installation.uninstall_bridge(str(self.project), True)
+        self.assertTrue(result["ok"], result)
+        self.assertIn("may load", result["warning"])
+        self.assertEqual(manifest.read_text(), original)
+        self.assertFalse((self.target / "package.json").exists())
+
     def test_modified_owned_file_blocks_update_and_uninstall(self):
         self.install()
         file = self.target / "Editor/BubbleUnityBridge.cs"

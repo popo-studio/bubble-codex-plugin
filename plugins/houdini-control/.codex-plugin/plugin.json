@@ -1,6 +1,6 @@
 {
   "name": "houdini-control",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Control local Houdini, execute Python, and inspect scene dependencies.",
   "author": {
     "name": "popo-studio"

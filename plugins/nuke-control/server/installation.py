@@ -16,7 +16,7 @@ import tempfile
 import tokenize
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 OWNER = "bubble-nuke-control"
 FILES = ("bridge.py", "bootstrap.py")
 MANIFEST = "installation.json"

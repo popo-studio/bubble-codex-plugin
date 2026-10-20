@@ -65,6 +65,21 @@ class InstallationTests(unittest.TestCase):
         (target / manifest).write_text(json.dumps(state))
         self.assertFalse(installation.uninstall_bridge(str(self.location), True)["ok"])
 
+    def test_malformed_files_manifest_returns_conflict_without_writes(self):
+        self.assertTrue(installation.install_bridge(str(self.location), True)["ok"])
+        target, manifest, files, _, _ = installation._layout(str(self.location))
+        manifest_path = target / manifest
+        state = json.loads(manifest_path.read_text())
+        state["files"] = list(files)
+        manifest_path.write_text(json.dumps(state))
+        before = {path: path.read_bytes() for path in target.rglob("*") if path.is_file()}
+        for response in (installation.installation_status(str(self.location)),
+                         installation.install_bridge(str(self.location), True),
+                         installation.uninstall_bridge(str(self.location), True)):
+            self.assertFalse(response["ok"])
+            self.assertEqual(response["error"]["code"], "installation_conflict")
+        self.assertEqual(before, {path: path.read_bytes() for path in target.rglob("*") if path.is_file()})
+
     def test_transaction_rolls_back_after_write_failure(self):
         original = installation._atomic_write
         calls = []

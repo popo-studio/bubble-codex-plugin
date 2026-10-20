@@ -46,7 +46,7 @@ def initializePlugin(plugin):
     global _active, _exit_callback, _bridge_path
     from maya import cmds, utils
     from maya.api import OpenMaya
-    plugin_fn = OpenMaya.MFnPlugin(plugin, "Bubble", "0.2.6", "Any")
+    plugin_fn = OpenMaya.MFnPlugin(plugin, "Bubble", "0.2.7", "Any")
     # Maya's native Python plug-in loader can execute without defining __file__.
     # Capture its authoritative location while the MObject is available; the
     # deferred callback must not infer a path from the working directory.

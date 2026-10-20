@@ -70,7 +70,9 @@ def inspect_scene(hou):
                         return "<f>"
                     if len(width) > 2 or not 1 <= int(width) <= 16:
                         raise ValueError("Unsupported frame padding; expected 1..16 digits")
-                    return "#" * int(width)
+                    # Houdini padding is a minimum field width (including a
+                    # minus sign), not an exact count of unsigned digits.
+                    return "%0" + str(int(width)) + "d"
                 tokenized = re.sub(r"\$\{F(\d*)\}|\$F(\d*)(?![A-Za-z_0-9])", frame_token, path)
                 resolved = hou.expandString(tokenized)
                 # An unknown variable stays unresolved; don't report it as a missing file.
@@ -102,6 +104,7 @@ def path_status(path, project="", sequence=False):
     matches = list(tokens.finditer(source))
     is_pattern = bool(matches)
     glob_parts, regex_parts, offset = [], [], 0
+    printf_tokens = []
     for match in matches:
         literal, token = source[offset:match.start()], match.group().lower()
         glob_parts.extend([glob.escape(literal), "*"])
@@ -111,8 +114,14 @@ def path_status(path, project="", sequence=False):
             numeric = r"u[0-9]+_v[0-9]+"
         elif token.startswith("#"):
             numeric = r"[0-9]{%d}" % len(token)
-        elif token.startswith("%") and token[1:-1].lstrip("0"):
-            numeric = r"[0-9]{%d}" % int(token[1:-1])
+        elif token.startswith("%"):
+            width = token[1:-1].lstrip("0")
+            if width and (len(width) > 2 or int(width) > 16):
+                raise ValueError("Unsupported frame padding; expected at most 16 characters")
+            printf_tokens.append(token)
+            numeric = r"( *-?[0-9]+)"
+        elif token in ("<f>", "<frame>"):
+            numeric = r"-?[0-9]+"
         else:
             numeric = r"[0-9]+"
         regex_parts.extend([re.escape(literal), numeric])
@@ -120,7 +129,15 @@ def path_status(path, project="", sequence=False):
     glob_parts.append(glob.escape(source[offset:]))
     regex_parts.append(re.escape(source[offset:]))
     expected = re.compile("".join(regex_parts))
-    exists = any(os.path.isfile(p) and expected.fullmatch(os.path.normcase(os.path.normpath(p))) for p in glob.iglob("".join(glob_parts))) if is_pattern else os.path.isfile(expanded)
+    def matches_path(candidate):
+        match = expected.fullmatch(os.path.normcase(os.path.normpath(candidate)))
+        if match is None:
+            return False
+        # Formatting a parsed integer distinguishes real padding from extra
+        # leading zeroes, and handles signs and widths exceeded by large frames.
+        return all(token % int(value) == value
+                   for token, value in zip(printf_tokens, match.groups()))
+    exists = any(os.path.isfile(p) and matches_path(p) for p in glob.iglob("".join(glob_parts))) if is_pattern else os.path.isfile(expanded)
     return {"resolved_path": expanded, "exists": exists, "pattern": is_pattern}
 
 

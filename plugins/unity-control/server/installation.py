@@ -8,7 +8,7 @@ import stat
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 OWNER = "bubble-unity-control"
 PACKAGE = "com.bubble.codex-control"
 FILES = ("package.json", "Editor/BubbleUnityBridge.cs", "Editor/Bubble.UnityControl.Editor.asmdef")
@@ -31,7 +31,7 @@ def _safe_path(path):
     return path
 
 
-def _paths(project_path):
+def _paths(project_path, uninstall=False):
     if os.name != "nt":
         raise ValueError("This release supports Windows Unity Editor only")
     if not isinstance(project_path, str) or not project_path or not Path(project_path).is_absolute():
@@ -42,15 +42,15 @@ def _paths(project_path):
     if not _safe_path(project / "Assets").is_dir() or not version_file.is_file() or not manifest.is_file():
         raise ValueError("Select an existing Unity project containing Assets, Packages/manifest.json and ProjectSettings/ProjectVersion.txt")
     match = re.search(r"^m_EditorVersion:\s*(\S+)", version_file.read_text(encoding="utf-8-sig"), re.M)
-    if not match or not match[1].startswith("6000."):
+    if not match or (not uninstall and not match[1].startswith("6000.")):
         raise ValueError("This release supports Unity 6 (6000.x); validated against 6000.1.0f1")
     dependencies = json.loads(manifest.read_text(encoding="utf-8-sig")).get("dependencies", {})
-    if not isinstance(dependencies, dict) or PACKAGE in dependencies:
+    if not isinstance(dependencies, dict) or (not uninstall and PACKAGE in dependencies):
         raise ValueError("Project manifest already declares this package, or is malformed. Refusing to shadow a dependency")
     target = _safe_path(project / "Packages" / PACKAGE)
     for name in (*FILES, MANIFEST):
         _safe_path(target / name)
-    return project, target, match[1]
+    return project, target, match[1], PACKAGE in dependencies
 
 
 def _read_state(target):
@@ -114,7 +114,7 @@ def _operate(project_path, confirmed=False, uninstall=False):
     try:
         if type(confirmed) is not bool:
             raise ValueError("confirmed must be a boolean")
-        project, target, version = _paths(project_path)
+        project, target, version, declared_dependency = _paths(project_path, uninstall)
         state = _read_state(target)
         runtime = {name: (ROOT / "unity" / name).read_bytes() for name in FILES}
         if uninstall:
@@ -132,6 +132,10 @@ def _operate(project_path, confirmed=False, uninstall=False):
                   "restart_recommended": bool(changes),
                   "no_restart_instructions": "Return to the selected Unity Editor in Edit Mode and wait for package refresh and compilation. If Auto Refresh is disabled, use Assets > Refresh. Then rediscover the same project; compilation reloads the bridge. If it does not connect, restart that Editor. Unity has no built-in Python Script Editor; do not paste Python code.",
                   "note": "Only this project's embedded Editor package is changed. Packages/manifest.json and scene files remain untouched. Restart the selected Editor after installation/removal; package refresh may apply it without a restart. Generated .meta files and unrelated files remain after removal. Existing C# errors can prevent the bridge from loading."}
+        if uninstall and declared_dependency:
+            result["warning"] = ("Packages/manifest.json still declares " + PACKAGE +
+                                 ". Removing this owned embedded copy does not remove that dependency; "
+                                 "Unity may load its declared package instead. Manage that dependency separately in Package Manager.")
         if confirmed:
             _transaction(changes)
             result.update(applied=True, installed=not uninstall, installed_version=None if uninstall else VERSION)

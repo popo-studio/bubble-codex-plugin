@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 import sys
+import tempfile
+import hou
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "houdini"))
 import bubble_houdini_bridge as bridge
@@ -16,4 +18,12 @@ except RuntimeError as error:
     assert "interactive" in str(error)
 else:
     raise AssertionError("Headless bridge must not listen")
+# Use the actual host's padding semantics, including negative and over-width
+# frames, to prevent the pattern matcher drifting away from Houdini behavior.
+with tempfile.TemporaryDirectory() as directory:
+    for frame in (-10000, -1, 0, 10000):
+        with tempfile.TemporaryDirectory(dir=directory) as shot:
+            actual = hou.text.expandStringAtFrame("seq.$F4.exr", frame)
+            Path(shot, actual).touch()
+            assert bridge.path_status(str(Path(shot, "seq.%04d.exr")))["exists"], actual
 print("BUBBLE_HOST_SMOKE_OK", json.dumps(before))
