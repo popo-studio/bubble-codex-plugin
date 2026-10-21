@@ -1,4 +1,4 @@
-"""Real MCP stdio -> real broker HTTP -> production UXP transport/host with mock DOM."""
+"""Real MCP stdio -> real broker HTTP -> production CEP transport/host with mock DOM."""
 import asyncio
 import json
 import os
@@ -18,7 +18,7 @@ async def main():
         async with ClientSession(read, write) as session:
             await session.initialize()
             names = {t.name for t in (await session.list_tools()).tools}
-            assert len(names) == 10, names
+            assert len(names) == 14, names
 
             async def call(name, args=None):
                 result = await session.call_tool(name, args or {})
@@ -65,7 +65,7 @@ async def main():
                             await panel.wait()
             assert (await call("premiere_list_sessions"))["data"] == []
             print(json.dumps({"ok": True, "tools": len(names),
-                              "transport": "stdio -> actual HTTP -> production UXP transport and host adapter, mocked Adobe DOM",
+                              "transport": "stdio -> actual HTTP -> production CEP transport and host adapter, mocked Adobe DOM",
                               "native_adobe_tested": False}))
 
 

@@ -12,7 +12,7 @@ import sys
 import time
 
 APPS = ("maya", "nuke", "houdini", "max", "unreal", "unity")
-ADOBE_APPS = ("premiere", "photoshop")
+ADOBE_APPS = ("premiere", "photoshop", "after-effects")
 PLUGINS = tuple(a + "-control" for a in (*APPS, *ADOBE_APPS)) + (
     "deadline-control", "sequence-check", "asset-package", "plugin-doctor")
 MAX_JSON = 256 * 1024
@@ -69,7 +69,7 @@ def children(path, limit):
 
 
 def status():
-    return {"ok": True, "data": {"version": "0.1.2", "mode": "read-only",
+    return {"ok": True, "data": {"version": "0.1.3", "mode": "read-only",
         "python_version": sys.version.split()[0], "uv_available": bool(shutil.which("uv")),
         "supported_plugins": list(PLUGINS)},
         "note": "Disk/cache observations do not prove Codex enabled state or tool loading. Use Codex's own tool discovery for that."}
@@ -302,10 +302,16 @@ def guidance(plugin_name, action):
             "Use the supported Codex marketplace refresh/install UI or CLI for the actual registered source; do not edit installed cache/config files."]
     if app == "premiere":
         steps.extend([
-            "Use %s_installation_status to distinguish prepared UXP source/package from Adobe installation and a connected panel." % app,
-            "Use the owning plugin's setup workflow and official Adobe installer for the exact Bubble UXP package; preview before authorizing installation/removal. Never delete Adobe private plugin directories.",
+            "Use premiere_installation_status to distinguish signed CEP release files, user-profile installation and an actually connected Premiere 26.x panel.",
+            "Use premiere_install_bridge or premiere_uninstall_bridge with a preview and explicit authorization. Preserve modified/unknown extensions. No Creative Cloud, UPIA or PlayerDebugMode is required; never edit Adobe private plugin stores or registry debug switches.",
             "Adobe panel sessions use session IDs, not the DCC PID registry. Use %s_list_sessions in the paired Codex conversation; select an explicit session and document/project." % app,
             "After updating or restarting the MCP server, obtain a fresh pairing code and reconnect the intended panel. Never switch to another application session silently."])
+    if app == "after-effects":
+        steps.extend([
+            "Use after_effects_installation_status and after_effects_list_sessions to inspect exact executable version/path and running processes. Only AE 26+ is supported.",
+            "Native script delivery requires the AE preference Allow Scripts To Write Files And Access Network. Do not install Creative Cloud, UPIA, developer tools or a persistent bridge; do not silently change the preference.",
+            "Multiple AfterFX processes cannot be safely selected by the documented command-line API. Resolve ambiguity before running scripts, and refresh the explicit project-state token after edits.",
+            "Remove the Codex package to uninstall the integration. Preserve user projects and preferences; never automatically retry a timed-out write."])
     if app == "photoshop":
         steps.extend([
             "Use photoshop_installation_status and photoshop_list_sessions to inspect native Windows COM registration, the exact installed version/path, and running instances.",

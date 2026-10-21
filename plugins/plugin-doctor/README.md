@@ -16,9 +16,11 @@
 | `doctor_check_log` | 指定日志尾部最多 256 KiB 的已知错误分类；不返回原始日志 |
 | `doctor_repair_guidance` | 修复/更新/卸载步骤，不执行写操作 |
 
-支持八个软件插件及 Deadline、Sequence Check、Asset Package、Plugin Doctor。各缓存版本均展示；不会把缓存存在误报为“已启用”或“工具已加载”。启用状态和实际工具发现需要 Codex 宿主确认。本地来源版本不代表远端最新版本，不自动联网刷新市场。
+支持九个软件插件及 Deadline、Sequence Check、Asset Package、Plugin Doctor。各缓存版本均展示；不会把缓存存在误报为“已启用”或“工具已加载”。启用状态和实际工具发现需要 Codex 宿主确认。本地来源版本不代表远端最新版本，不自动联网刷新市场。
 
-PR 的 UXP 面板使用当前 Codex 会话内的配对连接，由对应插件的 `*_list_sessions` 查询；不使用旧 DCC 的 PID 注册目录。诊断中心可检查其 Codex 包并提供官方安装、卸载和重新配对指引。
+PR 0.2.0 起使用签名 CEP 面板和当前 Codex 会话内的配对连接；不使用旧 DCC 的 PID 注册目录。诊断中心提供自有扩展安装、卸载和重新配对指引，不再要求 Creative Cloud / UPIA。
+
+AE 面向 26+，使用原生命令行脚本入口，无常驻软件端桥接。需要用户启用 AE 脚本文件写入权限；多个 AfterFX 进程时拒绝操作，超时不重试。
 
 Photoshop 0.2.0 起为原生 Windows COM 直连，仅需 Codex 插件。诊断指引检查具体版本、路径和已运行进程，不再要求 Creative Cloud、Adobe 面板或配对。
 

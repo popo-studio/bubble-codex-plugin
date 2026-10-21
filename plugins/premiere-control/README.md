@@ -1,72 +1,31 @@
-# Bubble Premiere Pro
+# Bubble Premiere Pro 0.2.0
 
-Premiere Pro **25.6+** UXP integration for Codex. The user's detected Premiere
-2021 / 15.0 cannot load UXP; this package intentionally targets the newer API.
-It does not enable CEP debugging or install an old bridge.
+Candidate integration for **Windows Premiere Pro 26.x only**, using a signed CEP 12 panel and local MCP broker. Older versions and untested future major versions are rejected. No Creative Cloud, UPIA, UXP Developer Tool, debugger setting or script pasting is required. This differs from Photoshop COM: Premiere needs a small signed panel installed in its per-user extensions folder.
 
-## Supported operations
+## Setup and lifecycle
 
-Ten MCP tools: installation status, install/update, uninstall, private pairing
-code, session/project selection, project/sequence information, offline-media
-inspection, import media into the root bin, relink one item, and save the chosen
-project. No arbitrary JavaScript/eval, ExtendScript, QE, timeline editing or
-render/export API is exposed in this release.
+Run the setup skill, inspect the installation preview, then authorize installation. The bundled signed payload is copied to `%APPDATA%/Adobe/CEP/extensions/com.popostudio.bubble.premiere`; ownership and file hashes are recorded in an adjacent receipt. Restart Premiere if the panel is absent, open **Window > Extensions > Bubble Premiere**, request a private connection code and paste it into the panel. Keep the panel open. Nothing starts invisibly or launches Premiere automatically.
 
-The media audit scans at most 1000 project bin items, marks host errors
-unverified, and surfaces truncation. It is not a complete dependency/sequence or
-effects audit. Import/relink changes remain unsaved; relink is not undoable in
-Adobe. Save is a separate explicit action.
+Each Codex server uses a random loopback port and private token. Every connected panel has a separate session UUID; the active project is identified by its document ID, name and path. Multiple matches require selection. Only the active project is advertised; activate another project in Premiere and list again. Connection credentials stay in memory. Closing the panel disconnects; Codex restart requires a new code. Queued requests expire, are delivered at most once and never replayed after uncertain failures.
 
-## Installation and removal
+Install/update validates exact release files and ownership; unknown or modified files block replacement or removal. Close the panel before update/uninstall. Uninstall removes only the managed extension and receipt. Already loaded code stops when the panel closes or Premiere restarts. Codex plugin removal and the Premiere extension removal are separate. No projects, preferences or registry debug flags are removed. Adobe upgrades may remove manually deployed CEP files; inspect setup status before repair.
 
-1. Install this Codex plugin and run its setup skill.
-2. Check a supported Premiere version and Adobe Creative Cloud/UPIA.
-3. Preview the bundled candidate CCX package. Its ZIP layout follows the Adobe
-   packaging format; it has not yet been validated by UDT or a native Adobe
-   installation. If needed, package `uxp/manifest.json` with UXP Developer Tool
-   and pass the resulting absolute `.ccx` path as `package_path`.
-4. Approve the returned install plan; the tool validates exact release contents
-   before invoking Adobe's official UPIA `/install`. Adobe may require approval.
-5. Open the Bubble Premiere Pro panel. Request a pairing code in Codex and paste
-   it in the panel's connection field; click Connect. No script copying.
+## Tools
 
-Updates use the same Adobe plugin ID and validate the new release's CCX.
-Uninstall previews first and uses UPIA only after exact installed identity is
-verified. Unknown UPIA output remains unknown; use Creative Cloud **Manage
-Plugins** in that case. We do not edit Adobe's private plugin store. Codex plugin
-removal and Adobe panel removal are separate. Close/disconnect the panel to stop
-the connection without closing projects. No Adobe profile files or registry
-debug switches are written by this integration.
+14 tools cover installation status/install/uninstall, pairing, session selection, project info, media inspection, import, relink, save, timeline inspection, sequence creation from chosen source clips, and new/open project from an empty application.
 
-## Multiple instances and lifecycle
+- Create a new `.prproj` only at a nonexistent local absolute path, with no projects open. Open an existing `.prproj` only when no projects are open; Adobe conversion/offline warnings remain enabled. Neither action closes or discards work.
+- Create a sequence from explicit online source clip IDs; settings follow source media. No implicit project save.
+- Import media into the root bin; relink one explicit item with Adobe compatibility checks. Relinking is not undoable; inspect state after an uncertain result.
+- Inspect up to 1000 project items or timeline clips. Truncation and unreadable media fields remain visible. This is not a complete effect, transition or dependency audit.
+- Save only to the selected project's existing path. No arbitrary JSX, QE, automatic retries, render/export, effects, transition editing, or automatic project closing.
 
-Each open, paired panel has an opaque session UUID. Its active project is shown
-with name/path/GUID; all other open projects are **not** advertised. Choose the
-correct session and project ID, or activate the intended project in Premiere and
-list again. Duplicate names remain ambiguous. A native PID is not fabricated.
-Every host action checks the project identity and deadline before executing.
+## Verification status
 
-The broker listens on a random `127.0.0.1` port with a private token, within the
-current MCP process. Panel credentials remain in memory. Restarting Codex/MCP
-requires re-pairing. A panel belongs to one chat at a time. Closing the panel
-disconnects; no dormant software autostart is installed. Requests/results are
-bounded to 1 MiB, queues/HTTP workers to 32. Timed-out commands are never replayed;
-an already-started operation may finish and require state inspection.
+The signed package is produced and verified using Adobe's standalone ZXPSignCmd. Unit tests and real MCP stdio/HTTP tests use a simulated Adobe DOM; **native Premiere 26 installation, panel load, API behavior, connection and uninstall remain unverified**, pending user installation of the latest host. The local Premiere 2021 is intentionally not used as acceptance evidence.
 
-## Validation limits
+## Release signing (maintainer only)
 
-Tests cover real loopback authentication, app/session isolation, deadlines,
-at-most-once delivery, bounded requests, lifecycle, mocked Adobe UPIA, and public
-DOM behavior under a Node mock. These do not constitute a real Premiere 25.6+
-UXP load test. This machine has Premiere 15.0, so current host loading, UXP
-localhost permission, official CCX packaging and native operations remain for
-acceptance on a supported installation.
+`tools/build_signed_release.py --signer <absolute ZXPSignCmd.exe> --certificate <external .p12> --password-env BUBBLE_CEP_SIGNING_PASSWORD` builds `adobe/com.popostudio.bubble.premiere.zxp`, extracted `adobe/signed/`, and `adobe/release.json`. The password and private key are never included. The candidate is self-signed without a timestamp, so certificate expiry applies; re-sign before expiry. Any CEP source change requires rebuilding the signed payload.
 
-Official references:
-
-- [UXP Project API](https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/project)
-- [ClipProjectItem API](https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/clipprojectitem)
-- [FolderItem API](https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/folderitem)
-- [UXP networking](https://developer.adobe.com/uxp/guides/how-to/recipes/network/)
-- [Official packaging](https://developer.adobe.com/uxp/guides/how-to/distribution/package/)
-- [Official installation](https://developer.adobe.com/uxp/guides/how-to/distribution/install/)
+Sources: [Adobe CEP12 integration/extension folders](https://github.com/Adobe-CEP/CEP-Resources/blob/master/CEP_12.x/Documentation/CEP%2012%20HTML%20Extension%20Cookbook.md), [Adobe signing guide](https://github.com/Adobe-CEP/Getting-Started-guides/blob/master/Package%20Distribute%20Install/readme.md), [Adobe Premiere scripting example](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/jsx/PPRO/Premiere.jsx).

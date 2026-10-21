@@ -6,3 +6,7 @@
 *.lock text eol=lf
 *.js text eol=lf
 *.html text eol=lf
+# CEP signatures cover exact bytes; Git must not normalize signed payloads
+# or their source counterparts during staging/checkout on any platform.
+plugins/premiere-control/cep/** -text
+plugins/premiere-control/adobe/signed/** -text

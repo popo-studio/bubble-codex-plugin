@@ -1,7 +1,7 @@
 {
   "name": "premiere-control",
-  "version": "0.1.0",
-  "description": "Control Premiere Pro 25.6+ through an authenticated local UXP panel.",
+  "version": "0.2.0",
+  "description": "Control Premiere Pro 26.x through an authenticated local signed CEP panel.",
   "author": {
     "name": "popo-studio"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Bubble Premiere Pro",
     "shortDescription": "Premiere 项目检查与素材操作",
-    "longDescription": "Pair a Premiere Pro 25.6+ UXP panel, inspect projects and offline media, import and relink media with explicit project selection.",
+    "longDescription": "Pair a Premiere Pro 26.x signed CEP panel, inspect projects and offline media, import and relink media with explicit project selection.",
     "developerName": "popo-studio",
     "category": "Productivity",
     "capabilities": [

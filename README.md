@@ -1,6 +1,6 @@
 # Bubble Codex Plugins
 
-一个 Git 仓库维护自己的 Codex 插件市场。十二个插件可独立安装：八个连接本机创作软件，另四个提供渲染管理、序列检查、素材打包和插件诊断。
+一个 Git 仓库维护自己的 Codex 插件市场。十三个插件可独立安装：九个连接本机创作软件，另四个提供渲染管理、序列检查、素材打包和插件诊断。
 
 | 插件 | 目标版本 | 执行能力 | 安装范围 |
 | --- | --- | --- | --- |
@@ -10,7 +10,8 @@
 | [Bubble 3ds Max](plugins/max-control/README.md) | Windows 3ds Max 2025/2026 | Python / MAXScript | 明确选择用户启动脚本目录 |
 | [Bubble Unreal](plugins/unreal-control/README.md) | Unreal Engine 5.5 | Editor Python | 用户指定的 Unreal 项目 |
 | [Bubble Unity](plugins/unity-control/README.md) | Unity 6 / 6000.x | 已编译 C# 静态方法 / 菜单命令 | 用户指定的 Unity 项目 |
-| [Bubble Premiere](plugins/premiere-control/README.md) | Premiere Pro 25.6+，UXP | 项目、序列、素材检查与支持的项目操作 | Adobe 官方 UXP 插件安装 |
+| [Bubble Premiere](plugins/premiere-control/README.md) | Windows Premiere Pro 26.x | 项目、序列、时间线、素材检查与支持的项目操作 | 用户目录签名 CEP 扩展，无 CC/UPIA |
+| [Bubble After Effects](plugins/after-effects-control/README.md) | Windows After Effects 26+ | 项目检查、合成、素材、图层、变换、保存与授权 JSX | 原生脚本入口，无常驻软件端桥接 |
 | [Bubble Photoshop](plugins/photoshop-control/README.md) | Windows Photoshop 26.2+，原生 COM | 文档、PSD/图片输出、画布调整、图层与文字管理、ExtendScript | 仅安装 Codex 插件，无 PS 端桥接 |
 | [Bubble Deadline](plugins/deadline-control/README.md) | 现有 Deadline 10 客户端 | 任务查询、日志检查、预览后提交/重提 | 无软件侧桥接 |
 | [Bubble Sequence Check](plugins/sequence-check/README.md) | 本地图片序列 / EXR | 缺帧、损坏、通道、尺寸与像素异常检查 | 无软件侧桥接 |
@@ -56,9 +57,13 @@ Windows Photoshop 26.2+ 使用 Adobe 自带 COM 自动化，无需 Creative Clou
 
 插件绑定已注册的具体版本并核对真实安装路径，不使用可能指向旧版本的通用 ProgID。仅连接已运行的实例，不自动启动软件；同一路径出现多个 Photoshop 进程时拒绝操作，因为 COM 无法保证按 PID 选择。多个文档按明确 ID 操作，写入前重新核对目标；超时不重试。
 
-## Premiere UXP（待验收）
+## Premiere 与 After Effects 新版接入（待实机验收）
 
-Premiere 仍使用 UXP 面板方案，目标 25.6+；本机 PR 2021 不支持，当前按用户要求暂停其原生验收。随包提供 ZIP 格式可复现构建的 `.ccx` 候选包，尚未通过 Adobe 原生安装验收。原有 Creative Cloud / UPIA 安装及面板连接要求仍适用于 PR，不适用于新的 Photoshop 直连方案。
+两者面向 26+，不兼容本机旧 PR 2021 / AE 2024。用户已确认先完成代码和自动化测试，升级软件后再验收原生操作；不能把工具加载、模拟宿主测试或磁盘安装成功当作新版软件实测。
+
+PR 0.2.0 改为签名 CEP 扩展，由插件预览后安装到当前用户扩展目录，不需要 Creative Cloud、UPIA、用户开发者工具或调试开关。打开面板并配对后，按会话和项目身份调用标准工具。更新需同步软件侧签名资源；完整卸载先移除自有扩展，再卸载 Codex 插件。
+
+AE 0.1.0 使用官方 `AfterFX.exe -r` 脚本入口，需要 AE 开启「允许脚本写入文件和访问网络」，不安装常驻桥接、不静默修改偏好。命令行不能可靠按 PID 路由，多个 AfterFX 进程时拒绝执行；写操作检查会话令牌、项目状态和截止时间。项目状态令牌不是 Adobe 项目 GUID，修改后需重新读取。
 
 ## 六个 DCC 首次连接
 
@@ -84,7 +89,7 @@ Premiere 仍使用 UXP 面板方案，目标 25.6+；本机 PR 2021 不支持，
 
 Unity 自定义脚本需先经过 Unity 编译，再调用其中的静态方法。现有项目编译错误可能阻止桥接加载。Unreal 需要内置 Python Script Plugin；项目禁用它时按设置说明处理。本机没有 3ds Max，尚未实机验证。真实 GUI 重启、多窗口和生产项目检查由用户验收，自动化测试不代替这些步骤。
 
-八个软件图标使用产品资源，四个流程插件使用原创 SVG；来源见 [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md)。本项目是独立第三方集成。
+九个软件图标使用产品资源，四个流程插件使用原创 SVG；来源见 [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md)。本项目是独立第三方集成。
 
 ## 开发与测试
 
@@ -99,7 +104,7 @@ uv run --locked tests/stdio_smoke.py
 
 本次结果见 [验证记录](VALIDATION.md)。其他插件的具体验证命令和实机验证限制见各自 README。单元测试和软件宿主测试使用临时配置/项目；网络测试需允许本机回环连接。不要提交虚拟环境、用户场景、会话令牌或软件用户配置。
 
-发布前还需用 **桌面应用实际使用的 Codex 后端** 验证插件加载。`tests/codex_plugin_smoke.py --codex <codex.exe绝对路径>` 默认只读取插件，检查十二个 MCP 服务及旧版 `cwd` 故障对照。加 `--install` 后会实际安装或更新十二个 Codex 插件，创建不持久化的测试会话，发现工具并调用只读的实例列表或状态；结束时卸载原先未安装的插件，保留已有插件的更新。它不安装软件侧桥接、不运行模型回合，也不提交渲染任务。此项会修改 Codex 插件安装状态，应在已授权的测试环境执行。
+发布前还需用 **桌面应用实际使用的 Codex 后端** 验证插件加载。`tests/codex_plugin_smoke.py --codex <codex.exe绝对路径>` 默认只读取插件，检查十三个 MCP 服务及旧版 `cwd` 故障对照。加 `--install` 后会实际安装或更新十三个 Codex 插件，创建不持久化的测试会话，发现工具并调用只读的实例列表或状态；结束时卸载原先未安装的插件，保留已有插件的更新。它不安装软件侧桥接、不运行模型回合，也不提交渲染任务。此项会修改 Codex 插件安装状态，应在已授权的测试环境执行。
 
 `tests/launcher_smoke.py` 另验证服务从插件目录启动后迁出，并在连接期间删除临时插件副本。两种测试都需要通过，独立 MCP SDK 的测试无法替代 Codex 插件加载测试。
 

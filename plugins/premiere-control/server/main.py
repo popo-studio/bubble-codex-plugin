@@ -1,4 +1,4 @@
-"""Premiere Pro 25.6+ UXP integration; stdio only."""
+"""Premiere Pro 26.x signed CEP integration; stdio only."""
 import atexit
 import threading
 from mcp.server.fastmcp import FastMCP
@@ -24,7 +24,7 @@ def broker():
 
 def call(operation, args, session_id, timeout=30):
     if _broker is None:
-        return failure("not_paired", "Generate a pairing code and connect the Premiere UXP panel first")
+        return failure("not_paired", "Generate a pairing code and connect the Premiere CEP panel first")
     return _broker.request(operation, args, session_id, timeout)
 
 
@@ -36,16 +36,16 @@ def premiere_installation_status(package_path: str | None = None) -> dict:
 
 @mcp.tool(annotations=WRITE)
 def premiere_install_bridge(confirmed: bool = False, package_path: str | None = None) -> dict:
-    """Preview by default. With explicit user authorization, install a release-matching CCX using Adobe's installer.
-    Requires Premiere 25.6+. Never copy code into an editor. Adobe may require user approval; command success
+    """Preview by default. With explicit user authorization, install a the bundled signed CEP release in the current user extension folder.
+    Requires Premiere 26.x. Never copy code into an editor. Installation success
     does not prove host loading. Updates use the same plugin ID. Does not restart Premiere."""
     return install_bridge(confirmed, package_path)
 
 
 @mcp.tool(annotations=WRITE)
 def premiere_uninstall_bridge(confirmed: bool = False) -> dict:
-    """Preview by default; confirmed removal uses Adobe's installer after verifying exact installed identity.
-    Removing the Codex plugin does not remove the Adobe plugin. Close its panel to disconnect immediately."""
+    """Preview by default; confirmed removal deletes only exact managed signed extension files.
+    Removing the Codex plugin does not remove the CEP extension. Close its panel to disconnect immediately."""
     return uninstall_bridge(confirmed)
 
 
@@ -99,6 +99,33 @@ def premiere_relink_media(project_id: str, item_id: str, path: str, session_id: 
 def premiere_save_project(project_id: str, session_id: str | None = None) -> dict:
     """Save the explicitly authorized selected project to its existing path; refuses unsaved projects."""
     return call("save_project", {"project_id": project_id}, session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_new_project(path: str, session_id: str) -> dict:
+    """Create a project at a new absolute .prproj path only when no project is open. Never overwrites.
+    Writes a new project file; requires authorization for that path. Does not close or discard existing work."""
+    return call("new_project", {"path": path}, session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_open_project(path: str, session_id: str) -> dict:
+    """Open an existing .prproj only when no project is open; preserves Adobe conversion/offline warnings.
+    Does not close, save, or discard existing work. Inspect after timeouts; never replay automatically."""
+    return call("open_project", {"path": path}, session_id)
+
+
+@mcp.tool(annotations=READ)
+def premiere_inspect_timeline(project_id: str, sequence_id: str, session_id: str | None = None) -> dict:
+    """Inspect up to 1000 video/audio timeline clips with stable IDs and exact tick strings. No effects audit."""
+    return call("inspect_timeline", {"project_id": project_id, "sequence_id": sequence_id}, session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_create_sequence_from_clips(project_id: str, name: str, item_ids: list[str], session_id: str | None = None) -> dict:
+    """Create a sequence from 1-100 chosen online source clip IDs in order; settings follow source media.
+    Requires authorization for project and clips. Does not save; never retry a timed-out mutation."""
+    return call("create_sequence_from_clips", {"project_id": project_id, "name": name, "item_ids": item_ids}, session_id)
 
 
 if __name__ == "__main__":

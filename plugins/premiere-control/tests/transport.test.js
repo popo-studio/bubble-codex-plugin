@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const {createTransport} = require("../uxp/transport.js");
-const code = "bubble-uxp:1:33333:" + "a".repeat(43);
+const {createTransport} = require("../cep/transport.js");
+const code = "bubble-premiere:1:33333:" + "a".repeat(43);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 test("expired queued command never reaches host adapter", async () => {
     let ran = 0, result;

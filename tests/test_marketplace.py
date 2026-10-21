@@ -9,7 +9,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity", "deadline", "premiere", "photoshop")} | {
+NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity", "deadline", "premiere", "photoshop", "after-effects")} | {
     "sequence-check", "asset-package", "plugin-doctor"}
 
 
@@ -34,20 +34,25 @@ class MarketplaceTests(unittest.TestCase):
                 self.assertTrue((folder / f"launch-{version}.py").is_file())
                 self.assertTrue((folder / f"launch-{version}.py.lock").is_file())
 
-    def test_adobe_candidate_packages_match_uxp_source(self):
-        for app in ("premiere",):
-            folder = ROOT / "plugins" / (app + "-control")
-            source = folder / "uxp"
-            manifest = read_json(source / "manifest.json")
-            self.assertEqual(manifest["version"], read_json(folder / "plugin.json")["version"])
-            self.assertIsInstance(manifest["host"], dict)
-            self.assertEqual(manifest["requiredPermissions"]["network"]["domains"], ["http://127.0.0.1"])
-            expected = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob("*") if p.is_file()}
-            with zipfile.ZipFile(folder / "adobe" / (manifest["id"] + ".ccx")) as archive:
-                self.assertEqual(set(archive.namelist()), set(expected))
-                self.assertEqual(len(archive.namelist()), len(expected))
-                for name, content in expected.items():
-                    self.assertEqual(archive.read(name), content, (app, name))
+    def test_premiere_signed_release_matches_source(self):
+        import hashlib
+        folder = ROOT / 'plugins/premiere-control'
+        source = folder / 'cep'
+        signed = folder / 'adobe/signed'
+        release = read_json(folder / 'adobe/release.json')
+        self.assertEqual(release['version'], read_json(folder / 'plugin.json')['version'])
+        manifest = ET.fromstring((source / 'CSXS/manifest.xml').read_text(encoding='utf-8'))
+        self.assertEqual(manifest.attrib['ExtensionBundleVersion'], release['version'])
+        original = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob('*') if p.is_file()}
+        payload = {p.relative_to(signed).as_posix(): p.read_bytes() for p in signed.rglob('*') if p.is_file()}
+        self.assertTrue(any(name.startswith('META-INF/') for name in payload))
+        self.assertEqual({name:data for name,data in payload.items() if not name.startswith('META-INF/') and name != 'mimetype'},original)
+        self.assertEqual({name:hashlib.sha256(data).hexdigest() for name,data in payload.items()},release['files'])
+        with zipfile.ZipFile(folder / 'adobe/com.popostudio.bubble.premiere.zxp') as archive:
+            files=[name for name in archive.namelist() if not name.endswith('/')]
+            self.assertEqual(len(files),len(set(files)))
+            self.assertEqual(set(files),set(payload))
+            for name,data in payload.items():self.assertEqual(archive.read(name),data)
 
     def test_manifest_parity_and_local_references(self):
         for name in sorted(NAMES):

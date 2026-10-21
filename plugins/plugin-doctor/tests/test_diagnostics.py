@@ -53,6 +53,14 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertTrue(result["ok"], result)
         self.assertTrue(result["data"]["healthy"], result)
 
+    def test_after_effects_native_guidance(self):
+        result = d.guidance('after-effects-control', 'uninstall')
+        self.assertTrue(result['ok'])
+        steps = ' '.join(result['data']['steps'])
+        self.assertIn('after_effects_list_sessions', steps)
+        self.assertIn('Multiple AfterFX', steps)
+        self.assertNotIn('confirmed=true', steps)
+
     def test_detect_legacy_failure_and_version_drift(self):
         p = self.root / "package"
         shutil.copytree(ROOT, p, ignore=shutil.ignore_patterns(".venv", "__pycache__", ".test-runtime"))

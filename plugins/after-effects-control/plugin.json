@@ -1,0 +1,38 @@
+{
+  "name": "after-effects-control",
+  "version": "0.1.0",
+  "description": "Control Windows After Effects 26+ using native scripting, without a host bridge.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "after-effects",
+    "adobe",
+    "composition",
+    "animation"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/after-effects-setup/SKILL.md",
+      "interface": {
+        "displayName": "Bubble After Effects",
+        "shortDescription": "After Effects 合成与图层操作",
+        "longDescription": "Windows After Effects 26+ native JSX control using AfterFX -r. No Creative Cloud or host bridge installation. Exactly one running instance and user-enabled scripting file access required. Native acceptance is pending.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 After Effects 并检查当前项目",
+          "创建合成并添加文字图层"
+        ],
+        "logo": "./assets/icon.png",
+        "composerIcon": "./assets/icon.png"
+      }
+    }
+  }
+}

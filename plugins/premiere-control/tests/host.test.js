@@ -1,61 +1,15 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const {createHost} = require("../uxp/host.js");
-function fixture() {
-    let calls = [];
-    const clip = {name: "clip", getId: async () => "item-1", isSequence: async () => false,
-        getMediaFilePath: async () => "C:/a.mov", isOffline: async () => true,
-        canChangeMediaPath: async () => true,
-        changeMediaFilePath: async (path, override) => {calls.push(["relink", path, override]); return true;}};
-    const project = {guid: {toString: () => "project-1"}, name: "shot.prproj", path: "C:/shot.prproj",
-        getSequences: async () => [{guid: {toString: () => "seq-1"}, name: "edit"}],
-        getRootItem: async () => ({getItems: async () => [clip]}),
-        importFiles: async (...args) => {calls.push(["import", ...args]); return true;},
-        save: async () => {calls.push(["save"]); return true;}};
-    const api = {Project: {getActiveProject: async () => project},
-        FolderItem: {cast: () => null}, ClipProjectItem: {cast: item => item}};
-    return {project, clip, api, calls, host: createHost(api, "25.6")};
-}
-const expiry = () => Date.now() / 1000 + 10;
-test("advertises active project with opaque GUID", async () => {
-    const x = fixture(); assert.equal((await x.host.info()).targets[0].id, "project-1");
-});
-test("rejects switched project before mutation", async () => {
-    const x = fixture();
-    await assert.rejects(x.host.dispatch("save_project", {project_id: "other"}, expiry()), /selection changed/);
-    assert.equal(x.calls.length, 0);
-});
-test("expired command does not run", async () => {
-    const x = fixture();
-    await assert.rejects(x.host.dispatch("save_project", {project_id: "project-1"}, 1), /expired/);
-    assert.equal(x.calls.length, 0);
-});
-test("media report uses Adobe offline state", async () => {
-    const x = fixture();
-    const result = await x.host.dispatch("inspect_media", {project_id: "project-1"}, expiry());
-    assert.equal(result.items[0].offline, true); assert.equal(result.truncated, false);
-});
-test("media errors remain explicitly unverified", async () => {
-    const x = fixture(); x.clip.isOffline = async () => {throw Error("host busy");};
-    const result = await x.host.dispatch("inspect_media", {project_id: "project-1"}, expiry());
-    assert.equal(result.items[0].offline, null); assert.equal(result.items[0].kind, "unverified");
-});
-test("import preserves root target and does not save", async () => {
-    const x = fixture();
-    await x.host.dispatch("import_files", {project_id: "project-1", paths: ["C:/new.mov"]}, expiry());
-    assert.equal(x.calls.length, 1); assert.equal(x.calls[0][0], "import"); assert.equal(x.calls[0][2], true);
-});
-test("relink retains Adobe compatibility checks", async () => {
-    const x = fixture();
-    await x.host.dispatch("relink_media", {project_id: "project-1", item_id: "item-1", path: "C:/new.mov"}, expiry());
-    assert.deepEqual(x.calls[0], ["relink", "C:/new.mov", false]);
-});
-test("unknown item cannot relink", async () => {
-    const x = fixture();
-    await assert.rejects(x.host.dispatch("relink_media", {project_id: "project-1", item_id: "wrong", path: "C:/a"}, expiry()), /no longer exists/);
-    assert.equal(x.calls.length, 0);
-});
-test("no remote arbitrary script execution", async () => {
-    const x = fixture();
-    await assert.rejects(x.host.dispatch("execute_script", {project_id: "project-1", code: "evil()"}, expiry()), /Unsupported/);
-});
+const test=require("node:test"),assert=require("node:assert/strict");
+const {fixture}=require("./mock_host");
+const args={project_id:"mock-project"};
+test("26 only including future rejection",()=>{for(const v of ["15.0","25.6","27.0","bad"]){const f=fixture();f.set("app.version="+JSON.stringify(v));assert.equal(f.run("host_info").ok,false);}});
+test("empty host is discoverable",()=>{const f=fixture();f.set("app.project=null;app.projects.numProjects=0");assert.deepEqual(f.run("host_info").data.targets,[]);});
+test("wrong project and expired jobs never mutate",()=>{const f=fixture();f.set("project.save=function(){throw Error('MUTATED')}");assert.match(f.run("save_project",{project_id:"wrong"}).error.message,/no longer active/);assert.match(f.run("save_project",args,1).error.message,/expired/);});
+test("public project media and timeline reads",()=>{const f=fixture();assert.equal(f.run("project_info",args).data.sequences[0].id,"mock-sequence");assert.equal(f.run("inspect_media",args).data.items[1].id,"clip1");assert.equal(f.run("inspect_timeline",{...args,sequence_id:"mock-sequence"}).ok,true);});
+test("wide bins report truncation and forbid ambiguous mutation",()=>{const f=fixture();f.set('project.rootItem.children=[];for(var k=0;k<1100;k++)project.rootItem.children.push(clip);project.rootItem.children.numItems=1100');assert.equal(f.run("inspect_media",args).data.truncated,true);assert.match(f.run("relink_media",{...args,item_id:"clip1",path:"D:/mock.mov"}).error.message,/truncated/);});
+test("media mutations validate paths",()=>{const f=fixture();assert.equal(f.run("import_files",{...args,paths:["D:/mock.mov"]}).ok,true);for(const path of ["relative.mov","D:/missing.mov","D:/bad.jsx"]){assert.equal(f.run("import_files",{...args,paths:[path]}).ok,false);}assert.equal(f.run("relink_media",{...args,item_id:"clip1",path:"D:/mock.mov"}).ok,true);});
+test("save refuses unsaved path and checks result",()=>{const f=fixture();assert.equal(f.run("save_project",args).ok,true);f.set('project.path=""');assert.equal(f.run("save_project",args).ok,false);});
+test("sequence creation rejects missing offline and bin items",()=>{const f=fixture();assert.equal(f.run("create_sequence_from_clips",{...args,name:"new",item_ids:["clip1"]}).data.created,true);assert.equal(f.run("create_sequence_from_clips",{...args,name:"new",item_ids:["root"]}).ok,false);f.set('clip.isOffline=function(){return true;}');assert.equal(f.run("create_sequence_from_clips",{...args,name:"new",item_ids:["clip1"]}).ok,false);});
+test("new/open project guard existing work and overwrite",()=>{const f=fixture();assert.equal(f.run("new_project",{path:"D:/new.prproj"}).ok,false);f.set('app.project=null;app.projects.numProjects=0');assert.equal(f.run("new_project",{path:"D:/hero.prproj"}).ok,false);assert.equal(f.run("new_project",{path:"D:/new.prproj"}).data.project.path,"D:/new.prproj");});
+test("open existing project only from empty application",()=>{const f=fixture();f.set('app.project=null;app.projects.numProjects=0');assert.equal(f.run("open_project",{path:"D:/hero.prproj"}).ok,true);});
+test("no arbitrary script operation",()=>{const f=fixture();assert.equal(f.run("execute_script",{...args,script:"app.quit()"}).ok,false);});
+test("JSON job strings cannot inject code",async()=>{const f=fixture(),{createHost}=require("../cep/host");const host=createHost(f.evalScript);await assert.rejects(host.dispatch('evil");app.quit();//',args,Date.now()/1000+10),/Unsupported/);assert.equal((await host.info()).version,"26.0");});

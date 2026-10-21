@@ -1,29 +1,16 @@
 ---
 name: premiere-control
-description: Inspect Premiere Pro 25.6+ projects and offline media, import or relink selected media, and save an explicitly chosen project.
+description: Control Premiere 26.x through the Bubble signed CEP panel, inspect projects and timeline, create/open projects and sequences, import/relink media, and save explicitly selected projects.
 ---
 
-# Bubble Premiere Pro control
+Prefer Premiere MCP tools over computer use. If tools are missing, diagnose loading; if unconnected, use premiere-setup. Do not fall back silently to UI automation, shell injection, COM guesses, QE or arbitrary scripts.
 
-First list sessions. Match exact filename, stem or full path; if ambiguous,
-incomplete or unsaved, present the panels and ask the user to choose. Retain the
-session UUID and project ID. Never choose a first item or move silently to a
-different panel. Only active projects are advertised, not all open projects.
+List sessions first. Match project name/path only when unique; if multiple hosts/projects match, list choices and ask. Session UUID identifies the paired panel, not a fabricated OS PID. Only the active project is advertised. Pass explicit session_id and project_id for project operations; refresh after project changes.
 
-`premiere_project_info` lists sequences; `premiere_inspect_media` reports up to
-1000 bin items, offline media and unverified host errors. Offline reporting is
-Adobe's judgment, not a frame completeness check, effect audit or package-ready
-dependency manifest. Keep truncation/errors visible.
+An empty application is supported: `premiere_new_project` creates a new .prproj at a user-authorized, nonexistent absolute path; `premiere_open_project` opens an existing .prproj. Both require an explicit session and refuse while any project is open. Do not close or discard existing work to satisfy these prerequisites.
 
-`premiere_import_files` modifies the selected project root bin without saving.
-`premiere_relink_media` changes exactly one selected media item and is not
-undoable in Adobe. Confirm the exact target/path when not already authorized.
-`premiere_save_project` writes the existing project path only on a save request.
-Before any write, re-read project identity and verify the intended target.
+Use `premiere_project_info`, `premiere_inspect_media`, and `premiere_inspect_timeline` before editing. A truncated or unverified audit is incomplete. `premiere_create_sequence_from_clips` uses explicit online clip IDs and follows source settings. Imports go to the root bin. Relink only the specific authorized item/path, noting it cannot be undone. Mutations do not automatically save; `premiere_save_project` saves only an existing path when authorized.
 
-The first version has explicit supported operations; arbitrary JavaScript,
-ExtendScript, QE, timeline editing and rendering are not exposed. Do not invent
-tool support or bypass the UXP integration with hidden host APIs.
+There is no exposed arbitrary-script or render tool. If the requested operation is unsupported, state that clearly. Never retry a timed-out write automatically: it may already have changed the project. Preserve all unrelated projects and files.
 
-Timeout/disconnect may follow partial host changes. Never automatically retry a
-write. Inspect the selected project state before deciding the next action.
+Target is Windows Premiere 26.x. Native Premiere acceptance of this candidate is pending; unit/mock transport tests are not host verification.

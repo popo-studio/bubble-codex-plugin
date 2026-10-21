@@ -1,35 +1,14 @@
 ---
 name: premiere-setup
-description: Install, update, uninstall, pair or troubleshoot the Bubble Premiere Pro UXP panel for Premiere 25.6 and newer.
+description: Install, update, remove or troubleshoot Bubble Premiere for Windows Premiere 26.x using a signed CEP panel without Creative Cloud or developer tools.
 ---
 
-# Bubble Premiere Pro setup
+Use the Premiere MCP setup tools first. No Creative Cloud, UPIA, developer mode, registry edits, unsigned extensions or script copying. Only Premiere 26.x is targeted; older and future major versions are not validated. This is a candidate pending native host acceptance; never imply mocked tests prove host loading.
 
-Use `premiere_installation_status` first. This integration targets Premiere Pro
-25.6+ UXP, not Premiere 2021/15.x or CEP. Explain version mismatch instead of
-changing Adobe settings or enabling old debug flags.
+1. Call `premiere_installation_status`. Explain supported host, exact extension destination and current status. Unsupported installed versions require user upgrade; do not install/launch old versions.
+2. Preview `premiere_install_bridge`. After the user's installation authorization, call with `confirmed=true`. Only bundled signed resources may be installed. Do not override a modified/unknown extension or manufacture ownership receipts.
+3. If the panel is absent, ask the user to restart Premiere. Open Window > Extensions > Bubble Premiere. Call `premiere_pairing_code`, then let the user paste the private connection code and click Connect. This is a connection credential, not script code. Do not save or share it. Keep the panel open.
+4. List sessions and inspect the chosen active project. Connection is confirmed only by a real returned session and project information. Empty host sessions can create/open a project through the plugin.
+5. Updates follow the same preview/authorization sequence. Close the panel before update. Preview uninstall and use `confirmed=true` when authorized. Removing Codex plugin alone does not remove the CEP extension. Do not remove unknown files or Adobe preferences; surface conflicts and backup paths.
 
-Use `premiere_install_bridge(confirmed=false)` to preview exact package and Adobe
-installer changes. Once the user authorizes installation or an update, call with
-`confirmed=true`. Adobe may require its own approval. The bundled candidate CCX
-is not yet native-host validated; a UDT-packaged release-matching CCX can be
-passed as `package_path` if needed. Never pretend source files installed a panel. Use only the
-returned official installation instructions; do not manually copy into Adobe's
-private plugin cache.
-
-Open the Bubble Premiere Pro panel in the supported host. Call
-`premiere_pairing_code` only for a requested connection; show its private code to
-this user, never store it in source/logs or send it elsewhere. The user pastes the
-code into the panel and clicks Connect, with no Script Editor code. Keep the
-panel open. Codes and connections belong to this MCP process; restarting Codex
-requires re-pairing. A panel connects to one chat at a time.
-
-Call `premiere_list_sessions` to confirm the actual connection. Installation
-success does not prove live host operation. Session UUIDs identify panels; no
-host PID is inferred. Only the active project in each panel is advertised.
-
-For removal, preview `premiere_uninstall_bridge(false)` then apply authorized
-removal. Adobe host-plugin removal and Codex-plugin removal are separate.
-Disconnect/close the panel immediately; do not close projects or Adobe itself.
-Do not alter unrelated files. Updates keep the same
-Adobe ID and require reconnection; never retry uncertain writes.
+Prefer plugin tools over computer use for project actions. Never silently substitute UI automation or claim completion on an unconnected host. Pending/timeout actions may have run; inspect before another mutation.

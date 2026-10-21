@@ -1,4 +1,4 @@
-"""Per-MCP-process, authenticated loopback UXP broker. No retry or session guessing."""
+"""Per-MCP-process, authenticated loopback CEP broker. No retry or session guessing."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import hmac
 import json
@@ -51,6 +51,17 @@ class Broker:
             def log_message(self, *args):
                 pass  # Never log pairing credentials, scripts, or document paths.
 
+            def do_OPTIONS(self):
+                # CEP file:// panels have an opaque/null origin. Tokens remain mandatory for POST.
+                if self.headers.get("Origin") != "null":
+                    return self.reply(403, failure("origin", "Only the local CEP panel origin is accepted"))
+                self.send_response(204)
+                self.send_header("Access-Control-Allow-Origin", "null")
+                self.send_header("Access-Control-Allow-Methods", "POST")
+                self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
             def do_POST(self):
                 self.connection.settimeout(3)
                 supplied = self.headers.get("Authorization", "")
@@ -76,6 +87,8 @@ class Broker:
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(raw)))
                     self.send_header("Cache-Control", "no-store")
+                    if self.headers.get("Origin") == "null":
+                        self.send_header("Access-Control-Allow-Origin", "null")
                     self.end_headers()
                     self.wfile.write(raw)
                 except OSError:
@@ -89,7 +102,7 @@ class Broker:
 
     def pairing(self):
         return {"ok": True, "data": {
-            "connection_code": "bubble-uxp:1:%s:%s" % (self.http.server_port, self.token),
+            "connection_code": "bubble-premiere:1:%s:%s" % (self.http.server_port, self.token),
             "note": "Paste this private code into the Bubble panel and click Connect. "
                     "It grants this Codex process control. Keep the panel open. "
                     "Reconnect with a new code after Codex restarts; each chat has a separate broker."}}

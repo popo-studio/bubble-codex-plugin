@@ -1,6 +1,6 @@
 # 软件图标来源
 
-八个软件图标均取自原始产品资源（Adobe 图标从 Windows 可执行文件图标资源导出 PNG），用于识别连接的软件。Bubble Plugins 是独立第三方集成，与各厂商无隶属关系。名称、图标及商标归各权利人所有，本仓库不授予额外素材许可。
+软件图标均取自原始产品资源（Adobe 图标从 Windows 可执行文件图标资源导出 PNG），用于识别连接的软件。Bubble Plugins 是独立第三方集成，与各厂商无隶属关系。名称、图标及商标归各权利人所有，本仓库不授予额外素材许可。
 
 | 插件 | 原始来源 | SHA-256 |
 | --- | --- | --- |
@@ -12,6 +12,7 @@
 | unity-control | `Unity 6000.1.0f1: Editor/Data/Resources/UnityPlayerIcon.png` | `4545a1113d7d08b48bfea5276ca9a2d5121a9e5dbebb130f2296589b89790513` |
 | photoshop-control | `Adobe Photoshop 2025 / Photoshop.exe` 图标资源 0，Win32 `PrivateExtractIcons` 导出 256×256 PNG | `681190f5deef94bbd52668ba59462377fde28f76f84aba66433da075b0e59a27` |
 | premiere-control | `Adobe Premiere Pro 2021 / Adobe Premiere Pro.exe` 图标资源 0，Win32 `PrivateExtractIcons` 导出 256×256 PNG；仅作软件标识，不表示兼容 2021 | `21ad6e23c5586edff9bcc00326a150c89c5cbf35dfec92e3a23aa8c1699ae54e` |
+| after-effects-control | `Adobe After Effects 2024 / Support Files/AfterFX.exe` 图标资源 0，Win32 `PrivateExtractIcons` 导出 256×256 PNG；仅作软件标识，不表示兼容 2024 | `82234946fecc8bb1f34cc6768d8f19f7016b92c17e58d15fdc3f5c9d1b4b57c7` |
 
 3ds Max 图标引用于 [Autodesk 官方产品页](https://www.autodesk.com.cn/products/3ds-max/overview)。来源核对日期：2026-10-17。各插件 assets/SOURCE.md 随包保留。
 

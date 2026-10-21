@@ -29,8 +29,23 @@ class BrokerTests(unittest.TestCase):
         with urllib.request.urlopen(req, timeout=3) as response:
             return json.load(response)
 
+    def test_cep_null_origin_preflight_and_auth(self):
+        url = "http://127.0.0.1:%s/register" % self.broker.http.server_port
+        request = urllib.request.Request(url,method="OPTIONS",headers={"Origin":"null"})
+        with urllib.request.urlopen(request,timeout=3) as reply:
+            self.assertEqual(reply.status,204)
+            self.assertEqual(reply.headers["Access-Control-Allow-Origin"],"null")
+        request = urllib.request.Request(url,method="OPTIONS",headers={"Origin":"https://example.com"})
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request,timeout=3)
+        self.assertEqual(error.exception.code,403)
+        request = urllib.request.Request(url,data=b'{}',headers={"Origin":"null","Content-Type":"application/json"})
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request,timeout=3)
+        self.assertEqual(error.exception.code,401)
+
     def register(self, name="shot.prproj"):
-        return self.post("/register", {"info": {"app": "premiere", "version": "25.6",
+        return self.post("/register", {"info": {"app": "premiere", "version": "26.0",
             "targets": [{"id": "project-1", "name": name, "path": "C:/work/" + name}]}})["data"]["session_id"]
 
     def queued(self, sid, timeout=1):

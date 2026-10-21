@@ -1,6 +1,6 @@
 [project]
 name = "bubble-plugin-doctor"
-version = "0.1.2"
+version = "0.1.3"
 description = "Read-only Bubble plugin diagnostics"
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.28,<2"]

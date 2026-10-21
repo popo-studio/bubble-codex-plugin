@@ -1,0 +1,21 @@
+{
+  "plugin_id": "com.popostudio.bubble.premiere",
+  "version": "0.2.0",
+  "files": {
+    "CSXS/manifest.xml": "b26626db0e9251964efa348f9cc0cfb34a0a820dec18026a26dd155523251c55",
+    "META-INF/signatures.xml": "a77bb17344db713803489301f14e92439da3e8fc1c0715c25885fb66a78e692c",
+    "host.js": "acbc6f03068c8e0bc68bc047840f7aca6c1c61620971793ff5e689ec3378593a",
+    "host.jsx": "e6913e7f2422e787970fcdd30ad6a701f63039a0024c4af8ef1fb277474bd530",
+    "index.html": "f50abae9c57901c828add298f3bb0289a419e53a15dd63cccc2e555cdd2e028a",
+    "mimetype": "6f4ece9eef5c4e518ad56a6f82d14e95f93e4e5d07b1cb8d22de8666d7ac3d7f",
+    "panel.js": "1cf437fe65fd7441f404ee209d7bef8586e0921bb82b9d4beb3d2bda67e14888",
+    "transport.js": "7025d6652b87a834c4d48b9c06eff45e335aa60ab5cafed876cfa8431c181c11"
+  },
+  "zxp_sha256": "748f6cb17b7889cb4898e92c8dba1d709f55af0b0654dfe98a20aac509393627",
+  "signer": {
+    "tool": "Adobe ZXPSignCmd",
+    "sha256": "ffc2223167225ce61d024eb463fc5ad1a1be16133f99ef334a646f7311916c98",
+    "timestamped": false
+  },
+  "native_tested": false
+}
