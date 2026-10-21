@@ -1,4 +1,4 @@
-# Bubble Photoshop 0.3.0
+# Bubble Photoshop 0.4.0
 
 Windows Photoshop control through its native COM automation. Install this plugin in Codex, open Photoshop normally, and list sessions. **No Creative Cloud Desktop, UPIA, UXP Developer Tool, CCX, panel, pairing code, or Photoshop-side files are required.** The plugin never changes Adobe licensing, security, COM registration, startup or user documents during setup.
 
@@ -31,6 +31,12 @@ Windows Photoshop control through its native COM automation. Install this plugin
 | photoshop_create_layer / update_layer | Create pixel/group/text layers; edit properties and text size in points |
 | photoshop_duplicate_layer / delete_layer | Duplicate or delete by stable layer ID |
 | photoshop_translate_layer / select_layer | Move by pixel offsets or select an explicit layer |
+| photoshop_selection_info / selection | Read and modify pixel selections, including rectangle modes and ellipse replace |
+| photoshop_fill_selection | Fill selected normal-layer pixels with explicit RGB color |
+| photoshop_layer_mask | Create, enable, disable, delete or apply a raster layer mask |
+| photoshop_adjust_color | Destructive brightness/contrast, levels, invert or desaturate |
+| photoshop_apply_filter | Destructive Gaussian blur, unsharp mask or median |
+| photoshop_smart_object | Convert a normal pixel layer or replace verified embedded contents |
 | photoshop_execute_script | Execute user-authorized JSX with explicit session and active document ID |
 
 Scripts can affect Photoshop and files beyond the selected document. The ID guard is not a sandbox. Use create_document or open_file when the session is empty; use activate_document to select the intended existing document before JSX. Script execution itself retains its active-document guard. These native tools are preferred to UI automation. Each operation runs in a bounded worker. A timeout stops the worker but may not cancel the Photoshop operation: never automatically retry.
@@ -57,3 +63,17 @@ All edits require the explicit session and active document ID. Inspect returns s
 Save changes the current document path to a layered PSD. Export converts only a temporary duplicate to RGB 8-bit; JPEG flattens only that duplicate, which is closed in finally while the original is restored active. Absolute output paths need an existing parent directory and matching extension. Existing output is refused unless `overwrite=True` is explicitly authorized, with checks in Python and immediately before native save. These checks do not promise atomic exclusion against another program concurrently writing the same path.
 
 A running MCP server snapshots its worker source into an owned external temporary directory at startup. Updating/removing the package does not break that server's workers. The snapshot is cleaned up when the server exits; no source/worker files are installed into Photoshop.
+
+## Selections, masks and pixel operations
+
+Selection tools report bounds, not an exact shape serialization. Rectangle supports replace/add/subtract/intersect; ellipse supports replace. Expand/contract/feather take whole pixel amounts. Fill requires an explicit selection: request `all` first for a full-image fill.
+
+Fill, adjustments and filters target **normal pixel layers and RGB/grayscale component channels**, not whatever mask channel was previously active. They select exactly one layer by ID, clear layer multiselection, and leave component channels active. Current pixel selection is respected. No automatic rasterization, unlocking, color-mode conversion or saving occurs. Supported pixel depth is 8/16 bit; Photoshop may impose further native restrictions.
+
+Raster masks support reveal/hide all or current selection, enable/disable, delete without applying, and destructive apply to a normal pixel layer. Existing masks are never silently replaced. Vector masks and painting directly into a mask are outside these tools. Inspection returns raster-mask presence/enabled state, smart-object state and selection bounds.
+
+Smart conversion returns the new stable layer ID. Replacement requires a verified embedded object (`smart_object_linked=false`) and an existing PNG/JPEG/TIFF/BMP. Linked or unknown objects, script/PDF/raw/PSD replacement sources and automatic editing of embedded contents are not supported in this release. No external linked source is modified.
+
+Hue/saturation, AI filters, neural filters, adjustment layers and smart filters are not claimed by these standard tools. The bounded authorized JSX tool remains available for separately requested operations.
+
+Smart-object replacement safety limit: native testing confirmed that ordinary duplicates can share embedded contents, so replacing one may also change its twin. Until reliable independent-content identity is available, replacement refuses when **any other smart-object layer exists in any open document**, including nested groups, linked objects or unrelated smart objects. The error lists document/layer IDs. This deliberately conservative check runs before selection/channel changes or replacement. Never delete, close, unlink, or independently copy user objects to bypass it without an explicit user request. Conversion itself remains available.

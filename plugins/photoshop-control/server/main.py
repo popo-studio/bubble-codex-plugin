@@ -16,7 +16,7 @@ from native import discover, installations, failure, select
 # source at startup into an external temporary directory, never into the plugin.
 _worker_runtime = tempfile.TemporaryDirectory(prefix="bubble-photoshop-worker-")
 atexit.register(_worker_runtime.cleanup)
-for _name in ("native.py", "worker.py", "operations.py"):
+for _name in ("native.py", "worker.py", "operations.py", "advanced.py"):
     (Path(_worker_runtime.name) / _name).write_bytes(Path(__file__).with_name(_name).read_bytes())
 _worker_path = str(Path(_worker_runtime.name) / "worker.py")
 
@@ -197,6 +197,48 @@ def photoshop_translate_layer(document_id: StrictInt, session_id: str, layer_id:
 def photoshop_select_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, timeout: float = 20) -> dict:
     """Select the explicit stable layer ID belonging to the active selected document. Does not change document selection, content, or save."""
     return call("select_layer",session_id,timeout,document_id=document_id,layer_id=layer_id)
+
+
+@mcp.tool(annotations=READ)
+def photoshop_selection_info(document_id: StrictInt, session_id: str) -> dict:
+    """Read whether selected active document has a selection and its pixel bounds. Bounds do not describe shape or feathering. Does not change selection or channels."""
+    return call("selection_info",session_id,20,document_id=document_id)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_selection(document_id: StrictInt, session_id: str, action: Literal["all","deselect","invert","rectangle","ellipse","expand","contract","feather"], mode: Literal["replace","add","subtract","intersect"] = "replace", left: StrictFloat | None = None, top: StrictFloat | None = None, right: StrictFloat | None = None, bottom: StrictFloat | None = None, amount: StrictInt | None = None, timeout: float = 20) -> dict:
+    """Modify selected active document selection. Rectangle supports replace/add/subtract/intersect with explicit pixel bounds; ellipse currently replace only. Expand/contract/feather require an existing selection and integer amount 1–500 pixels. Returns selection bounds. Does not paint or save."""
+    return call("selection",session_id,timeout,document_id=document_id,action=action,mode=mode,left=left,top=top,right=right,bottom=bottom,amount=amount)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_fill_selection(document_id: StrictInt, session_id: str, layer_id: StrictInt, color: str, opacity: StrictFloat = 100, timeout: float = 30) -> dict:
+    """Fill existing selection on the exact normal pixel layer using #RRGGBB and opacity 0–100. Explicitly selects only this layer and RGB/grayscale component channels, never a mask. Use selection all for whole-image fill. Destructive; no implicit rasterization, unlocking, or save."""
+    return call("fill_selection",session_id,timeout,document_id=document_id,layer_id=layer_id,color=color,opacity=opacity)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_layer_mask(document_id: StrictInt, session_id: str, layer_id: StrictInt, action: Literal["create","enable","disable","delete","apply"], mode: Literal["reveal_all","hide_all","reveal_selection","hide_selection"] = "reveal_all", timeout: float = 30) -> dict:
+    """Manage the exact layer's raster mask (not vector masks). Create refuses existing masks; selection modes require a selection. Enable/disable preserve mask; delete discards it; apply destructively applies to normal pixel layer only. Explicitly selects one layer and returns to component pixel channels. Does not save."""
+    return call("layer_mask",session_id,timeout,document_id=document_id,layer_id=layer_id,action=action,mode=mode)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_adjust_color(document_id: StrictInt, session_id: str, layer_id: StrictInt, adjustment: Literal["brightness_contrast","levels","invert","desaturate"], brightness: StrictInt = 0, contrast: StrictInt = 0, input_black: StrictInt = 0, input_white: StrictInt = 255, gamma: StrictFloat = 1, output_black: StrictInt = 0, output_white: StrictInt = 255, timeout: float = 30) -> dict:
+    """Destructively adjust exact normal pixel layer (8/16-bit RGB/grayscale), respecting current selection. Explicitly selects only this layer and component channels; masks untouched. Brightness/contrast -100..100, levels 0..255 ordered endpoints and gamma .1..9.99. No automatic rasterization or adjustment-layer creation; no save."""
+    return call("adjust_color",session_id,timeout,document_id=document_id,layer_id=layer_id,adjustment=adjustment,brightness=brightness,contrast=contrast,input_black=input_black,input_white=input_white,gamma=gamma,output_black=output_black,output_white=output_white)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_apply_filter(document_id: StrictInt, session_id: str, layer_id: StrictInt, filter: Literal["gaussian_blur","unsharp_mask","median"], radius: StrictFloat = 1, amount: StrictFloat = 100, threshold: StrictInt = 0, timeout: float = 30) -> dict:
+    """Destructively filter exact normal pixel layer, respecting selection. Gaussian/unsharp radius .1–250 px; unsharp amount 1–500%, threshold 0–255; median radius integer 1–100px. Selects one layer and component channels, never the mask. No implicit rasterization/smart-filter conversion or save."""
+    return call("apply_filter",session_id,timeout,document_id=document_id,layer_id=layer_id,filter=filter,radius=radius,amount=amount,threshold=threshold)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_smart_object(document_id: StrictInt, session_id: str, layer_id: StrictInt, action: Literal["convert","replace_contents"], path: str | None = None, timeout: float = 30) -> dict:
+    """Convert one normal pixel layer to a smart object, or replace a verified embedded object's contents with absolute existing PNG/JPEG/TIFF/BMP. Linked/unknown objects are refused. Replacement also refuses if any other smart-object layer exists in any open document, because copied embedded objects may share contents; error lists other document/layer IDs. Selects exactly one layer; returns current stable ID because conversion can change it. Does not edit original source file or save document; no automatic retry."""
+    return call("smart_object",session_id,timeout,document_id=document_id,layer_id=layer_id,action=action,path=path)
 
 
 if __name__ == "__main__":

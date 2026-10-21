@@ -34,7 +34,7 @@ def output_file(request, extensions):
     return setup,guard
 
 
-LAYER_HELPERS=r'''function layerInfo(l){var o={layer_id:l.id,name:l.name,visible:l.visible,opacity:l.opacity,typename:l.typename};if(l.typename==="ArtLayer"){o.kind=String(l.kind);if(l.kind===LayerKind.TEXT){o.text=l.textItem.contents;o.font_size=Number(l.textItem.size.as("pt"));o.font=l.textItem.font;}}return o;}function findLayer(ls,id){for(var i=0;i<ls.length;i++){var l=ls[i];if(l.id===id)return l;if(l.typename==="LayerSet"){var found=findLayer(l.layers,id);if(found)return found;}}return null;}'''
+LAYER_HELPERS=r'''function layerInfo(l){var o={layer_id:l.id,name:l.name,visible:l.visible,opacity:l.opacity,typename:l.typename};if(l.typename==="ArtLayer"){o.kind=String(l.kind);if(l.kind===LayerKind.TEXT){o.text=l.textItem.contents;o.font_size=Number(l.textItem.size.as("pt"));o.font=l.textItem.font;}}var owner=l.parent;while(owner&&owner.typename!=="Document")owner=owner.parent;if(!owner)throw new Error("Cannot identify layer owner document");var state=layerState(l.id,owner.id);o.has_user_mask=state.has_user_mask;o.mask_enabled=state.mask_enabled;o.smart_object=state.smart_object;o.smart_object_linked=state.smart_object_linked;return o;}function findLayer(ls,id){for(var i=0;i<ls.length;i++){var l=ls[i];if(l.id===id)return l;if(l.typename==="LayerSet"){var found=findLayer(l.layers,id);if(found)return found;}}return null;}'''
 
 
 def build(op,r):
