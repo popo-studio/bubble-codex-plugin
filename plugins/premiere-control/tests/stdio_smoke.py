@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import shutil
 import sys
+import tempfile
+import hashlib
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -12,8 +14,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 async def main():
+    with tempfile.TemporaryDirectory(prefix="bubble-pr-stdio-") as temp:
+        await run(Path(temp))
+
+
+async def run(profile):
+    target=profile/"Adobe/CEP/extensions/com.popostudio.bubble.premiere"
+    target.mkdir(parents=True)
+    (target/"fixture.txt").write_text("simulated host installation")
+    receipt={"plugin_id":"com.popostudio.bubble.premiere","version":"0.3.0","target":str(target),
+        "files":{"fixture.txt":hashlib.sha256((target/"fixture.txt").read_bytes()).hexdigest()}}
+    target.with_name(target.name+".bubble-install.json").write_text(json.dumps(receipt))
+    profile_env={"APPDATA":str(profile),"LOCALAPPDATA":str(profile)}
     params = StdioServerParameters(command=sys.executable, args=[str(ROOT / "server/main.py")],
-                                  env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+                                  env={**os.environ, **profile_env, "PYTHONDONTWRITEBYTECODE": "1"})
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
@@ -26,7 +40,9 @@ async def main():
                 return json.loads(result.content[0].text)
 
             assert (await call("premiere_list_sessions"))["data"] == []
-            code = (await call("premiere_pairing_code"))["data"]["connection_code"]
+            status=await call("premiere_connection_status")
+            assert status["data"]["automatic"] is True
+            assert "token" not in json.dumps(status)
             panels = []
             try:
                 for _ in range(2):
@@ -35,12 +51,12 @@ async def main():
                         stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE)
                     panels.append(panel)
-                    panel.stdin.write((code + "\n").encode())
+                    panel.stdin.write((json.dumps({**profile_env,"target":str(target)}) + "\n").encode())
                     await panel.stdin.drain()
                     assert await asyncio.wait_for(panel.stdout.readline(), 5) == b"connected\n"
                 listing = await call("premiere_list_sessions", {"project": "hero"})
                 assert listing["selection"]["status"] == "ambiguous", listing
-                assert code.split(":")[-1] not in json.dumps(listing)
+                assert "token" not in json.dumps(listing)
                 unselected = await call("premiere_project_info", {"project_id": "mock-project"})
                 assert unselected["error"]["code"] == "selection"
                 sid = listing["data"][0]["session_id"]
@@ -65,7 +81,7 @@ async def main():
                             await panel.wait()
             assert (await call("premiere_list_sessions"))["data"] == []
             print(json.dumps({"ok": True, "tools": len(names),
-                              "transport": "stdio -> actual HTTP -> production CEP transport and host adapter, mocked Adobe DOM",
+                              "transport": "stdio -> actual HTTP -> automatic protected discovery -> production CEP manager/transport/host adapter, mocked Adobe DOM",
                               "native_adobe_tested": False}))
 
 

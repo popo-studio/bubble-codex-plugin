@@ -66,7 +66,7 @@ class Broker:
                 self.connection.settimeout(3)
                 supplied = self.headers.get("Authorization", "")
                 if not hmac.compare_digest(supplied.encode("utf-8"), ("Bearer " + broker.token).encode()):
-                    return self.reply(401, failure("unauthorized", "Pair this panel first"))
+                    return self.reply(401, failure("unauthorized", "Automatic discovery credentials are required"))
                 try:
                     length = int(self.headers.get("Content-Length", "0"))
                     if not 0 < length <= MAX_MESSAGE:
@@ -100,13 +100,6 @@ class Broker:
         self.thread = threading.Thread(target=self.http.serve_forever, daemon=True)
         self.thread.start()
 
-    def pairing(self):
-        return {"ok": True, "data": {
-            "connection_code": "bubble-premiere:1:%s:%s" % (self.http.server_port, self.token),
-            "note": "Paste this private code into the Bubble panel and click Connect. "
-                    "It grants this Codex process control. Keep the panel open. "
-                    "Reconnect with a new code after Codex restarts; each chat has a separate broker."}}
-
     def _expire(self):
         now = time.time()
         for sid in list(self.clients):
@@ -128,7 +121,7 @@ class Broker:
             if path == "/register":
                 info = data.get("info")
                 if not isinstance(info, dict) or info.get("app") != self.application:
-                    return failure("application", "Pairing code belongs to a different Adobe application")
+                    return failure("application", "Discovery record belongs to a different Adobe application")
                 if len(self.clients) >= 32:
                     return failure("limit", "Too many panels")
                 sid = str(uuid.uuid4())
@@ -200,7 +193,7 @@ class Broker:
                   "unique" if len(matches) == 1 else "ambiguous" if matches else "not_found")
         return {"ok": True, "data": rows, "selection": {"status": status, "matches": matches,
                 "selected": matches[0] if status == "unique" else None},
-                "note": "Only paired open panels are visible. Session UUID identifies a panel, not a host PID. "
+                "note": "Only automatically connected background hosts are visible. Session UUID identifies a connection, not a host PID. "
                         "Choose explicit session and target IDs; do not infer the first document/project."}
 
     def request(self, operation, arguments=None, session_id=None, timeout=30):
@@ -211,10 +204,10 @@ class Broker:
             available = list(self.clients)
             if session_id is None:
                 if len(available) != 1:
-                    return failure("selection", "Choose one paired panel explicitly", sessions=available)
+                    return failure("selection", "Choose one connected Premiere session explicitly", sessions=available)
                 session_id = available[0]
             if session_id not in self.clients:
-                return failure("session", "Chosen panel is not connected; no fallback")
+                return failure("session", "Chosen Premiere session is not connected; no fallback")
             if len(self.jobs) >= 32:
                 return failure("busy", "Request queue full")
             job = {"request_id": str(uuid.uuid4()), "session_id": session_id,

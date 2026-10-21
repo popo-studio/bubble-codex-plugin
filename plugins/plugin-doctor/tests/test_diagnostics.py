@@ -36,7 +36,7 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertFalse(d.sessions("unknown")["ok"])
         self.assertFalse(d.guidance("evil", "repair")["ok"])
 
-    def test_adobe_guidance_uses_paired_session_not_pid_registry(self):
+    def test_adobe_guidance_uses_owning_connector_not_pid_registry(self):
         for app in ("premiere", "photoshop"):
             self.assertIn(app + "-control", d.status()["data"]["supported_plugins"])
             for action in ("repair", "update", "uninstall"):
@@ -46,6 +46,9 @@ class DiagnosticsTests(unittest.TestCase):
                 self.assertIn(app + "_list_sessions", " ".join(result["data"]["steps"]))
                 if app == "photoshop":
                     self.assertIn("no Creative Cloud", " ".join(result["data"]["steps"]))
+                if app == "premiere":
+                    self.assertIn("automatic discovery", " ".join(result["data"]["steps"]))
+                    self.assertNotIn("obtain a fresh pairing code", " ".join(result["data"]["steps"]))
             self.assertFalse(d.sessions(app)["ok"])
 
     def test_current_package(self):

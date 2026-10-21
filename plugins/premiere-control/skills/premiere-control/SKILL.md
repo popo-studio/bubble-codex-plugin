@@ -1,11 +1,11 @@
 ---
 name: premiere-control
-description: Control Premiere 26.x through the Bubble signed CEP panel, inspect projects and timeline, create/open projects and sequences, import/relink media, and save explicitly selected projects.
+description: Control Premiere 26.x through the Bubble automatic signed CEP background bridge, inspect projects and timeline, create/open projects and sequences, import/relink media, and save explicitly selected projects.
 ---
 
 Prefer Premiere MCP tools over computer use. If tools are missing, diagnose loading; if unconnected, use premiere-setup. Do not fall back silently to UI automation, shell injection, COM guesses, QE or arbitrary scripts.
 
-List sessions first. Match project name/path only when unique; if multiple hosts/projects match, list choices and ask. Session UUID identifies the paired panel, not a fabricated OS PID. Only the active project is advertised. Pass explicit session_id and project_id for project operations; refresh after project changes.
+Call `premiere_list_sessions` first; it automatically discovers running hosts, without opening a panel or pasting connection codes. Match project name/path only when unique; if multiple hosts/projects match, list choices and ask. Session UUID identifies the background connection, not a fabricated OS PID. Only the active project is advertised. Pass explicit session_id and project_id for project operations; refresh after project changes.
 
 An empty application is supported: `premiere_new_project` creates a new .prproj at a user-authorized, nonexistent absolute path; `premiere_open_project` opens an existing .prproj. Both require an explicit session and refuse while any project is open. Do not close or discard existing work to satisfy these prerequisites.
 

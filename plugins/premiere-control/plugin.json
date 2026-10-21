@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "premiere-control",
-  "version": "0.2.0",
-  "description": "Control Premiere Pro 26.x through an authenticated local signed CEP panel.",
+  "version": "0.3.0",
+  "description": "Control Premiere Pro 26.x through an signed CEP background bridge with automatic local connections.",
   "author": {
     "name": "popo-studio"
   },
@@ -19,7 +19,7 @@
       "interface": {
         "displayName": "Bubble Premiere Pro",
         "shortDescription": "Premiere 项目检查与素材操作",
-        "longDescription": "Pair a Premiere Pro 26.x signed CEP panel, inspect projects and offline media, import and relink media with explicit project selection.",
+        "longDescription": "Automatically connect to Premiere Pro 26.x through a signed background bridge, inspect projects and offline media, import and relink media with explicit project selection.",
         "developerName": "popo-studio",
         "category": "Productivity",
         "capabilities": [

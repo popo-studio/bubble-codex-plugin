@@ -1,17 +1,19 @@
 {
   "plugin_id": "com.popostudio.bubble.premiere",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "files": {
-    "CSXS/manifest.xml": "b26626db0e9251964efa348f9cc0cfb34a0a820dec18026a26dd155523251c55",
-    "META-INF/signatures.xml": "a77bb17344db713803489301f14e92439da3e8fc1c0715c25885fb66a78e692c",
-    "host.js": "acbc6f03068c8e0bc68bc047840f7aca6c1c61620971793ff5e689ec3378593a",
-    "host.jsx": "e6913e7f2422e787970fcdd30ad6a701f63039a0024c4af8ef1fb277474bd530",
-    "index.html": "f50abae9c57901c828add298f3bb0289a419e53a15dd63cccc2e555cdd2e028a",
+    "CSXS/manifest.xml": "b80a92f153f98619fd913d281bcd4ec61691006dd4b5e6a2c431b63edc773d06",
+    "META-INF/signatures.xml": "129b18d863e0d7546b0c2108968056307a8e13bd92f4308aae7b68e661fb6dad",
+    "auto.js": "909cd94d087b13bd43a458f1c1ae51a0385b267fc6af1ff3f83dbef8d7fbafa9",
+    "background.js": "4b5c02b3a0e50ad162e36e569f8e4067f06fbd4c003da68d63b226fdda4093cd",
+    "discovery.js": "b63dfc3375ff6abfc2952f09219b627d651df3c06087ca07360fdff2d0eaf275",
+    "host.js": "b31f187749eaeafcddf5dc26d501efbe7d712944e06114bef33d9e9d786c2cae",
+    "host.jsx": "3edee686724b9299c76a17cc91c70f6d96c18e170699bde799b17b883591928e",
+    "index.html": "d9fc3cf9846b2c0dc613d047debe78447eb595fc3aec5ae56d1304fad4197396",
     "mimetype": "6f4ece9eef5c4e518ad56a6f82d14e95f93e4e5d07b1cb8d22de8666d7ac3d7f",
-    "panel.js": "1cf437fe65fd7441f404ee209d7bef8586e0921bb82b9d4beb3d2bda67e14888",
-    "transport.js": "7025d6652b87a834c4d48b9c06eff45e335aa60ab5cafed876cfa8431c181c11"
+    "transport.js": "2024323c4b8c3a129325012a39d544f4144a9700f4b5518ed8dbd2ed0c8c53a5"
   },
-  "zxp_sha256": "748f6cb17b7889cb4898e92c8dba1d709f55af0b0654dfe98a20aac509393627",
+  "zxp_sha256": "5a3a806835d95800a02aa9ae159ece07e94cde2ed36fb4c364147eb0824aca64",
   "signer": {
     "tool": "Adobe ZXPSignCmd",
     "sha256": "ffc2223167225ce61d024eb463fc5ad1a1be16133f99ef334a646f7311916c98",

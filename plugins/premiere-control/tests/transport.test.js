@@ -65,3 +65,14 @@ test("superseded registration is unregistered and cannot steal new connection", 
     assert.deepEqual(removed, ["old", "new"]);
     assert.equal(statuses.includes("Connected: old"), false);
 });
+
+test("hung HTTP registration aborts without replay",async()=>{
+ let calls=0;const transport=createTransport({info:async()=>({app:"premiere"})},()=>{},async(url,options)=>{calls++;return new Promise((resolve,reject)=>options.signal.addEventListener("abort",()=>reject(new Error("aborted")),{once:true}));});
+ const start=Date.now();await assert.rejects(transport.connect("bubble-premiere:1:43210:"+"x".repeat(44)),/aborted/);assert.equal(calls,1);assert.ok(Date.now()-start<6000);assert.equal(transport.connected(),false);
+});
+test("hung unregister is bounded and leaves no connected transport",async()=>{
+ const transport=createTransport({info:async()=>({app:"premiere"})},()=>{},async(url,options)=>{
+ if(url.endsWith("/register"))return {ok:true,json:async()=>({ok:true,data:{session_id:"test"}})};
+ return new Promise((resolve,reject)=>options.signal.addEventListener("abort",()=>reject(new Error("aborted")),{once:true}));});
+ await transport.connect("bubble-premiere:1:43210:"+"x".repeat(44));const start=Date.now();await transport.disconnect();assert.ok(Date.now()-start<6000);assert.equal(transport.connected(),false);
+});

@@ -1,18 +1,20 @@
-# Bubble Premiere Pro 0.2.0
+# Bubble Premiere Pro 0.3.0
 
-Candidate integration for **Windows Premiere Pro 26.x only**, using a signed CEP 12 panel and local MCP broker. Older versions and untested future major versions are rejected. No Creative Cloud, UPIA, UXP Developer Tool, debugger setting or script pasting is required. This differs from Photoshop COM: Premiere needs a small signed panel installed in its per-user extensions folder.
+Candidate integration for **Windows Premiere Pro 26.x only**, using a signed CEP 12 background bridge and local MCP broker. Older versions and untested future major versions are rejected. No Creative Cloud, UPIA, UXP Developer Tool, debugger setting or script pasting is required. This differs from Photoshop COM: Premiere needs a small signed background extension installed in its per-user extensions folder.
 
 ## Setup and lifecycle
 
-Run the setup skill, inspect the installation preview, then authorize installation. The bundled signed payload is copied to `%APPDATA%/Adobe/CEP/extensions/com.popostudio.bubble.premiere`; ownership and file hashes are recorded in an adjacent receipt. Restart Premiere if the panel is absent, open **Window > Extensions > Bubble Premiere**, request a private connection code and paste it into the panel. Keep the panel open. Nothing starts invisibly or launches Premiere automatically.
+Run the setup skill, inspect the installation preview, then authorize installation. The signed payload is installed under `%APPDATA%/Adobe/CEP/extensions/com.popostudio.bubble.premiere`, with an adjacent ownership receipt. **Restart Premiere once after first installation or updating from 0.2.0.** The invisible CEP background extension starts on Premiere's documented application activation event. No panel opening, connection code, or script copying is needed during normal use.
 
-Each Codex server uses a random loopback port and private token. Every connected panel has a separate session UUID; the active project is identified by its document ID, name and path. Multiple matches require selection. Only the active project is advertised; activate another project in Premiere and list again. Connection credentials stay in memory. Closing the panel disconnects; Codex restart requires a new code. Queued requests expire, are delivered at most once and never replayed after uncertain failures.
+Calling `premiere_list_sessions` starts this chat's broker and automatic discovery. Each broker publishes a random UUID, random loopback port and credential in `%LOCALAPPDATA%/Bubble/Codex/premiere/discovery`. Before any credential is written, a protected Windows DACL restricts access to the current user and SYSTEM. Records refresh every 3 seconds and expire after 12 seconds; credentials are never returned by tools or logged. This is same-user local automation, not a network service.
 
-Install/update validates exact release files and ownership; unknown or modified files block replacement or removal. Close the panel before update/uninstall. Uninstall removes only the managed extension and receipt. Already loaded code stops when the panel closes or Premiere restarts. Codex plugin removal and the Premiere extension removal are separate. No projects, preferences or registry debug flags are removed. Adobe upgrades may remove manually deployed CEP files; inspect setup status before repair.
+Every running Premiere background instance connects independently to all live local Codex brokers. Each connection receives a session UUID; list project names/paths and choose explicitly when multiple matches exist. Only the active project is advertised. All brokers share one execution queue inside each Premiere instance, and queued commands recheck project, installation and deadline before executing. Reconnection creates a new session; it never replays an earlier write or redirects a disconnected session ID.
+
+Installation authorization includes automatic connections to current-user local Codex chats. Only a fully matching managed 0.3.0 installation advertises. Updates and removal protect modified/unknown files. Uninstall removes the managed receipt, extension and owned discovery records; already loaded background code notices revocation and disconnects within a few seconds. An operation already executing may finish. Restart Premiere to unload cached code completely. Codex plugin removal and Premiere extension removal remain separate. No Adobe preferences, debug flags, or projects are changed by setup.
 
 ## Tools
 
-14 tools cover installation status/install/uninstall, pairing, session selection, project info, media inspection, import, relink, save, timeline inspection, sequence creation from chosen source clips, and new/open project from an empty application.
+14 tools cover installation status/install/uninstall, automatic connection status, session selection, project info, media inspection, import, relink, save, timeline inspection, sequence creation from chosen source clips, and new/open project from an empty application.
 
 - Create a new `.prproj` only at a nonexistent local absolute path, with no projects open. Open an existing `.prproj` only when no projects are open; Adobe conversion/offline warnings remain enabled. Neither action closes or discards work.
 - Create a sequence from explicit online source clip IDs; settings follow source media. No implicit project save.
@@ -22,7 +24,7 @@ Install/update validates exact release files and ownership; unknown or modified 
 
 ## Verification status
 
-The signed package is produced and verified using Adobe's standalone ZXPSignCmd. Unit tests and real MCP stdio/HTTP tests use a simulated Adobe DOM; **native Premiere 26 installation, panel load, API behavior, connection and uninstall remain unverified**, pending user installation of the latest host. The local Premiere 2021 is intentionally not used as acceptance evidence.
+The signed package is produced and verified using Adobe's standalone ZXPSignCmd. Unit tests and real MCP stdio/HTTP tests use a simulated Adobe DOM; **native Premiere 26 installation, background loading, API behavior, connection and uninstall remain unverified**, pending user installation of the latest host. The local Premiere 2021 is intentionally not used as acceptance evidence.
 
 ## Release signing (maintainer only)
 

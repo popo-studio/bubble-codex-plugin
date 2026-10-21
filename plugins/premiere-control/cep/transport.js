@@ -1,19 +1,23 @@
 "use strict";
-// No eval, script injection, or automatic replay. Credentials live only in this panel.
+// No eval, script injection, or automatic replay. Credentials come from protected current-user discovery and are never displayed.
 function createTransport(adapter, report, fetchImpl) {
     const fetcher = fetchImpl || fetch;
     let state = null;
     let generation = 0;
     async function post(s, endpoint, data) {
-        const response = await fetcher(s.url + endpoint, {
-            method: "POST",
-            headers: {Authorization: "Bearer " + s.token, "Content-Type": "application/json"},
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error("Bridge HTTP " + response.status);
-        const result = await response.json();
-        if (!result.ok) throw new Error((result.error || {}).message || "Bridge rejected request");
-        return result.data;
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),3000);
+        try {
+            const response=await fetcher(s.url+endpoint,{
+                method:"POST",signal:controller.signal,
+                headers:{Authorization:"Bearer "+s.token,"Content-Type":"application/json"},
+                body:JSON.stringify(data)
+            });
+            if(!response.ok)throw new Error("Bridge HTTP "+response.status);
+            const result=await response.json();
+            if(!result.ok)throw new Error((result.error||{}).message||"Bridge rejected request");
+            return result.data;
+        } finally {clearTimeout(timer);}
     }
     async function info() {
         try { return await adapter.info(); }
@@ -36,7 +40,9 @@ function createTransport(adapter, report, fetchImpl) {
         await pendingDisconnect;
         if (generation !== epoch) return;
         const s = {url: "http://127.0.0.1:" + match[1], token: match[2]};
-        const registered = await post(s, "/register", {info: await info()});
+        const metadata=await info();
+        if(generation!==epoch)return;
+        const registered = await post(s, "/register", {info:metadata});
         s.id = registered.session_id;
         if (generation !== epoch) {
             try { await post(s, "/unregister", {session_id: s.id}); } catch (_) {}
@@ -72,6 +78,6 @@ function createTransport(adapter, report, fetchImpl) {
             }
         }
     }
-    return {connect, disconnect};
+    return {connect, disconnect, connected:()=>state!==null};
 }
 if(typeof module!=="undefined")module.exports = {createTransport};

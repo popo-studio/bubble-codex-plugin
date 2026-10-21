@@ -1,6 +1,8 @@
 """Premiere Pro 26.x signed CEP integration; stdio only."""
 import atexit
 import threading
+import time
+from discovery import Publisher, installation_enabled
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from broker import Broker, failure
@@ -18,13 +20,16 @@ def broker():
     with _lock:
         if _broker is None:
             _broker = Broker()
+            _broker.publisher = Publisher(_broker.http.server_port,_broker.token)
+            _broker.publisher.start()
             atexit.register(_broker.close)
+            atexit.register(_broker.publisher.close)
         return _broker
 
 
 def call(operation, args, session_id, timeout=30):
     if _broker is None:
-        return failure("not_paired", "Generate a pairing code and connect the Premiere CEP panel first")
+        return failure("not_paired", "List sessions to start automatic discovery; install the bridge and restart Premiere if needed")
     return _broker.request(operation, args, session_id, timeout)
 
 
@@ -45,27 +50,32 @@ def premiere_install_bridge(confirmed: bool = False, package_path: str | None = 
 @mcp.tool(annotations=WRITE)
 def premiere_uninstall_bridge(confirmed: bool = False) -> dict:
     """Preview by default; confirmed removal deletes only exact managed signed extension files.
-    Removing the Codex plugin does not remove the CEP extension. Close its panel to disconnect immediately."""
+    Removing the Codex plugin does not remove the CEP extension. The running background bridge stops when its managed installation receipt disappears."""
     return uninstall_bridge(confirmed)
 
 
 @mcp.tool(annotations=READ)
-def premiere_pairing_code() -> dict:
-    """Start this chat's local broker and return a private pairing code for the Bubble Premiere panel.
-    Only call when the user requests connection; do not log or share the code. No script copying required.
-    Panel credentials stay in memory; reconnect after MCP/chat restarts. Separate chats do not steal connections."""
-    return broker().pairing()
+def premiere_connection_status() -> dict:
+    """Inspect automatic background discovery without exposing connection credentials. No panel or code needed."""
+    active=broker()
+    return {"ok":True,"data":{"automatic":True,"managed_bridge_installed":installation_enabled(),
+        "connected_sessions":len(active.sessions()["data"]),"error":active.publisher.error,
+        "note":"After first installation/update restart Premiere 26.x. The signed background bridge connects automatically."}}
 
 
 @mcp.tool(annotations=READ)
 def premiere_list_sessions(project: str | None = None) -> dict:
-    """List paired panels by UUID with active project name/path/ID. Only the active project is advertised.
-    Exact filename/stem/path matching; ambiguous results require user selection. Host PID is not guessed.
-    Recheck chosen project ID before writes. No automatic switching or retries."""
-    if _broker is None:
-        return {"ok": True, "data": [], "selection": {"status": "unspecified", "selected": None, "matches": []},
-                "note": "No panel paired with this chat"}
-    return _broker.sessions(project)
+    """Automatically discover running Premiere hosts; list session UUIDs and active project names/paths.
+    Multiple matches require explicit selection. Never pick the first session or reuse a disconnected UUID.
+    First installation/update needs a Premiere restart; ordinary connections need no panel or code."""
+    active=broker()
+    if installation_enabled():
+        until=time.monotonic()+4
+        while not active.sessions()["data"] and time.monotonic()<until:time.sleep(0.1)
+    result=active.sessions(project)
+    if not result["data"]:
+        result["note"]="No connected Premiere host. Install/update the managed bridge and restart Premiere 26.x; automatic discovery may take a few seconds."
+    return result
 
 
 @mcp.tool(annotations=READ)

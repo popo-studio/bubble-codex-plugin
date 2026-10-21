@@ -10,3 +10,4 @@
 # or their source counterparts during staging/checkout on any platform.
 plugins/premiere-control/cep/** -text
 plugins/premiere-control/adobe/signed/** -text
+plugins/premiere-control/adobe/signed/META-INF/signatures.xml whitespace=cr-at-eol

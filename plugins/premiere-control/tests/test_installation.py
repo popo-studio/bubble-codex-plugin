@@ -6,15 +6,17 @@ import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"server"))
 import installation as m
+import discovery
 
 class InstallationTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory()
         self.target=Path(self.tmp.name)/"extensions"/m.PLUGIN_ID
+        self.discovery_patch=patch.object(discovery,"runtime_directory",return_value=Path(self.tmp.name)/"discovery");self.discovery_patch.start()
         self.target_patch=patch.object(m,"_target",return_value=self.target);self.target_patch.start()
         self.apps=patch.object(m,"discover_applications",return_value=[{"version":"26.0","supported":True}]);self.apps.start()
     def tearDown(self):
-        self.apps.stop();self.target_patch.stop();self.tmp.cleanup()
+        self.apps.stop();self.target_patch.stop();self.discovery_patch.stop();self.tmp.cleanup()
     def test_release_exact(self):
         release,source=m._release();self.assertEqual(m._hashes(source),release["files"])
     def test_preview_no_changes(self):

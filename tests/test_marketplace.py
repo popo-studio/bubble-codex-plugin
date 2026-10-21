@@ -43,6 +43,10 @@ class MarketplaceTests(unittest.TestCase):
         self.assertEqual(release['version'], read_json(folder / 'plugin.json')['version'])
         manifest = ET.fromstring((source / 'CSXS/manifest.xml').read_text(encoding='utf-8'))
         self.assertEqual(manifest.attrib['ExtensionBundleVersion'], release['version'])
+        dispatch = manifest.find('./DispatchInfoList/Extension/DispatchInfo')
+        self.assertEqual(dispatch.findtext('./UI/Type'), 'Custom')
+        self.assertEqual(dispatch.findtext('./Lifecycle/AutoVisible'), 'false')
+        self.assertEqual(dispatch.findtext('./Lifecycle/StartOn/Event'), 'com.adobe.csxs.events.ApplicationActivate')
         original = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob('*') if p.is_file()}
         payload = {p.relative_to(signed).as_posix(): p.read_bytes() for p in signed.rglob('*') if p.is_file()}
         self.assertTrue(any(name.startswith('META-INF/') for name in payload))

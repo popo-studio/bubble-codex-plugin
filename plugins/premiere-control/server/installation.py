@@ -92,7 +92,7 @@ def _release():
     release = json.loads((ROOT / "adobe/release.json").read_text(encoding="utf-8"))
     source = ROOT / "adobe/signed"
     actual = _hashes(source)
-    if release.get("plugin_id") != PLUGIN_ID or release.get("version") != "0.2.0" or not actual or actual != release.get("files"):
+    if release.get("plugin_id") != PLUGIN_ID or release.get("version") != "0.3.0" or not actual or actual != release.get("files"):
         raise ValueError("Signed CEP release contents failed integrity validation")
     if "META-INF/signatures.xml" not in actual or "CSXS/manifest.xml" not in actual:
         raise ValueError("Release is missing its Adobe signature or manifest")
@@ -147,9 +147,9 @@ def installation_status(package_path=None):
         return {"ok": True, "data": {"application": "premiere", "minimum_version": MIN_VERSION,
             "supported_major": 26, "applications": applications, "supported_application": any(x["supported"] for x in applications),
             "installed": owned is not None, "installed_version": owned.get("version") if owned else None,
-            "version": release["version"], "target": str(target), "transport": "signed CEP 12 panel",
+            "version": release["version"], "target": str(target), "transport": "signed CEP 12 background bridge",
             "requires_creative_cloud": False, "requires_developer_mode": False,
-            "native_tested": False, "note": "Premiere 26 native acceptance is pending. Open Window > Extensions > Bubble Premiere, then connect using a private pairing code."}}
+            "native_tested": False, "note": "Premiere 26 native acceptance is pending. Installation authorizes automatic same-user local Codex connections after Premiere restarts. No panel or pairing code needed."}}
     except (ValueError, OSError, KeyError) as error:
         return {"ok": False, "error": {"code": "installation", "message": str(error)}}
 
@@ -191,7 +191,7 @@ def install_bridge(confirmed=False, package_path=None):
         committed = True
         if backup: _remove_owned_tree(backup,previous["files"]); backup = None
         return {"ok": True, "data": {"installed": True, "version": release["version"], "target": str(target), "host_loaded": False,
-            "next_step": "Restart Premiere if the panel is absent, open Window > Extensions > Bubble Premiere, request a private pairing code and click Connect. No script copying."}}
+            "next_step": "Restart Premiere once after install/update; the background bridge connects automatically. List sessions and select the intended project."}}
     except (ValueError, OSError) as error:
         # Roll back only trees whose exact owned hashes still match. Never discard unknown files.
         if not committed and target is not None and (swapped or backup):
@@ -206,7 +206,7 @@ def install_bridge(confirmed=False, package_path=None):
                     _receipt_path(target).unlink()
             except (ValueError, OSError): pass
         return {"ok": False, "error": {"code": "installation", "message": str(error), "backup": str(backup) if backup else None,
-            "note": "Close the Bubble panel before update. Inspect any reported backup; no automatic destructive retry."}}
+            "note": "Restart Premiere after update. Inspect any reported backup; no automatic destructive retry."}}
     finally:
         if stage and stage.exists():
             try: _remove_owned_tree(stage, _hashes(stage))
@@ -221,6 +221,8 @@ def uninstall_bridge(confirmed=False):
         if not owned: return {"ok":True,"data":{"removed":False,"note":"No managed CEP extension installed"}}
         _remove_owned_tree(target,owned["files"])
         _receipt_path(target).unlink()
-        return {"ok":True,"data":{"removed":True,"note":"Close the Bubble panel or restart Premiere to stop already loaded code. Projects and Adobe settings were not changed."}}
+        from discovery import cleanup_records
+        cleanup_records()
+        return {"ok":True,"data":{"removed":True,"note":"The background bridge checks its receipt and disconnects automatically within a few seconds. Restart Premiere to unload cached code. Projects and Adobe settings were not changed."}}
     except (ValueError,OSError) as error:
         return {"ok":False,"error":{"code":"uninstall","message":str(error)}}

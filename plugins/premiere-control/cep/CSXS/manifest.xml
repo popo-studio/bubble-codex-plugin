@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.popostudio.bubble.premiere" ExtensionBundleVersion="0.2.0" ExtensionBundleName="Bubble Premiere">
-<ExtensionList><Extension Id="com.popostudio.bubble.premiere.panel" Version="0.2.0"/></ExtensionList>
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.popostudio.bubble.premiere" ExtensionBundleVersion="0.3.0" ExtensionBundleName="Bubble Premiere">
+<ExtensionList><Extension Id="com.popostudio.bubble.premiere.background" Version="0.3.0"/></ExtensionList>
 <ExecutionEnvironment><HostList><Host Name="PPRO" Version="[26.0,27.0)"/></HostList><LocaleList><Locale Code="All"/></LocaleList><RequiredRuntimeList><RequiredRuntime Name="CSXS" Version="12.0"/></RequiredRuntimeList></ExecutionEnvironment>
-<DispatchInfoList><Extension Id="com.popostudio.bubble.premiere.panel"><DispatchInfo><Resources><MainPath>./index.html</MainPath><ScriptPath>./host.jsx</ScriptPath></Resources><Lifecycle><AutoVisible>true</AutoVisible></Lifecycle><UI><Type>Panel</Type><Menu>Bubble Premiere</Menu><Geometry><Size><Width>360</Width><Height>260</Height></Size></Geometry></UI></DispatchInfo></Extension></DispatchInfoList>
+<DispatchInfoList><Extension Id="com.popostudio.bubble.premiere.background"><DispatchInfo>
+<Resources><MainPath>./index.html</MainPath><ScriptPath>./host.jsx</ScriptPath><CEFCommandLine><Parameter>--enable-nodejs</Parameter></CEFCommandLine></Resources>
+<Lifecycle><AutoVisible>false</AutoVisible><StartOn><Event>com.adobe.csxs.events.ApplicationActivate</Event></StartOn></Lifecycle>
+<UI><Type>Custom</Type><Geometry><Size><Width>1</Width><Height>1</Height></Size></Geometry></UI>
+</DispatchInfo></Extension></DispatchInfoList>
 </ExtensionManifest>
