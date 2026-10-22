@@ -11,7 +11,7 @@
 | [Bubble Unreal](plugins/unreal-control/README.md) | Unreal Engine 5.5 | Editor Python | 用户指定的 Unreal 项目 |
 | [Bubble Unity](plugins/unity-control/README.md) | Unity 6 / 6000.x | 已编译 C# 静态方法 / 菜单命令 | 用户指定的 Unity 项目 |
 | [Bubble Premiere](plugins/premiere-control/README.md) | Windows Premiere Pro 26.x | 项目、序列、时间线、素材检查与支持的项目操作 | 用户目录签名 CEP 扩展，无 CC/UPIA |
-| [Bubble After Effects](plugins/after-effects-control/README.md) | Windows After Effects 26+ | 项目检查、合成、素材、图层、变换、保存与授权 JSX | 原生脚本入口，无常驻软件端桥接 |
+| [Bubble After Effects](plugins/after-effects-control/README.md) | Windows After Effects 26.x | 项目检查、合成、素材、图层、变换、保存与授权 JSX | 启动脚本自动连接，多实例按项目选择 |
 | [Bubble Photoshop](plugins/photoshop-control/README.md) | Windows Photoshop 26.2+，原生 COM | 文档、PSD/图片输出、画布调整、图层与文字管理、ExtendScript | 仅安装 Codex 插件，无 PS 端桥接 |
 | [Bubble Deadline](plugins/deadline-control/README.md) | 现有 Deadline 10 客户端 | 任务查询、日志检查、预览后提交/重提 | 无软件侧桥接 |
 | [Bubble Sequence Check](plugins/sequence-check/README.md) | 本地图片序列 / EXR | 缺帧、损坏、通道、尺寸与像素异常检查 | 无软件侧桥接 |
@@ -59,11 +59,11 @@ Windows Photoshop 26.2+ 使用 Adobe 自带 COM 自动化，无需 Creative Clou
 
 ## Premiere 与 After Effects 新版接入（待实机验收）
 
-两者面向 26+，不兼容本机旧 PR 2021 / AE 2024。用户已确认先完成代码和自动化测试，升级软件后再验收原生操作；不能把工具加载、模拟宿主测试或磁盘安装成功当作新版软件实测。
+两者面向 26.x，不兼容本机旧 PR 2021 / AE 2024。用户已确认先完成代码和自动化测试，升级软件后再验收原生操作；不能把工具加载、模拟宿主测试或磁盘安装成功当作新版软件实测。
 
 PR 0.3.0 使用签名 CEP 后台扩展，由插件预览后安装到当前用户扩展目录，不需要 Creative Cloud、UPIA、用户开发者工具或调试开关。首次安装或更新后重启 PR，后台扩展自动发现当前 Windows 用户的 Codex 连接，日常无需打开面板或输入配对码。多个 PR 实例按项目名、路径和会话列出，由用户选择；多个 Codex 聊天可分别连接，宿主命令串行执行。断线后不重放写操作、不自动替换已选择的实例。更新需同步软件侧签名资源；完整卸载先移除自有扩展，再卸载 Codex 插件。
 
-AE 0.1.0 使用官方 `AfterFX.exe -r` 脚本入口，需要 AE 开启「允许脚本写入文件和访问网络」，不安装常驻桥接、不静默修改偏好。命令行不能可靠按 PID 路由，多个 AfterFX 进程时拒绝执行；写操作检查会话令牌、项目状态和截止时间。项目状态令牌不是 Adobe 项目 GUID，修改后需重新读取。
+AE 0.2.0 使用软件自身的 Startup 脚本与定时任务自动连接。插件先预览并安装所选 AE 目录内的桥接文件；写入程序目录可能需要 Windows 管理员权限。首次安装需启用一次「允许脚本写入文件和访问网络」并重启 AE，不静默修改偏好。之后无需面板或配对码，多实例按会话与项目路径选择，命令只进入所选实例的队列。写操作检查项目状态和截止时间，超时不自动重放；完整卸载先移除自有启动脚本，再卸载 Codex 插件。新版原生启动仍待实机验收。
 
 ## 六个 DCC 首次连接
 

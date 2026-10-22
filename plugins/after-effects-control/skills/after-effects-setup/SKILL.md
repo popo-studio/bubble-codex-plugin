@@ -1,16 +1,14 @@
 ---
 name: after-effects-setup
-description: Set up or troubleshoot Bubble After Effects 26+ native scripting without Creative Cloud, UPIA, developer tools or an AE-side installation.
+description: Install, update, remove or troubleshoot the automatically connected AE26.x Startup bridge without Creative Cloud or developer tools.
 ---
 
 # Setup
 
-Call `after_effects_installation_status` and `after_effects_list_sessions`. Windows and AE 26+ only. Installation discovery checks Adobe's default Program Files tree; session discovery reads the actual executable path and PE version, including custom installs.
+Use `after_effects_installation_status`, then preview `after_effects_install_bridge` with the exact verified executable. With explicit installation authorization, set `confirmed=true`. The user-specific Startup JSX file lives in `Support Files/Scripts/Startup`; Program Files may require Windows administrator write permission. Do not change permissions broadly or install Creative Cloud, UPIA, developer tools, CEP debug mode, or fallback transports.
 
-No host files, panels, registry entries, startup scripts or persistent bridge are installed. Open the intended AE normally and keep exactly one instance running, counting all versions. Ask the user to enable **Allow Scripts to Write Files and Access Network** in AE's scripting preferences if they want to use file replies. This is a host-wide preference; do not silently change it. The plugin does not need network connections, but Adobe combines file and network permission in that setting.
+Ask the user to enable **Allow Scripts to Write Files and Access Network** once manually if necessary and restart AE after installing/updating. Never change the preference automatically. Normal later connections require no panel, connection code, or script-editor paste. Native AE26 validation is pending; do not conflate mocks/MCP startup with native acceptance.
 
-Call `after_effects_project_info` to check connectivity. A timeout does not establish that the preference is disabled: modal dialogs or routing can also prevent a reply. Report the uncertainty and do not retry writes. Do not call older AE versions for testing. No Creative Cloud, UPIA, developer tools or developer mode are required.
+Only AE26.x and one managed installation per Windows user are supported. Multiple instances of that installation register independently. `after_effects_list_sessions` returns project names/paths and per-instance UUIDs. Ask the user to choose if name/path matching remains ambiguous. Do not close instances or guess the first.
 
-Uninstall through Codex. `after_effects_uninstall_bridge` explains that no AE-side component exists; it does not remove Adobe's preferences. Normal request completion cleans owned temporary scripts/results. A killed Codex process may leave a temporary `bubble-ae-request-*` directory; inspect exact ownership/path before any manual cleanup. No user projects are stored there.
-
-Updates use the Git marketplace and the versioned locked launcher. A running server loads its Python modules into memory, so deleting the installed package does not require deleting Adobe files. Native acceptance on AE 26 is currently pending.
+Uninstall the host bridge using preview then authorized `after_effects_uninstall_bridge` before removing the Codex plugin. Modified Startup files are preserved and the receipt is revoked. Loaded pumps stop on their next check; already running commands may finish. Bounded cleanup preserves unknown files and live running requests. Inspect reported retained files; never recursively delete an arbitrary Adobe or runtime directory. Adobe preferences remain unchanged.

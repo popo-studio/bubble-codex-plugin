@@ -69,7 +69,7 @@ def children(path, limit):
 
 
 def status():
-    return {"ok": True, "data": {"version": "0.1.4", "mode": "read-only",
+    return {"ok": True, "data": {"version": "0.1.5", "mode": "read-only",
         "python_version": sys.version.split()[0], "uv_available": bool(shutil.which("uv")),
         "supported_plugins": list(PLUGINS)},
         "note": "Disk/cache observations do not prove Codex enabled state or tool loading. Use Codex's own tool discovery for that."}
@@ -308,10 +308,11 @@ def guidance(plugin_name, action):
             "First installation or software-side update may require restarting Premiere. No routine panel opening or pairing code is needed. Reconnection creates a new session; never replay a timed-out write or silently switch instances."])
     if app == "after-effects":
         steps.extend([
-            "Use after_effects_installation_status and after_effects_list_sessions to inspect exact executable version/path and running processes. Only AE 26+ is supported.",
-            "Native script delivery requires the AE preference Allow Scripts To Write Files And Access Network. Do not install Creative Cloud, UPIA, developer tools or a persistent bridge; do not silently change the preference.",
-            "Multiple AfterFX processes cannot be safely selected by the documented command-line API. Resolve ambiguity before running scripts, and refresh the explicit project-state token after edits.",
-            "Remove the Codex package to uninstall the integration. Preserve user projects and preferences; never automatically retry a timed-out write."])
+            "Use after_effects_installation_status and after_effects_list_sessions to inspect the selected AE 26.x installation and automatically discovered bridge sessions.",
+            "Use after_effects_install_bridge or after_effects_uninstall_bridge with a concrete preview and user authorization. The managed Startup script starts on AE launch; installing into the application directory may require Windows administrator permission. Preserve modified and unknown files.",
+            "Enable Allow Scripts To Write Files And Access Network once in AE preferences if needed, then restart after installation or update. Do not silently change this preference. No Creative Cloud, UPIA, developer tools, panel or pairing code is required.",
+            "Multiple AE instances are listed by session and project path; select the exact session instead of the first match. Refresh project_state after edits. Never silently switch instances or automatically retry a timed-out write.",
+            "For full removal, uninstall the managed AE bridge before the Codex package. Preserve user projects and preferences. Removing only the Codex package does not remove the AE Startup script."])
     if app == "photoshop":
         steps.extend([
             "Use photoshop_installation_status and photoshop_list_sessions to inspect native Windows COM registration, the exact installed version/path, and running instances.",

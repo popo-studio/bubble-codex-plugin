@@ -1,10 +1,6 @@
-"""ExtendScript operations with explicit project-state and native-session guards."""
-import json
 
-
-BODY = r'''
-(function(){
-var q=REQUEST, result, f, layerBudget=10000;
+function bubbleExecute(q){
+var result, layerBudget=10000;
 function encode(v){if(v===null||v===undefined)return 'null';if(typeof v==='string')return '"'+v.replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/\t/g,'\\t').replace(/[\x00-\x1f]/g,function(c){return '\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4);})+'"';if(typeof v==='number')return isFinite(v)?String(v):'null';if(typeof v==='boolean')return String(v);var a=[],k;if(v instanceof Array){for(k=0;k<v.length;k++)a.push(encode(v[k]));return '['+a.join(',')+']';}for(k in v)if(v.hasOwnProperty(k))a.push(encode(k)+':'+encode(v[k]));return '{'+a.join(',')+'}';}
 function state(){if(app.project.numItems>10000)throw Error('Project exceeds 10000 item inspection limit');var ids=[];for(var i=1;i<=app.project.numItems;i++){var x=app.project.item(i);ids.push([x.id,x.name,x.typeName]);}return {path:app.project.file?app.project.file.fsName:null,revision:app.project.revision,root_id:app.project.rootFolder.id,items:ids};}
 function sameState(a,b){return b&&a.path===b.path&&a.revision===b.revision&&a.root_id===b.root_id&&encode(a.items)===encode(b.items);}
@@ -13,7 +9,7 @@ function layer(c,id){for(var i=1;i<=c.numLayers;i++)if(c.layer(i).id===id)return
 function itemInfo(x){if(!x)throw Error('Item no longer exists');var o={item_id:x.id,name:x.name,type:x.typeName};if(x instanceof CompItem){layerBudget-=x.numLayers;if(layerBudget<0)throw Error('Inspection exceeds 10000 layer limit');o.width=x.width;o.height=x.height;o.duration=x.duration;o.frame_rate=x.frameRate;o.layers=[];for(var i=1;i<=x.numLayers;i++){var l=x.layer(i);o.layers.push({layer_id:l.id,index:i,name:l.name,locked:l.locked});}}if(x instanceof FootageItem)o.path=x.file?x.file.fsName:null;return o;}
 try{
  if(new Date().getTime()>q.expires_at)throw Error('Request expired before execution');
- if(parseInt(app.version,10)<26)throw Error('After Effects 26+ required');
+ if(parseInt(app.version,10)!==26)throw Error('After Effects 26.x required');
  if(app.preferences.getPrefAsLong('Main Pref Section','Pref_SCRIPTING_FILE_NETWORK_SECURITY')!==1)throw Error('Enable Allow Scripts to Write Files and Access Network manually in After Effects preferences');
  if(!app.project)throw Error('No project is available');
  var key='BubbleAE_'+q.server_id, s=$.global[key];
@@ -55,10 +51,5 @@ try{
  }
  result={ok:true,request_id:q.request_id,data:data,project_state:state()};
 }catch(e){result={ok:false,request_id:q.request_id,error:{code:'host_error',message:String(e),line:e.line||null}};}
-try{var output=encode(result);if(output.length>2000000)output=encode({ok:false,request_id:q.request_id,error:{code:'response_too_large',message:'Response exceeds size limit; a write may already have completed. Inspect state; do not automatically retry.'}});f=new File(q.response_path);f.encoding='UTF-8';if(f.open('w')){f.write(output);f.close();}}catch(ignore){}
-})();
-'''
-
-
-def script(request):
-    return BODY.replace('REQUEST', json.dumps(request, ensure_ascii=True, allow_nan=False), 1)
+return result;
+}

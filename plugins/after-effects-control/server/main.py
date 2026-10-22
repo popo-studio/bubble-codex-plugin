@@ -1,4 +1,4 @@
-"""Bubble After Effects 26+ Windows native scripting tools."""
+"""Bubble After Effects 26.x Windows native scripting tools."""
 import math
 import os
 from pathlib import Path
@@ -7,8 +7,8 @@ from typing import Literal
 from pydantic import StrictInt, StrictFloat
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from native import discover, installations
-from transport import call, failure
+from transport import call, failure, discover
+from installation import status, install, uninstall
 
 # Modules are loaded completely at startup; no worker imports source after package
 # removal. Launcher leaves the package CWD and disables bytecode before imports.
@@ -36,32 +36,41 @@ def absolute_file(path, extensions, exists=True):
 
 
 @mcp.tool(annotations=READ)
-def after_effects_installation_status() -> dict:
-    """Read Windows AE installations. Requires AE 26+. No Creative Cloud, UPIA, developer tools or host bridge is installed. This does not test native connectivity."""
+def after_effects_installation_status(executable: str | None = None) -> dict:
+    """Read AE26.x installation and managed Startup bridge state. Does not launch AE or change preferences. Native acceptance is pending."""
+    return status(executable)
+
+
+@mcp.tool(annotations=READ)
+def after_effects_list_sessions(project: str | None = None) -> dict:
+    """List automatically connected AE26.x instances with project names/paths. Multiple matches require explicit session selection; never choose the first. Session UUID is not a PID."""
     try:
-        return {'ok':True,'data':{'platform':sys.platform,'installations':installations(),'minimum_major':26,'host_bridge_required':False,'transport':'AfterFX.exe -r','required_preference':'Allow Scripts to Write Files and Access Network (user-controlled)','native_validation':'Not yet verified on AE 26; candidate implementation'}}
+        return discover(project)
     except Exception as exc:
         return failure('discovery_failed',exc)
 
 
-@mcp.tool(annotations=READ)
-def after_effects_list_sessions() -> dict:
-    """List running AE processes without executing scripts. All versions count toward ambiguity. -r has no PID routing: exactly one verified AE26+ instance is required."""
-    try:
-        return {'ok':True,'data':discover()}
-    except Exception as exc:
-        return failure('discovery_failed',exc)
+@mcp.tool(annotations=WRITE)
+def after_effects_install_bridge(confirmed: bool = False, executable: str | None = None) -> dict:
+    """Preview first; explicit authorization installs/updates exact per-user named Startup JSX in selected AE26.x installation. Program Files may require Windows admin permission. Enable scripting file permission once manually and restart AE; subsequent connections are automatic."""
+    return install(confirmed,executable)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_uninstall_bridge(confirmed: bool = False) -> dict:
+    """Preview first; confirmed removal deletes only exact unchanged owned Startup script and revokes running pumps through receipt removal. Adobe preferences remain unchanged. Remove host bridge before uninstalling Codex plugin."""
+    return uninstall(confirmed)
 
 
 @mcp.tool(annotations=READ)
-def after_effects_uninstall_bridge() -> dict:
-    """No AE files or startup entries are installed. Remove the Codex plugin; request temporary directories are cleaned on normal completion. Never remove Adobe preferences."""
-    return {'ok':True,'data':{'removed_files':[],'host_bridge_required':False,'note':'Uninstall Bubble After Effects in Codex. No permanent AE-side component exists. User-controlled scripting preferences remain unchanged.'}}
+def after_effects_connection_status() -> dict:
+    """Read automatic host connections. Missing sessions may indicate AE stopped, startup not loaded or scripting file permission disabled; never changes preferences."""
+    return after_effects_list_sessions()
 
 
 @mcp.tool(annotations=READ)
 def after_effects_project_info(session_id: str, timeout: Number = 20) -> dict:
-    """Read project/items/comps/layer IDs and establish native session token. Returns project_state, an observed fingerprint, NOT a permanent GUID. Requires AE scripting file/network preference already enabled; never changes it. -r may launch a new AE process if selected AE exits during dispatch; no content mutation occurs on this handshake."""
+    """Read project/items/comps/layer IDs in the selected automatically connected instance and establish client token. Returns project_state, an observed fingerprint, NOT a permanent GUID. No application launch or preference changes."""
     return call('project_info',session_id,timeout=timeout)
 
 

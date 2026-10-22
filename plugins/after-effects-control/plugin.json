@@ -1,7 +1,7 @@
 {
   "name": "after-effects-control",
-  "version": "0.1.0",
-  "description": "Control Windows After Effects 26+ using native scripting, without a host bridge.",
+  "version": "0.2.0",
+  "description": "Control Windows After Effects 26.x using an automatically connected Startup JSX bridge.",
   "author": {
     "name": "popo-studio"
   },
@@ -19,7 +19,7 @@
       "interface": {
         "displayName": "Bubble After Effects",
         "shortDescription": "After Effects 合成与图层操作",
-        "longDescription": "Windows After Effects 26+ native JSX control using AfterFX -r. No Creative Cloud or host bridge installation. Exactly one running instance and user-enabled scripting file access required. Native acceptance is pending.",
+        "longDescription": "Windows After Effects 26.x automatic per-instance Startup JSX control. No Creative Cloud or developer tools. One-time managed installation, scripting file permission and restart required. Native acceptance is pending.",
         "developerName": "popo-studio",
         "category": "Productivity",
         "capabilities": [
