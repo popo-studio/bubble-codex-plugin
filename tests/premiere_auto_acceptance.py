@@ -77,7 +77,8 @@ def install_receipt_fixture(profile):
     target=installation._target()
     target.mkdir(parents=True)
     (target/'acceptance-fixture.txt').write_text('Mock extension receipt only; no Adobe runtime.',encoding='utf-8')
-    installation._receipt_path(target).write_text(json.dumps({'plugin_id':installation.PLUGIN_ID,'target':str(target),'version':'0.3.0','files':installation._hashes(target)}),encoding='utf-8')
+    version=json.loads((PLUGIN/'plugin.json').read_text(encoding='utf-8'))['version']
+    installation._receipt_path(target).write_text(json.dumps({'plugin_id':installation.PLUGIN_ID,'target':str(target),'version':version,'files':installation._hashes(target)}),encoding='utf-8')
     return target
 
 

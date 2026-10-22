@@ -1,7 +1,7 @@
 {
   "FileVersion": 3,
   "Version": 1,
-  "VersionName": "0.1.3",
+  "VersionName": "0.2.0",
   "FriendlyName": "Bubble Codex Bridge",
   "Description": "User-authorized local Python bridge for the Unreal Editor.",
   "Category": "Editor",

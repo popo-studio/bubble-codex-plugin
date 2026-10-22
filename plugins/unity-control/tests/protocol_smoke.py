@@ -48,6 +48,34 @@ def main():
                 return client.request("invoke_method", {"type_name": "BubbleHarness", "method_name": method, "with_payload": payload is not None, "payload": payload}, pid=pid, timeout=timeout)
 
             assert client.request("status", pid=pid)["ok"]
+            objects=client.request('list_objects',{'limit':100},pid=pid)
+            assert objects['ok'],objects
+            scene_token=objects['data']['scene_token']
+            preview_id=int(call('PreviewObject')['data']['result'])
+            rejected=client.request('object_action',dict(action='rename',expected_scene=scene_token,object_id=preview_id,name='Forbidden'),pid=pid)
+            assert not rejected['ok'] and 'preview' in rejected['error']['message'].lower(),rejected
+            def edit(action, **args):
+                return client.request('object_action',dict(action=action,expected_scene=scene_token,**args),pid=pid)
+            created=edit('create',kind='cube',name='Fixture cube')
+            assert created['ok'],created
+            object_id=created['data']['objects'][0]['id']
+            changed=edit('transform',object_id=object_id,position=[1,2,3],scale=[2,2,2])
+            assert changed['ok'] and changed['data']['objects'][0]['position']==[1,2,3],changed
+            assert not client.request('scene_action',dict(action='new',expected_scene=scene_token),pid=pid)['ok'], 'Dirty scene was discarded'
+            assert edit('rename',object_id=object_id,name='Renamed')['ok']
+            assert edit('duplicate',object_id=object_id)['ok']
+            assert edit('delete',object_id=object_id)['ok']
+            assert not edit('rename',object_id=object_id,name='Stale')['ok']
+            assert client.request('list_objects',{'limit':100},pid=second['pid'])['data']['objects']==[], 'Other instance changed'
+            assert not client.request('object_action',dict(action='create',kind='cube',expected_scene='old'),pid=pid)['ok']
+            saved=client.request('scene_action',dict(action='save',expected_scene=scene_token,path='Assets/fixture.unity'),pid=pid)
+            assert saved['ok'],saved
+            scene_token=saved['data']['scene_token']
+            assert not client.request('scene_action',dict(action='save',expected_scene=scene_token,path='Assets/fixture.unity'),pid=pid)['ok']
+            reset=client.request('scene_action',dict(action='new',expected_scene=scene_token),pid=pid)
+            assert reset['ok'],reset
+            assert not edit('create',kind='cube')['ok'], 'Old scene token survived new scene'
+            print('PASS structured Unity create/transform/rename/duplicate/delete, scene dirty/overwrite/identity guards and instance isolation (stub DOM)')
             assert call("Echo", "Unicode 你好")["data"]["result"] == "Unicode 你好"
             assert call("Throw")["error"]["execution_uncertain"]
             assert call("AsyncVoid")["error"]["code"] == "unsupported_async_method"

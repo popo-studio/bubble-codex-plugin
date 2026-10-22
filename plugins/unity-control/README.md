@@ -58,3 +58,17 @@ Official APIs used: [embedded packages](https://docs.unity3d.com/6000.1/Document
 ## 更新和卸载的两层范围
 
 GitHub 发布后需刷新已注册的 Codex 插件市场，并重新加载聊天或重启 Codex。软件/项目中的桥接独立保存，需预览差异、经同意后更新，再重启或使用该软件支持的刷新方式。完整卸载请先通过本插件工具卸载软件端桥接，再从 Codex 移除插件；只卸载 Codex 插件会保留软件端配置。Windows 旧版缓存被占用时，先停掉明确属于该插件的旧 MCP 进程，再重试，勿关闭创作软件或批量删除配置。
+
+## Structured editing in 0.2.0
+
+Prefer `unity_list_objects`, `unity_inspect_object`, `unity_object_action`, `unity_scene_action`, and `unity_settings` for supported routine work instead of generating scripts. List objects first and retain both the explicit PID and returned `scene_token`; pass that token as `expected_scene`. IDs are GameObject instance IDs, guarded by loaded/active scene handles and a random epoch invalidated by scene open/close/new events; they are not portable asset GUIDs. Re-query after scene/level changes or reconnect.
+
+The object action supports create, select, duplicate, rename, delete, and position/scale transforms. Creation kinds: cube, sphere, plane, capsule, cylinder, quad, empty. Transforms use host world position and local scale; this release does not provide rotation, reparenting, animation/keyframe editing or arbitrary property assignment. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
+
+New/open refuse dirty affected scenes (Unreal also refuses dirty content packages), without implicitly saving or discarding anything. Save requires an explicit destination; replacing any existing file requires `overwrite=true` and user authorization. Unity new/open replaces all loaded scenes after checking every scene for unsaved changes. No build or render starts from the settings query.
+
+Update the application-side bridge through the setup tool and restart/reload the relevant application after updating the Codex plugin; an old running bridge does not gain new operations automatically. Existing owned-file update and removal protections remain in place.
+
+API references: [Unity 6000.1 EditorSceneManager](https://docs.unity3d.com/6000.1/Documentation/ScriptReference/SceneManagement.EditorSceneManager.html). Signatures compile against installed 6000.1 editor assemblies.
+
+Validation: 17 Python regressions, actual Unity 6000.1 assembly compilation, and production C# protocol with two mock Editors pass; structured create/transform/rename/duplicate/delete, dirty-scene refusal, save/overwrite and stale-scene-token checks are included. Real MCP stdio exposes 14 tools. Mock scenes are not native Unity Editor acceptance; that remains pending.

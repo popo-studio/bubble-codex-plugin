@@ -1,4 +1,4 @@
-# Bubble After Effects 0.2.0
+# Bubble After Effects 0.3.0
 
 Windows **After Effects 26.x** only. A managed Startup JSX bridge automatically registers each running AE instance. No Creative Cloud, UPIA, developer tools, CEP panel, debug mode, manual pairing code, or repeated script-editor paste is required. Native AE 26 acceptance remains pending; tests with a mocked Adobe DOM are not native acceptance.
 
@@ -31,3 +31,11 @@ Recognized owned heartbeat/request/result files are cleaned within bounded scans
 ## Evidence and sources
 
 The implementation uses Adobe’s shipped `Support Files/Scripts/Startup/About the Startup folder.txt` semantics and scheduled-task API. Current [Adobe Scripts help](https://helpx.adobe.com/after-effects/desktop/automate-in-after-effects/automate-animation/scripts.html) documents scripting preferences. The Adobe-authored [Scripting Guide](https://fendrafx.com/wp-content/uploads/After-Effects-CS6-Scripting-Guide.pdf), pages 6 and 27–28, documents startup globals and `scheduleTask`/`cancelTask`. No unsupported CEP hidden-autostart assumption or UXP 27 API is used.
+
+## 0.3 workflow additions
+
+27 tools include clean-project new/open operations, composition settings, layer state/duplication/removal, static text updates, transform keyframe inspection/set/removal, effect listing/addition by exact match name, and render-queue inspection/addition. New/open refuses dirty projects and requires explicit permission to replace a nonempty clean project. It never discards unsaved changes. Comp size changes do not scale layers.
+
+Keyframe deletion requires both its observed index and time; animated properties must use keyframe tools instead of static transforms. Expressions, separated dimensions and locked layers retain explicit guards. Effect addition checks `canAddProperty`; it does not install effects. Queued compositions are disabled (`render=false`), have no output path configured by this tool, and are never rendered automatically. Inspect results and configure output before an independently authorized render.
+
+Managed 0.2 receipts remain eligible for a safe update to 0.3, which rotates the installation generation and requires restart. Automated JSX DOM tests are distinct from native AE 26 acceptance, which remains pending.

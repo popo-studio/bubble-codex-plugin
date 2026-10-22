@@ -18,3 +18,16 @@ Use the bundled `maya` MCP server. Read `../../README.md` when setup or troubles
 9. Duplicate filenames need folder/path disambiguation. Unsaved scenes should be labeled “未保存场景” and distinguished by version/PID when no filename exists. An unavailable/busy record is not proof that Maya is closed: keep it visibly unavailable and do not silently choose another matching instance. With incomplete discovery, ask the user to confirm a clearly identified available scene or retry the read-only listing. List numbers are conversational choices, never stable identifiers. If a filename or path is not found, say so; never substitute another scene, open that file, or execute a mutation merely to satisfy a name match.
 
 If there is no session, invoke the setup workflow in `../maya-setup/SKILL.md`: preview a user-level installation, obtain consent, install, then recommend restarting Maya. Offer a Script Editor snippet only as the optional no-restart or temporary path. Do not silently enable startup behavior or edit Maya preferences outside the installation workflow. Do not expose or print discovery-file tokens.
+
+
+Prefer the structured scene/node tools for ordinary work. First read `maya_scene_state`,
+then use its `snapshot` as `expected_snapshot` with the chosen explicit PID on every mutation.
+Use `maya_scene_file` for new/open/save, `maya_query_nodes` for exact paths,
+`maya_create_node`/`maya_edit_node` for supported changes, `maya_select_nodes`,
+`maya_node_attribute`, `maya_node_connections`, and `maya_timeline`.
+Read the target parameter before setting it and supply its exact `expected_value`.
+Snapshot validation covers structure and dirty state, not all property changes.
+Never discard unsaved work or overwrite an existing file without existing user authorization.
+If the bridge reports an unsupported structured operation, use setup to preview/update the
+host bridge and recommend one restart; do not silently fall back to scripts/computer use.
+Scripts remain available for explicitly requested advanced operations absent from structured tools.

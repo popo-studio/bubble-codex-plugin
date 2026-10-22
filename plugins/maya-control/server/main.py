@@ -66,5 +66,61 @@ def maya_execute_mel(code: str, pid: int | None = None, timeout: float = 30) -> 
     return request("execute_mel", {"code": code}, pid, timeout)
 
 
+
+
+@mcp.tool(annotations=READ)
+def maya_scene_state(pid: int | None = None) -> dict:
+    """Read structural scene snapshot, dirty status and render configuration. Snapshot is not a full attribute revision; read target values immediately before edits."""
+    return request('structured_state', {}, pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_scene_file(action: str, pid: int, expected_snapshot: str, path: str = '', discard_changes: bool = False, overwrite: bool = False) -> dict:
+    """New/open/save scene. Explicit PID and fresh scene_state snapshot required. Save before new/open; discard_changes=true only with explicit user authorization. Existing output requires overwrite=true. Opening a user-authorized project may run application/plugin callbacks. Never retry after timeout/error."""
+    return request('structured_file', dict(action=action,pid=pid,expected_snapshot=expected_snapshot,path=path,discard_changes=discard_changes,overwrite=overwrite), pid)
+
+
+@mcp.tool(annotations=READ)
+def maya_query_nodes(pid: int | None = None, selected: bool = False, node_type: str = '', parent: str = '', limit: int = 200) -> dict:
+    """Inspect bounded node/object list with exact paths and types. Inspects the current scene. Returns truncation flag. Use exact returned paths for changes."""
+    return request('structured_query',dict(selected=selected,node_type=node_type,parent=parent,limit=limit),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_create_node(kind: str, name: str, pid: int, expected_snapshot: str, parent: str = '') -> dict:
+    """Create a named object/node using native commands. Kinds: cube/sphere/plane/cylinder/locator/transform/camera. Custom host node creation can run native callbacks. No implicit overwrite."""
+    return request('structured_create',dict(kind=kind,name=name,pid=pid,expected_snapshot=expected_snapshot,parent=parent),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_edit_node(action: str, node: str, pid: int, expected_snapshot: str, name: str = '', values: dict | None = None, confirm_delete: bool = False) -> dict:
+    """Edit exact node: rename, duplicate, delete, or transform with translation/rotation/scale triples. Delete requires user-authorized confirm_delete=true. Locked/referenced assets are protected. Structural guard does not detect every property edit; read target first."""
+    return request('structured_edit',dict(action=action,node=node,pid=pid,expected_snapshot=expected_snapshot,name=name,values=values,confirm_delete=confirm_delete),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_select_nodes(nodes: list[str], pid: int, expected_snapshot: str) -> dict:
+    """Replace selection with exact node paths (empty list clears). Does not fall back to current selection or another process."""
+    return request('structured_selection',dict(nodes=nodes,pid=pid,expected_snapshot=expected_snapshot),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_node_attribute(node: str, attribute: str, pid: int, action: str = 'get', expected_snapshot: str = '', value: str | float | int | bool | list | None = None, expected_value: str | float | int | bool | list | None = None) -> dict:
+    """Read/set a Maya attribute. Set requires fresh snapshot and exact expected_value from get; refuses animated/connected/locked values. No button/script knob execution. Supports scalar numeric/string values."""
+    return request('structured_attribute',dict(node=node,attribute=attribute,pid=pid,action=action,expected_snapshot=expected_snapshot,value=value,expected_value=expected_value),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_node_connections(node: str, pid: int, action: str = 'get', expected_snapshot: str = '', source: str = '', target: str = '', index: int = 0, expected_input: str | None = None) -> dict:
+    """Read/connect/disconnect exact nodes. Source/target are exact plugs and never force-replace. Set requires PID + fresh snapshot. Never follows current selection."""
+    return request('structured_connections',dict(node=node,pid=pid,action=action,expected_snapshot=expected_snapshot,source=source,target=target,index=index,expected_input=expected_input),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_timeline(pid: int, action: str = 'get', expected_snapshot: str = '', start: float = 1, end: float = 100, frame: float = 1) -> dict:
+    """Read or set playback frame range and current frame, without rendering. Set requires fresh structural snapshot. Does not change FPS or retime animation."""
+    return request('structured_timeline',dict(pid=pid,action=action,expected_snapshot=expected_snapshot,start=start,end=end,frame=frame),pid)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

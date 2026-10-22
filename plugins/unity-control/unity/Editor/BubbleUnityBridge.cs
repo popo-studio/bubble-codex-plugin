@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,8 +28,10 @@ namespace Bubble.UnityControl
         static string token, recordPath, projectPath;
         static int pid;
         static volatile bool closed = true;
+        static string sceneEpoch = Guid.NewGuid().ToString("N");
 
-        [Serializable] public class Args { public string type_name, method_name, payload, menu_path; public bool with_payload; public int max_objects = 5000; }
+        [Serializable] public class Args { public string type_name, method_name, payload, menu_path, action, expected_scene, kind, name, path; public bool with_payload, overwrite; public int max_objects = 5000, limit = 1000, object_id; public float[] position, scale; }
+        [Serializable] public class ObjectRow { public int id, parent_id; public string name, path, scene; public bool active; public float[] position, scale; public string[] components; }
         [Serializable] public class Request { public int protocol; public string token, operation; public Args arguments; public double timeout, expires_at; }
         [Serializable] public class Error { public string code, message; public bool execution_uncertain; }
         [Serializable] public class Response { public bool ok; public Data data; public Error error; }
@@ -38,11 +41,14 @@ namespace Bubble.UnityControl
         [Serializable] public class Data
         {
             public string path, project, project_name, unity_version, result, result_type, note;
+            public string bridge_version = "0.2.0";
             public int pid, inspected_objects;
             public bool modified, is_playing, is_compiling, is_updating, truncated, executed;
             public SceneRow[] scenes;
             public string[] selection;
             public Issue[] issues;
+            public string scene_token;
+            public ObjectRow[] objects;
         }
         sealed class Job
         {
@@ -54,6 +60,9 @@ namespace Bubble.UnityControl
 
         static Bridge()
         {
+            EditorSceneManager.sceneOpened += (scene,mode) => sceneEpoch=Guid.NewGuid().ToString("N");
+            EditorSceneManager.sceneClosed += scene => sceneEpoch=Guid.NewGuid().ToString("N");
+            EditorSceneManager.newSceneCreated += (scene,setup,mode) => sceneEpoch=Guid.NewGuid().ToString("N");
             EditorApplication.update += Update;
             EditorApplication.quitting += Stop;
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
@@ -70,7 +79,7 @@ namespace Bubble.UnityControl
             if (!closed || EditorApplication.isPlayingOrWillChangePlaymode) return;
             if (Application.platform != RuntimePlatform.WindowsEditor)
             {
-                Debug.LogWarning("Bubble Unity 0.1.3 supports Windows Editor only; bridge was not started.");
+                Debug.LogWarning("Bubble Unity 0.2.0 supports Windows Editor only; bridge was not started.");
                 return;
             }
             if (Application.isBatchMode && Environment.GetEnvironmentVariable("BUBBLE_UNITY_ALLOW_BATCH") != "1") return;
@@ -192,7 +201,7 @@ namespace Bubble.UnityControl
             if (!(request.timeout > 0 && request.timeout <= 120) || Double.IsNaN(request.expires_at) || Double.IsInfinity(request.expires_at)) return Fail("invalid_timeout", "Timeout must be finite and in (0,120].");
             double remaining = Math.Min(request.timeout, request.expires_at - Now());
             if (remaining <= 0) return Fail("expired", "Request expired before scheduling.");
-            if (request.operation != "status" && request.operation != "scene_info" && request.operation != "inspect_scene" && request.operation != "invoke_method" && request.operation != "execute_menu") return Fail("unknown_operation", "Unknown operation.");
+            if (request.operation != "status" && request.operation != "scene_info" && request.operation != "inspect_scene" && request.operation != "invoke_method" && request.operation != "execute_menu" && !new[]{"list_objects","inspect_object","object_action","scene_action","settings"}.Contains(request.operation)) return Fail("unknown_operation", "Unknown operation.");
             var job = new Job { Request = request };
             lock (Gate)
             {
@@ -227,7 +236,7 @@ namespace Bubble.UnityControl
             catch (Exception error)
             {
                 var cause = error is TargetInvocationException && error.InnerException != null ? error.InnerException : error;
-                bool mutation = job.Request.operation == "invoke_method" || job.Request.operation == "execute_menu";
+                bool mutation = job.Request.operation == "invoke_method" || job.Request.operation == "execute_menu" || job.Request.operation == "object_action" || job.Request.operation == "scene_action";
                 job.Response = Fail("execution_error", cause.GetType().Name + ": " + cause.Message, mutation);
             }
             finally { job.Done.Set(); }
@@ -249,6 +258,7 @@ namespace Bubble.UnityControl
             var args = request.arguments ?? new Args();
             if (request.operation == "status" || request.operation == "scene_info") return new Response { ok = true, data = data };
             if (data.is_compiling || data.is_updating || data.is_playing) return Fail("editor_busy", "Wait for Edit Mode, script compilation and asset import to finish. No operation executed.");
+            if (new[]{"list_objects", "inspect_object", "object_action", "scene_action", "settings"}.Contains(request.operation)) return Structured(request.operation, args, data);
             if (request.operation == "inspect_scene") Inspect(data, args.max_objects);
             else if (request.operation == "execute_menu")
             {
@@ -275,6 +285,83 @@ namespace Bubble.UnityControl
             }
             return new Response { ok = true, data = data };
         }
+        static string SceneToken()
+        {
+            var ids = new List<string>();
+            for (int i=0; i<SceneManager.sceneCount; i++) { var s=SceneManager.GetSceneAt(i); ids.Add(s.handle+":"+s.path); }
+            return sceneEpoch+":"+String.Join("|", ids)+"@"+SceneManager.GetActiveScene().handle;
+        }
+        static ObjectRow Row(GameObject go)
+        {
+            var t=go.transform;
+            return new ObjectRow { id=go.GetInstanceID(), parent_id=t.parent ? t.parent.gameObject.GetInstanceID():0, name=go.name, path=ObjectPath(t), scene=go.scene.path, active=go.activeSelf, position=new[]{t.position.x,t.position.y,t.position.z}, scale=new[]{t.localScale.x,t.localScale.y,t.localScale.z}, components=go.GetComponents<Component>().Select(c=>c ? c.GetType().FullName : "<missing script>").ToArray() };
+        }
+        static Vector3 Vector(float[] values)
+        {
+            if(values==null || values.Length!=3 || values.Any(v=>Single.IsNaN(v)||Single.IsInfinity(v))) throw new ArgumentException("Expected three finite numbers");
+            return new Vector3(values[0],values[1],values[2]);
+        }
+        static string ScenePath(string value)
+        {
+            if(String.IsNullOrEmpty(value)||!value.StartsWith("Assets/",StringComparison.Ordinal)||!value.EndsWith(".unity",StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Assets-relative .unity path required");
+            string root=Path.GetFullPath(Application.dataPath)+Path.DirectorySeparatorChar;
+            string full=Path.GetFullPath(Path.Combine(Directory.GetParent(Application.dataPath).FullName,value));
+            if(!full.StartsWith(root,StringComparison.OrdinalIgnoreCase)||!Directory.Exists(Path.GetDirectoryName(full))) throw new ArgumentException("Scene must be inside an existing Assets directory");
+            for(var dir=new DirectoryInfo(Path.GetDirectoryName(full));dir!=null;dir=dir.Parent)
+                if((dir.Attributes&FileAttributes.ReparsePoint)!=0)throw new ArgumentException("Scene directories must not be junctions or symlinks");
+            if(File.Exists(full)&&(File.GetAttributes(full)&FileAttributes.ReparsePoint)!=0)throw new ArgumentException("Scene file must not be a link");
+            return full;
+        }
+        static Response Structured(string operation, Args a, Data data)
+        {
+            data.scene_token=SceneToken();
+            if(operation=="settings") { data.result=JsonUtility.ToJson(new SettingsRow { color_space=QualitySettings.activeColorSpace.ToString(), quality=QualitySettings.GetQualityLevel(), target_frame_rate=Application.targetFrameRate, build_scenes=EditorBuildSettings.scenes.Select(s=>s.path).ToArray() }); return new Response{ok=true,data=data}; }
+            if(operation=="list_objects") {
+                if(a.limit<1||a.limit>5000) throw new ArgumentException("limit must be 1..5000");
+                var pending=new Queue<GameObject>(); var rows=new List<ObjectRow>();
+                for(int i=0;i<SceneManager.sceneCount;i++){var s=SceneManager.GetSceneAt(i);if(s.isLoaded)foreach(var go in s.GetRootGameObjects())pending.Enqueue(go);}
+                while(pending.Count>0 && rows.Count<a.limit){var go=pending.Dequeue();rows.Add(Row(go));foreach(Transform child in go.transform)pending.Enqueue(child.gameObject);}
+                data.objects=rows.ToArray();data.truncated=pending.Count>0;return new Response{ok=true,data=data};
+            }
+            if(a.expected_scene!=SceneToken())throw new InvalidOperationException("Loaded/active scenes changed; list objects again");
+            if(operation=="scene_action") {
+                if(a.action=="new"||a.action=="open")for(int i=0;i<SceneManager.sceneCount;i++)if(SceneManager.GetSceneAt(i).isDirty)throw new InvalidOperationException("Unsaved scene changes; save explicitly first");
+                if(a.action=="new") EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
+                else if(a.action=="open"||a.action=="save") {
+                    string full=ScenePath(a.path);
+                    if(a.action=="open"){if(!File.Exists(full))throw new FileNotFoundException("Scene missing");EditorSceneManager.OpenScene(a.path,OpenSceneMode.Single);}
+                    else {if(File.Exists(full)&&!a.overwrite)throw new InvalidOperationException("Existing scene requires overwrite=true");if(!EditorSceneManager.SaveScene(SceneManager.GetActiveScene(),a.path,false))throw new InvalidOperationException("Save failed");}
+                } else throw new ArgumentException("Unknown scene action");
+                data=Info();data.scene_token=SceneToken();return new Response{ok=true,data=data};
+            }
+            GameObject target=null;
+            if(operation=="object_action"&&a.action=="create") {
+                var kinds=new Dictionary<string,PrimitiveType>{{"cube",PrimitiveType.Cube},{"sphere",PrimitiveType.Sphere},{"plane",PrimitiveType.Plane},{"capsule",PrimitiveType.Capsule},{"cylinder",PrimitiveType.Cylinder},{"quad",PrimitiveType.Quad}};
+                if(a.kind=="empty")target=new GameObject(a.name??"GameObject");
+                else {if(!kinds.ContainsKey(a.kind??""))throw new ArgumentException("Unsupported primitive");target=GameObject.CreatePrimitive(kinds[a.kind]);}
+                if(!String.IsNullOrWhiteSpace(a.name))target.name=a.name;
+                Undo.RegisterCreatedObjectUndo(target,"Bubble create");
+            } else {
+                target=EditorUtility.InstanceIDToObject(a.object_id) as GameObject;
+                if(!target || EditorUtility.IsPersistent(target)||!target.scene.IsValid()||!target.scene.isLoaded)throw new InvalidOperationException("ID is not a loaded scene GameObject");
+                bool inLoadedScenes=false;for(int i=0;i<SceneManager.sceneCount;i++)if(SceneManager.GetSceneAt(i).handle==target.scene.handle)inLoadedScenes=true;
+                if(!inLoadedScenes)throw new InvalidOperationException("Object belongs to a preview or prefab-stage scene outside the selected loaded scenes");
+                if(operation=="inspect_object"){data.objects=new[]{Row(target)};return new Response{ok=true,data=data};}
+                if(operation!="object_action")throw new ArgumentException("Unknown operation");
+                if(a.action=="select")Selection.activeGameObject=target;
+                else if(a.action=="duplicate"){target=UnityEngine.Object.Instantiate(target,target.transform.parent);Undo.RegisterCreatedObjectUndo(target,"Bubble duplicate");}
+                else if(a.action=="rename"){if(String.IsNullOrWhiteSpace(a.name))throw new ArgumentException("Name required");Undo.RecordObject(target,"Bubble rename");target.name=a.name;}
+                else if(a.action=="delete"){Undo.DestroyObjectImmediate(target);data.result="Deleted "+a.object_id;data.executed=true;return new Response{ok=true,data=data};}
+                else if(a.action=="transform"){
+                    if(a.position==null&&a.scale==null)throw new ArgumentException("Specify position or scale");
+                    Vector3 p=a.position==null?target.transform.position:Vector(a.position),s=a.scale==null?target.transform.localScale:Vector(a.scale);
+                    Undo.RecordObject(target.transform,"Bubble transform");target.transform.position=p;target.transform.localScale=s;PrefabUtility.RecordPrefabInstancePropertyModifications(target.transform);
+                } else throw new ArgumentException("Unknown object action");
+            }
+            if(a.action!="select")EditorSceneManager.MarkSceneDirty(target.scene);
+            data.objects=new[]{Row(target)};data.executed=true;return new Response{ok=true,data=data};
+        }
+        [Serializable] class SettingsRow { public string color_space; public int quality,target_frame_rate; public string[] build_scenes; }
         static string ObjectPath(Transform transform)
         {
             var parts = new List<string>();

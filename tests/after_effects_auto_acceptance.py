@@ -191,7 +191,7 @@ def main():
                     async with stdio_client(parameters) as (reader,writer):
                         async with ClientSession(reader,writer) as session:
                             await session.initialize()
-                            listing=await session.list_tools();assert len(listing.tools)==13
+                            listing=await session.list_tools();assert len(listing.tools)==27
                             async def invoke(name,args):
                                 response=await session.call_tool(name,args)
                                 assert not response.isError,response
@@ -210,7 +210,7 @@ def main():
                     return await asyncio.wait_for(mcp_acceptance(),timeout=45)
                 asyncio.run(bounded_mcp())
                 assert h4.command('state')['log']==['MCP 512']
-                print('PASS actual MCP stdio / 13 tools / discovery / project info / empty-project512 creation / readback')
+                print('PASS actual MCP stdio / 27 tools / discovery / project info / empty-project512 creation / readback')
 
                 # Both user-specific Startup files coexist in one Adobe directory.
                 # Loading the other profile first or last must not stop our bridge.

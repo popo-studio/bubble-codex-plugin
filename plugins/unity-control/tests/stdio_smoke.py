@@ -45,7 +45,7 @@ async def main():
                     await session.initialize()
                     listing = await session.list_tools()
                     names = {tool.name for tool in listing.tools}
-                    assert names == {"unity_installation_status", "unity_install_bridge", "unity_uninstall_bridge", "unity_list_sessions", "unity_status", "unity_scene_info", "unity_inspect_scene", "unity_invoke_method", "unity_execute_menu"}
+                    assert names == {'unity_list_objects', 'unity_inspect_object', 'unity_object_action', 'unity_scene_action', 'unity_settings', "unity_installation_status", "unity_install_bridge", "unity_uninstall_bridge", "unity_list_sessions", "unity_status", "unity_scene_info", "unity_inspect_scene", "unity_invoke_method", "unity_execute_menu"}
                     for name in sorted(names):
                         arguments = {}
                         if "install" in name:
@@ -54,6 +54,12 @@ async def main():
                             arguments = {"type_name": "Example", "method_name": "ReadOnlyMethod"}
                         elif name == "unity_execute_menu":
                             arguments = {"menu_path": "Fixture/ReadOnly"}
+                        if name in {'unity_object_action', 'unity_scene_action', 'unity_inspect_object', 'unity_list_objects', 'unity_settings'}:
+                            arguments["pid"] = 123
+                            if name.endswith(("inspect_object", "object_action", "scene_action")): arguments["expected_scene"] = "fixture"
+                            if name.endswith("inspect_object"): arguments["object_id"] = 1
+                            if name.endswith("object_action"): arguments["action"] = "create"
+                            if name.endswith("scene_action"): arguments["action"] = "new"
                         response = await session.call_tool(name, arguments)
                         assert not response.isError, response
                         payload = json.loads(response.content[0].text)

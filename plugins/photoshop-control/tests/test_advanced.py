@@ -8,6 +8,20 @@ import advanced
 import worker
 
 class AdvancedTests(unittest.TestCase):
+    def test_new_filter_parameter_guards(self):
+        for args in [dict(filter='motion_blur',radius=0),dict(filter='add_noise',amount=401),dict(filter='add_noise',distribution='other')]:
+            with self.assertRaises(ValueError):advanced.build('apply_filter',dict(layer_id=1,**args))
+        for v in [[1,2],[0,0,101],[0,True,0]]:
+            with self.assertRaises(ValueError):advanced.build('adjust_color',dict(layer_id=1,adjustment='color_balance',shadows=v))
+    def test_new_filters_execute_after_target_guards(self):
+        import subprocess,json,shutil
+        if not shutil.which('node'):self.skipTest('Node required')
+        cases=[('apply_filter',dict(filter='motion_blur',angle=30,radius=12),'motion',[30,12]),('apply_filter',dict(filter='add_noise',amount=5,distribution='gaussian',monochromatic=True),'noise',[5,2,True]),('apply_filter',dict(filter='sharpen'),'sharpen',[]),('adjust_color',dict(adjustment='color_balance',shadows=[2,3,4]),'balance',[[2,3,4],[0,0,0],[0,0,0],True])]
+        for op,args,name,expected in cases:
+            body=advanced.build(op,dict(layer_id=1,**args))
+            stub="var events=[],l={};['applyMotionBlur','applyAddNoise','applySharpen','adjustColorBalance'].forEach(function(n){l[n]=function(){events.push([n,Array.from(arguments)]);};});var app={activeDocument:{mode:'rgb',layers:[]}},DocumentMode={RGB:'rgb'},NoiseDistribution={GAUSSIAN:2};function findLayer(){return l;}function normalPixels(){events.push('guard');}function singleLayer(){}function pixels(){}function layerInfo(){return {};}"
+            result=subprocess.run(['node','-e',stub+'(function(){'+body+'})();process.stdout.write(JSON.stringify(events));'],capture_output=True,text=True,check=True)
+            events=json.loads(result.stdout);self.assertEqual(events[0],'guard');self.assertEqual(events[-1][1],expected)
     def test_selection_modes(self):
         for mode,constant in [('replace','REPLACE'),('add','EXTEND'),('subtract','DIMINISH'),('intersect','INTERSECT')]:
             code=advanced.build('selection',dict(action='rectangle',mode=mode,left=1,top=2,right=10,bottom=12))

@@ -138,5 +138,59 @@ def premiere_create_sequence_from_clips(project_id: str, name: str, item_ids: li
     return call("create_sequence_from_clips", {"project_id": project_id, "name": name, "item_ids": item_ids}, session_id)
 
 
+@mcp.tool(annotations=WRITE)
+def premiere_create_bin(project_id: str, parent_item_id: str, name: str, session_id: str | None = None) -> dict:
+    """Create a bin under the explicit parent bin ID. Does not save."""
+    return call("create_bin", {"project_id":project_id,"parent_item_id":parent_item_id,"name":name},session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_rename_item(project_id: str, item_id: str, name: str, session_id: str | None = None) -> dict:
+    """Rename one project item/bin; refuses the project root. Media files are not renamed."""
+    return call("rename_item", {"project_id":project_id,"item_id":item_id,"name":name},session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_rename_sequence(project_id: str, sequence_id: str, name: str, session_id: str | None = None) -> dict:
+    """Rename one explicitly selected sequence."""
+    return call("rename_sequence", {"project_id":project_id,"sequence_id":sequence_id,"name":name},session_id)
+
+
+@mcp.tool(annotations=READ)
+def premiere_sequence_settings(project_id: str, sequence_id: str, session_id: str | None = None) -> dict:
+    """Read dimensions, timebase, display formats, playhead and in/out range."""
+    return call("sequence_settings", {"project_id":project_id,"sequence_id":sequence_id},session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_set_playhead(project_id: str, sequence_id: str, ticks: str, session_id: str | None = None) -> dict:
+    """Set explicit sequence playhead using exact tick string; does not move clips."""
+    return call("set_playhead", {"project_id":project_id,"sequence_id":sequence_id,"ticks":ticks},session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_set_sequence_range(project_id: str, sequence_id: str, start: float, end: float, session_id: str | None = None) -> dict:
+    """Set sequence in/out range in seconds; does not trim clips or start export."""
+    return call("set_sequence_range", {"project_id":project_id,"sequence_id":sequence_id,"start":start,"end":end},session_id)
+
+
+@mcp.tool(annotations=READ)
+def premiere_sequence_markers(project_id: str, sequence_id: str, session_id: str | None = None) -> dict:
+    """List bounded sequence markers with GUID/name/comments/start/end."""
+    return call("sequence_markers", {"project_id":project_id,"sequence_id":sequence_id},session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_create_marker(project_id: str, sequence_id: str, start: float, name: str = "", comments: str = "", duration: float = 0, session_id: str | None = None) -> dict:
+    """Create a comment marker at explicit sequence time, optionally with duration."""
+    return call("create_marker", {"project_id":project_id,"sequence_id":sequence_id,"start":start,"name":name,"comments":comments,"duration":duration},session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_update_marker(project_id: str, sequence_id: str, guid: str, name: str, comments: str, end: float | None = None, color: int | None = None, session_id: str | None = None) -> dict:
+    """Update exact sequence marker GUID text/end/color index0-7; never changes marker start."""
+    return call("update_marker", {"project_id":project_id,"sequence_id":sequence_id,"guid":guid,"name":name,"comments":comments,"end":end,"color":color},session_id)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

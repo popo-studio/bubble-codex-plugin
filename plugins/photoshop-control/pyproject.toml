@@ -1,6 +1,6 @@
 [project]
 name = "bubble-photoshop-control"
-version = "0.4.0"
+version = "0.5.0"
 description = "Native Windows Photoshop COM control for Codex"
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.28,<2", "pywin32>=311; sys_platform == 'win32'"]

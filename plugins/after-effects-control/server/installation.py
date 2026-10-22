@@ -20,7 +20,7 @@ def receipt():
     if not p.exists():return None
     if p.stat().st_size>65536:raise ValueError('Installation receipt is too large')
     r=json.loads(p.read_text(encoding='utf-8'))
-    if r.get('schema')!=1 or r.get('version')!='0.2.0' or not r.get('target') or r.get('profile')!=os.environ.get('LOCALAPPDATA'):
+    if r.get('schema')!=1 or r.get('version') not in ('0.2.0','0.3.0') or not r.get('target') or r.get('profile')!=os.environ.get('LOCALAPPDATA'):
         raise ValueError('Unknown installation receipt; inspect before modifying')
     return r
 
@@ -41,7 +41,7 @@ def cleanup_runtime():
         safe_path(folder);owner=folder/'.owner.json'
         try:
             data=read(owner)
-            if data.get('schema')!=1 or data.get('session_id')!=folder.name or data.get('bridge_version')!='0.2.0' or not re.fullmatch('[0-9a-f]{32}',str(data.get('installation_id',''))):continue
+            if data.get('schema')!=1 or data.get('session_id')!=folder.name or data.get('bridge_version') not in ('0.2.0','0.3.0') or not re.fullmatch('[0-9a-f]{32}',str(data.get('installation_id',''))):continue
         except (OSError,ValueError):continue
         heartbeat=folder/'heartbeat.json'
         if heartbeat.exists():
@@ -85,7 +85,7 @@ def plan(executable=None):
 
 def status(executable=None):
     try:
-        data={'version':'0.2.0','installations':installations(),'receipt':receipt(),'transport':'managed Startup JSX + per-instance private file IPC','requires_creative_cloud':False,'requires_developer_mode':False,'required_preference':'Allow Scripts to Write Files and Access Network (enable once manually)','native_tested':False}
+        data={'version':'0.3.0','installations':installations(),'receipt':receipt(),'transport':'managed Startup JSX + per-instance private file IPC','requires_creative_cloud':False,'requires_developer_mode':False,'required_preference':'Allow Scripts to Write Files and Access Network (enable once manually)','native_tested':False}
         if executable:
             target,_,_=plan(executable);data['target']=str(target)
         return {'ok':True,'data':data}
@@ -129,7 +129,7 @@ def _install(confirmed=False,executable=None):
         if temp.exists() or rt.exists():raise ValueError('Pending temporary install/receipt exists; inspect before proceeding')
         old_raw=target.read_bytes() if target.exists() else None
         old_receipt=rp.read_bytes() if rp.exists() else None
-        r={'schema':1,'version':'0.2.0','installation_id':installation_id,'profile':os.environ['LOCALAPPDATA'],'target':str(target),'executable':selected['executable'],'sha256':hashlib.sha256(raw).hexdigest(),'enabled':True}
+        r={'schema':1,'version':'0.3.0','installation_id':installation_id,'profile':os.environ['LOCALAPPDATA'],'target':str(target),'executable':selected['executable'],'sha256':hashlib.sha256(raw).hexdigest(),'enabled':True}
         replaced=False
         try:
             with temp.open('xb') as f:f.write(raw)

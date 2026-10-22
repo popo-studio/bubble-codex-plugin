@@ -49,7 +49,7 @@ def discover(project=None,private=False):
             if not isinstance(r,dict):continue
             project_info=r.get('project')
             if not isinstance(project_info,dict) or not isinstance(project_info.get('name'),str) or (project_info.get('path') is not None and not isinstance(project_info.get('path'),str)):continue
-            if r.get('installation_id')!=owner['installation_id'] or r.get('bridge_version')!='0.2.0':continue
+            if r.get('installation_id')!=owner['installation_id'] or r.get('bridge_version')!='0.3.0':continue
             if r.get('schema')!=1 or r.get('session_id')!=folder.name or not isinstance(r.get('expires_at'),(int,float)) or not time.time()*1000<r['expires_at']<=time.time()*1000+20000 or not str(r.get('version','')).startswith('26.') or not isinstance(r.get('token'),str) or len(r['token'])!=64:continue
             if not private:r.pop('token',None)
             rows.append(r)

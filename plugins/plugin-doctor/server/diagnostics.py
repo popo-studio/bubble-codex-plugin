@@ -69,7 +69,7 @@ def children(path, limit):
 
 
 def status():
-    return {"ok": True, "data": {"version": "0.1.5", "mode": "read-only",
+    return {"ok": True, "data": {"version": "0.1.6", "mode": "read-only",
         "python_version": sys.version.split()[0], "uv_available": bool(shutil.which("uv")),
         "supported_plugins": list(PLUGINS)},
         "note": "Disk/cache observations do not prove Codex enabled state or tool loading. Use Codex's own tool discovery for that."}
@@ -304,7 +304,7 @@ def guidance(plugin_name, action):
         steps.extend([
             "Use premiere_installation_status to distinguish signed CEP release files, user-profile installation and an actually connected Premiere 26.x background extension.",
             "Use premiere_install_bridge or premiere_uninstall_bridge with a preview and explicit authorization. Preserve modified/unknown extensions. No Creative Cloud, UPIA or PlayerDebugMode is required; never edit Adobe private plugin stores or registry debug switches.",
-            "Premiere 0.3.0 starts its signed background extension when Premiere activates. Use premiere_list_sessions for automatic discovery; select an explicit session and project by name/path when multiple instances match.",
+            "Premiere 0.4.0 starts its signed background extension when Premiere activates. Use premiere_list_sessions for automatic discovery; select an explicit session and project by name/path when multiple instances match.",
             "First installation or software-side update may require restarting Premiere. No routine panel opening or pairing code is needed. Reconnection creates a new session; never replay a timed-out write or silently switch instances."])
     if app == "after-effects":
         steps.extend([
@@ -321,6 +321,7 @@ def guidance(plugin_name, action):
             "Updating/uninstalling the Codex package replaces/removes this integration; it does not stop Photoshop or alter documents. A separately installed legacy 0.1.0 UXP panel is outside this native integration."])
     if app in APPS:
         steps.append("Select the exact software profile/project, then call %s_installation_status." % app)
+        steps.append("Structured scene/object tools require the matching software-side bridge. After a Codex package update, inspect the loaded bridge version and update/restart the selected application bridge if needed. Unsupported-operation errors must not silently fall back to arbitrary scripts or another instance.")
         tool = app + ("_uninstall_bridge" if action == "uninstall" else "_install_bridge")
         steps.extend(["Call %s with confirmed=false and the exact profile/project arguments to preview." % tool,
             "Only after user authorization for that concrete preview, call %s with confirmed=true. Preserve ownership conflicts." % tool,

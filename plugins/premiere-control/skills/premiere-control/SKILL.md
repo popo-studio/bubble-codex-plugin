@@ -14,3 +14,11 @@ Use `premiere_project_info`, `premiere_inspect_media`, and `premiere_inspect_tim
 There is no exposed arbitrary-script or render tool. If the requested operation is unsupported, state that clearly. Never retry a timed-out write automatically: it may already have changed the project. Preserve all unrelated projects and files.
 
 Target is Windows Premiere 26.x. Native Premiere acceptance of this candidate is pending; unit/mock transport tests are not host verification.
+
+Prefer the structured workflow tools described in the plugin README over raw scripts or computer use. Discover current IDs and state first; refresh them after mutations. Never retry a timed-out write automatically.
+
+## 0.4 workflow additions
+
+23 tools include bin creation, project-item and sequence renaming, sequence settings inspection, exact-tick playhead positioning, sequence in/out range editing, and sequence-marker listing/creation/update by GUID. Renaming an item does not rename its disk file. Sequence ranges do not trim clips. Marker updates preserve the start time; they can change name, comments, end time and color. All operations require an explicit session and the observed project identity.
+
+This release does not expose undocumented QE editing, clip trimming, marker deletion or arbitrary effect manipulation. The public ExtendScript signatures are evidenced by Adobe's [PProPanel sample](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/jsx/PPRO/Premiere.jsx). Automated host-DOM tests are not Premiere 26 native acceptance. An unchanged managed 0.3 installation can be updated through the installer; modified files are preserved and reported. Restart Premiere after updating the signed bridge.

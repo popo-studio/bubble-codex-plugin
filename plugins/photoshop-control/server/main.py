@@ -16,7 +16,7 @@ from native import discover, installations, failure, select
 # source at startup into an external temporary directory, never into the plugin.
 _worker_runtime = tempfile.TemporaryDirectory(prefix="bubble-photoshop-worker-")
 atexit.register(_worker_runtime.cleanup)
-for _name in ("native.py", "worker.py", "operations.py", "advanced.py"):
+for _name in ("native.py", "worker.py", "operations.py", "advanced.py", "workflow.py"):
     (Path(_worker_runtime.name) / _name).write_bytes(Path(__file__).with_name(_name).read_bytes())
 _worker_path = str(Path(_worker_runtime.name) / "worker.py")
 
@@ -224,21 +224,75 @@ def photoshop_layer_mask(document_id: StrictInt, session_id: str, layer_id: Stri
 
 
 @mcp.tool(annotations=WRITE)
-def photoshop_adjust_color(document_id: StrictInt, session_id: str, layer_id: StrictInt, adjustment: Literal["brightness_contrast","levels","invert","desaturate"], brightness: StrictInt = 0, contrast: StrictInt = 0, input_black: StrictInt = 0, input_white: StrictInt = 255, gamma: StrictFloat = 1, output_black: StrictInt = 0, output_white: StrictInt = 255, timeout: float = 30) -> dict:
-    """Destructively adjust exact normal pixel layer (8/16-bit RGB/grayscale), respecting current selection. Explicitly selects only this layer and component channels; masks untouched. Brightness/contrast -100..100, levels 0..255 ordered endpoints and gamma .1..9.99. No automatic rasterization or adjustment-layer creation; no save."""
-    return call("adjust_color",session_id,timeout,document_id=document_id,layer_id=layer_id,adjustment=adjustment,brightness=brightness,contrast=contrast,input_black=input_black,input_white=input_white,gamma=gamma,output_black=output_black,output_white=output_white)
+def photoshop_adjust_color(document_id: StrictInt, session_id: str, layer_id: StrictInt, adjustment: Literal["brightness_contrast","levels","invert","desaturate","color_balance"], brightness: StrictInt = 0, contrast: StrictInt = 0, input_black: StrictInt = 0, input_white: StrictInt = 255, gamma: StrictFloat = 1, output_black: StrictInt = 0, output_white: StrictInt = 255, shadows: list[StrictInt] | None = None, midtones: list[StrictInt] | None = None, highlights: list[StrictInt] | None = None, preserve_luminosity: StrictBool = True, timeout: float = 30) -> dict:
+    """Destructively adjust exact normal pixel layer (8/16-bit RGB/grayscale), respecting current selection. Explicitly selects only this layer and component channels; masks untouched. Brightness/contrast -100..100, levels 0..255 ordered endpoints and gamma .1..9.99. Color balance requires RGB, each shadows/midtones/highlights vector has three integers -100..100. No automatic rasterization or adjustment-layer creation; no save."""
+    return call("adjust_color",session_id,timeout,document_id=document_id,layer_id=layer_id,adjustment=adjustment,brightness=brightness,contrast=contrast,input_black=input_black,input_white=input_white,gamma=gamma,output_black=output_black,output_white=output_white,shadows=shadows,midtones=midtones,highlights=highlights,preserve_luminosity=preserve_luminosity)
 
 
 @mcp.tool(annotations=WRITE)
-def photoshop_apply_filter(document_id: StrictInt, session_id: str, layer_id: StrictInt, filter: Literal["gaussian_blur","unsharp_mask","median"], radius: StrictFloat = 1, amount: StrictFloat = 100, threshold: StrictInt = 0, timeout: float = 30) -> dict:
-    """Destructively filter exact normal pixel layer, respecting selection. Gaussian/unsharp radius .1–250 px; unsharp amount 1–500%, threshold 0–255; median radius integer 1–100px. Selects one layer and component channels, never the mask. No implicit rasterization/smart-filter conversion or save."""
-    return call("apply_filter",session_id,timeout,document_id=document_id,layer_id=layer_id,filter=filter,radius=radius,amount=amount,threshold=threshold)
+def photoshop_apply_filter(document_id: StrictInt, session_id: str, layer_id: StrictInt, filter: Literal["gaussian_blur","unsharp_mask","median","motion_blur","add_noise","sharpen"], radius: StrictFloat = 1, amount: StrictFloat = 100, threshold: StrictInt = 0, angle: StrictFloat = 0, distribution: Literal["uniform","gaussian"] = "uniform", monochromatic: StrictBool = True, timeout: float = 30) -> dict:
+    """Destructively filter exact normal pixel layer, respecting selection. Gaussian/unsharp radius .1–250 px; unsharp amount 1–500%, threshold 0–255; median radius integer 1–100px. Motion blur angle -360..360 and radius as distance 1..999; noise amount .1..400 with uniform/gaussian distribution; sharpen uses host defaults. Selects one layer and component channels, never the mask. No implicit rasterization/smart-filter conversion or save."""
+    return call("apply_filter",session_id,timeout,document_id=document_id,layer_id=layer_id,filter=filter,radius=radius,amount=amount,threshold=threshold,angle=angle,distribution=distribution,monochromatic=monochromatic)
 
 
 @mcp.tool(annotations=WRITE)
 def photoshop_smart_object(document_id: StrictInt, session_id: str, layer_id: StrictInt, action: Literal["convert","replace_contents"], path: str | None = None, timeout: float = 30) -> dict:
     """Convert one normal pixel layer to a smart object, or replace a verified embedded object's contents with absolute existing PNG/JPEG/TIFF/BMP. Linked/unknown objects are refused. Replacement also refuses if any other smart-object layer exists in any open document, because copied embedded objects may share contents; error lists other document/layer IDs. Selects exactly one layer; returns current stable ID because conversion can change it. Does not edit original source file or save document; no automatic retry."""
     return call("smart_object",session_id,timeout,document_id=document_id,layer_id=layer_id,action=action,path=path)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_duplicate_document(document_id: StrictInt, session_id: str, name: str = "Copy", merged: StrictBool = False, timeout: float = 30) -> dict:
+    """Duplicate selected document without saving; merged affects the copy only."""
+    return call("duplicate_document",session_id,timeout,document_id=document_id,name=name,merged=merged)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_transform_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, scale_x: StrictFloat = 100, scale_y: StrictFloat = 100, angle: StrictFloat = 0, timeout: float = 30) -> dict:
+    """Scale by percent and rotate around layer center. Refuses linked/background/locked layers."""
+    return call("transform_layer",session_id,timeout,document_id=document_id,layer_id=layer_id,scale_x=scale_x,scale_y=scale_y,angle=angle)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_move_layer(document_id: StrictInt, session_id: str, layer_id: StrictInt, relative_layer_id: StrictInt, placement: Literal["before","after","inside"] = "before", timeout: float = 30) -> dict:
+    """Move relative to an explicit layer/group ID; refuses cycles and background moves."""
+    return call("move_layer",session_id,timeout,document_id=document_id,layer_id=layer_id,relative_layer_id=relative_layer_id,placement=placement)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_set_blend_mode(document_id: StrictInt, session_id: str, layer_id: StrictInt, mode: Literal["normal","multiply","screen","overlay","softlight","hardlight","difference","darken","lighten","color","luminosity"], timeout: float = 30) -> dict:
+    """Set one explicit layer blend mode without merging pixels."""
+    return call("set_blend_mode",session_id,timeout,document_id=document_id,layer_id=layer_id,mode=mode)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_set_text_style(document_id: StrictInt, session_id: str, layer_id: StrictInt, font: str | None = None, color: str | None = None, justification: Literal["left","center","right"] | None = None, tracking: StrictInt | None = None, timeout: float = 30) -> dict:
+    """Set text PostScript font, RGB color, justification and tracking. Exact installed font required; preserves visibility."""
+    return call("set_text_style",session_id,timeout,document_id=document_id,layer_id=layer_id,font=font,color=color,justification=justification,tracking=tracking)
+
+
+@mcp.tool(annotations=READ)
+def photoshop_history_info(document_id: StrictInt, session_id: str, timeout: float = 30) -> dict:
+    """Read bounded history names/active index; pass exact result to restore_history."""
+    return call("history_info",session_id,timeout,document_id=document_id)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_restore_history(document_id: StrictInt, session_id: str, index: StrictInt, expected_history: dict, timeout: float = 30) -> dict:
+    """Restore an explicit history index after an immediate history_info read with no intervening edits. Names/index are an observed fingerprint, not stable history IDs; equal-named replacement branches cannot be detected. May discard later edits; require user intent."""
+    return call("restore_history",session_id,timeout,document_id=document_id,index=index,expected_history=expected_history)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_save_selection(document_id: StrictInt, session_id: str, name: str, timeout: float = 30) -> dict:
+    """Store selection in a new named alpha channel; never overwrites a channel."""
+    return call("save_selection",session_id,timeout,document_id=document_id,name=name)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_load_selection(document_id: StrictInt, session_id: str, name: str, mode: Literal["replace","add","subtract","intersect"] = "replace", timeout: float = 30) -> dict:
+    """Load a unique alpha-channel selection with explicit combination mode."""
+    return call("load_selection",session_id,timeout,document_id=document_id,name=name,mode=mode)
 
 
 if __name__ == "__main__":

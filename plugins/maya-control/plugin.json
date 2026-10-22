@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "maya-control",
-  "version": "0.2.7",
+  "version": "0.3.0",
   "description": "Control a local Autodesk Maya session, execute Python or MEL, and inspect scene dependencies.",
   "author": {
     "name": "popo-studio"

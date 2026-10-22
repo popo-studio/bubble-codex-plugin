@@ -34,3 +34,13 @@ Raster mask create requires no existing raster mask; reveal/hide selection requi
 Smart convert accepts a normal pixel layer and returns its new ID. Replacement accepts only verified embedded objects and existing PNG/JPEG/TIFF/BMP files; linked or unknown objects are refused. Do not expand this into editing linked source files or automatic embedded-content saving. Report unsupported requested actions rather than presenting these subsets as the full Photoshop feature set.
 
 Smart-object replacement safety limit: native testing confirmed that ordinary duplicates can share embedded contents, so replacing one may also change its twin. Until reliable independent-content identity is available, replacement refuses when **any other smart-object layer exists in any open document**, including nested groups, linked objects or unrelated smart objects. The error lists document/layer IDs. This deliberately conservative check runs before selection/channel changes or replacement. Never delete, close, unlink, or independently copy user objects to bypass it without an explicit user request. Conversion itself remains available.
+
+Prefer the structured workflow tools described in the plugin README over raw scripts or computer use. Discover current IDs and state first; refresh them after mutations. Never retry a timed-out write automatically.
+
+## 0.5 workflow additions
+
+39 structured tools include document duplication, layer scale/rotation and relative ordering, blend modes, exact-font text styling, history inspection/restoration, and named alpha-channel selection storage/loading. History restoration requires the complete observed history snapshot; inspect again after any change. Alpha names never overwrite existing channels. Text styling preserves visibility and unrelated text properties. Locked/background/linked layers are refused where the operation cannot be isolated safely.
+
+Existing adjustment/filter tools additionally expose RGB color balance, motion blur, noise and sharpening. These operate on the selected normal pixel layer, with the existing channel and lock guards. They do not create adjustment layers or bypass unsupported modes. Photoshop native acceptance is reported separately from DOM simulations.
+
+History snapshots compare document ID, action names and active index, not persistent history-state identity. An undo followed by a same-named action can reproduce that fingerprint. Read immediately before restoring with no intervening edits; never present this guard as a full revision check.

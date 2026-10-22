@@ -6,6 +6,103 @@ _tick = None
 _shutdown = None
 _queue = queue.Queue(maxsize=64)
 
+_identity_world = None
+_identity_token = None
+_observed_actors = {}
+
+
+def scene_token():
+    import uuid
+    import unreal
+    global _identity_world, _identity_token
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    if world != _identity_world or _identity_token is None:
+        _identity_world, _identity_token = world, uuid.uuid4().hex
+        _observed_actors.clear()
+    return _identity_token
+
+
+def structured(operation, a):
+    import math
+    import re
+    import unreal
+    ensure_script_allowed()
+    actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    scene_token()
+    def vec(v):
+        if not isinstance(v, list) or len(v) != 3 or any(isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) for x in v): raise ValueError('Expected three finite numbers')
+        return unreal.Vector(*v)
+    def xyz(v): return [v.x, v.y, v.z]
+    def row(n):
+        _observed_actors[n.get_path_name()] = n
+        parent = n.get_attach_parent_actor()
+        return {'id': n.get_path_name(), 'name': n.get_actor_label(), 'class': n.get_class().get_path_name(), 'parent_id': parent.get_path_name() if parent else None, 'position': xyz(n.get_actor_location()), 'scale': xyz(n.get_actor_scale3d()), 'rotation': [n.get_actor_rotation().pitch, n.get_actor_rotation().yaw, n.get_actor_rotation().roll]}
+    if operation == 'list_objects':
+        limit = a.get('limit', 1000)
+        if type(limit) is not int or not 1 <= limit <= 5000: raise ValueError('limit must be 1..5000')
+        nodes = list(actors.get_all_level_actors())
+        return {'objects': [row(n) for n in nodes[:limit]], 'truncated': len(nodes) > limit, 'scene_token': scene_token(), 'scene': scene_info()}
+    if operation == 'settings':
+        return {'engine': unreal.SystemLibrary.get_engine_version(), 'world_settings_class': world.get_world_settings().get_class().get_path_name(), 'dirty_maps': [x.get_path_name() for x in unreal.EditorLoadingAndSavingUtils.get_dirty_map_packages()], 'dirty_assets': [x.get_path_name() for x in unreal.EditorLoadingAndSavingUtils.get_dirty_content_packages()]}
+    if a.get('expected_scene') != scene_token(): raise ValueError('World changed; list objects again')
+    action = a.get('action')
+    if operation == 'scene_action':
+        api = unreal.EditorLoadingAndSavingUtils
+        if action in ('new', 'open') and (api.get_dirty_map_packages() or api.get_dirty_content_packages()): raise ValueError('Dirty maps/content exist; save explicitly first')
+        if action == 'new':
+            if not api.new_blank_map(False): raise RuntimeError('New map failed')
+        elif action in ('open', 'save'):
+            package = a.get('path') or ''
+            if not re.fullmatch(r'/Game/(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+', package): raise ValueError('Use a /Game/Folder/Map long package name')
+            disk = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), package[6:] + '.umap')
+            if action == 'open':
+                if not os.path.isfile(disk): raise ValueError('Map does not exist')
+                if not api.load_map(disk): raise RuntimeError('Open map failed')
+            else:
+                if os.path.exists(disk) and not a.get('overwrite'): raise ValueError('Existing map requires overwrite=true')
+                if not api.save_map(world, package): raise RuntimeError('Save map failed')
+        else: raise ValueError('Unknown scene action')
+        return {'scene': scene_info(), 'scene_token': scene_token()}
+    nodes = {n.get_path_name(): n for n in actors.get_all_level_actors()}
+    if operation == 'object_action' and action == 'create':
+        kinds = {'actor': unreal.Actor, 'point_light': unreal.PointLight, 'camera': unreal.CameraActor, 'static_mesh': unreal.StaticMeshActor}
+        if a.get('kind') not in kinds: raise ValueError('Unsupported actor kind')
+        n = actors.spawn_actor_from_class(kinds[a['kind']], unreal.Vector(0, 0, 0))
+        if not n: raise RuntimeError('Actor creation failed')
+        if a.get('name'): n.set_actor_label(a['name'])
+        return row(n)
+    n = nodes.get(a.get('object_id'))
+    if n is None: raise ValueError('Actor is not in the current editor world')
+    if _observed_actors.get(a.get('object_id')) != n: raise ValueError('Actor identity changed; list objects again')
+    if operation == 'inspect_object':
+        data = row(n); data['components'] = [{'name': x.get_name(), 'class': x.get_class().get_path_name()} for x in n.get_components_by_class(unreal.ActorComponent)][:500]
+        return data
+    if operation != 'object_action': raise ValueError('Unknown structured operation')
+    with unreal.ScopedEditorTransaction('Bubble actor edit'):
+        if action == 'select': actors.set_selected_level_actors([n])
+        elif action == 'duplicate':
+            n = actors.duplicate_actor(n)
+            if not n: raise RuntimeError('Duplicate failed')
+        elif action == 'rename':
+            if not isinstance(a.get('name'), str) or not a['name'].strip(): raise ValueError('Nonempty label required')
+            n.set_actor_label(a['name'])
+        elif action == 'delete':
+            identity = n.get_path_name()
+            if not actors.destroy_actor(n): raise RuntimeError('Delete failed')
+            return {'deleted_id': identity}
+        elif action == 'transform':
+            values = {k: vec(a[k]) for k in ('position', 'scale') if a.get(k) is not None}
+            if not values: raise ValueError('Specify position or scale')
+            n.modify()
+            if 'position' in values:
+                n.set_actor_location(values['position'], False, True)
+                actual = n.get_actor_location()
+                if any(abs(getattr(actual,k)-getattr(values['position'],k))>0.001 for k in ('x','y','z')): raise RuntimeError('Actor rejected requested location; inspect before retrying')
+            if 'scale' in values: n.set_actor_scale3d(values['scale'])
+        else: raise ValueError('Unknown object action')
+    return row(n)
+
 
 def is_interactive():
     import re

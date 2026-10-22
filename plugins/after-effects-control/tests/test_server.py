@@ -18,7 +18,7 @@ import transport
 
 class ServerTests(unittest.TestCase):
  def test_tools_and_identity(self):
-  tools=asyncio.run(main.mcp.list_tools());self.assertEqual(len(tools),13)
+  tools=asyncio.run(main.mcp.list_tools());self.assertEqual(len(tools),27)
   for tool in tools:
    if tool.name.endswith(('create_comp','add_layer','set_transform','save_project','execute_script','import_file')):
     self.assertIn('expected_project_state',tool.inputSchema['required']);self.assertIn('session_id',tool.inputSchema['required'])
@@ -36,8 +36,8 @@ class ServerTests(unittest.TestCase):
  def test_timeout_validation(self):
   for value in [True,0,float('nan'),121]:self.assertFalse(transport.call('project_info','missing',timeout=value)['ok'])
  def test_launcher_manifest_versions(self):
-  p=json.loads((ROOT/'plugin.json').read_text(encoding='utf-8'));self.assertEqual(p['version'],'0.2.0')
-  self.assertTrue((ROOT/'launch-0.2.0.py.lock').exists())
+  p=json.loads((ROOT/'plugin.json').read_text(encoding='utf-8'));self.assertEqual(p['version'],'0.3.0')
+  self.assertTrue((ROOT/'launch-0.3.0.py.lock').exists())
 
 class InstallTests(unittest.TestCase):
  def setUp(self):
@@ -74,6 +74,9 @@ class InstallTests(unittest.TestCase):
  def test_modified_startup_preserved_and_revoked(self):
   target=self.install();target.write_text('user-modified');r=installation.uninstall(True)
   self.assertTrue(r['ok']);self.assertTrue(r['data']['connection_revoked']);self.assertEqual(target.read_text(encoding='utf-8'),'user-modified');self.assertIsNone(installation.receipt())
+ def test_managed_old_receipt_upgrade_rotates_generation(self):
+  self.install();rp=installation.runtime_directory()/'receipt.json';r=json.loads(rp.read_text(encoding='utf-8'));old=r['installation_id'];r['version']='0.2.0';rp.write_text(json.dumps(r))
+  result=installation.install(True,str(self.exe));self.assertTrue(result['ok'],result);self.assertEqual(installation.receipt()['version'],'0.3.0');self.assertNotEqual(installation.receipt()['installation_id'],old)
  def test_missing_startup_still_revokes(self):
   target=self.install();target.unlink();self.assertTrue(installation.uninstall(True)['ok']);self.assertIsNone(installation.receipt())
  def test_unknown_startup_is_not_overwritten(self):
@@ -87,7 +90,7 @@ class InstallTests(unittest.TestCase):
  def test_runtime_cleanup_preserves_unknown_and_live_claim(self):
   self.install();sid='a'*32;root=installation.runtime_directory()/'hosts'/sid
   (root/'requests').mkdir(parents=True);(root/'results').mkdir()
-  (root/'.owner.json').write_text(json.dumps({'schema':1,'session_id':sid,'installation_id':installation.receipt()['installation_id'],'bridge_version':'0.2.0'}))
+  (root/'.owner.json').write_text(json.dumps({'schema':1,'session_id':sid,'installation_id':installation.receipt()['installation_id'],'bridge_version':'0.3.0'}))
   (root/'heartbeat.json').write_text(json.dumps({'session_id':sid}))
   expired=root/'requests'/('b'*32+'.running');expired.write_text(json.dumps({'request_id':'b'*32,'session_id':sid,'expires_at':0}))
   live=root/'requests'/('c'*32+'.running');live.write_text(json.dumps({'request_id':'c'*32,'session_id':sid,'expires_at':10**15}))
@@ -98,7 +101,7 @@ class InstallTests(unittest.TestCase):
   self.install();root=installation.runtime_directory()/'hosts';root.mkdir()
   for i in range(300):(root/format(i,'032x')).mkdir()
   sid='f'*32;folder=root/sid;folder.mkdir()
-  (folder/'heartbeat.json').write_text(json.dumps({'schema':1,'session_id':sid,'token':'a'*64,'installation_id':installation.receipt()['installation_id'],'bridge_version':'0.2.0','version':'26.0','expires_at':time.time()*1000+12000,'project':{'name':'hero.aep','path':'D:/hero.aep'}}))
+  (folder/'heartbeat.json').write_text(json.dumps({'schema':1,'session_id':sid,'token':'a'*64,'installation_id':installation.receipt()['installation_id'],'bridge_version':'0.3.0','version':'26.0','expires_at':time.time()*1000+12000,'project':{'name':'hero.aep','path':'D:/hero.aep'}}))
   for bad_id,value in [('d'*32,[]),('e'*32,{'project':'bad'})]:
    bad=root/bad_id;bad.mkdir();(bad/'heartbeat.json').write_text(json.dumps(value))
   real=Path.stat;deleted=root/format(0,'032x')/'heartbeat.json'

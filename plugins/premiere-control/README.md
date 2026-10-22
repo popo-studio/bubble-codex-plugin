@@ -1,4 +1,4 @@
-# Bubble Premiere Pro 0.3.0
+# Bubble Premiere Pro 0.4.0
 
 Candidate integration for **Windows Premiere Pro 26.x only**, using a signed CEP 12 background bridge and local MCP broker. Older versions and untested future major versions are rejected. No Creative Cloud, UPIA, UXP Developer Tool, debugger setting or script pasting is required. This differs from Photoshop COM: Premiere needs a small signed background extension installed in its per-user extensions folder.
 
@@ -10,7 +10,7 @@ Calling `premiere_list_sessions` starts this chat's broker and automatic discove
 
 Every running Premiere background instance connects independently to all live local Codex brokers. Each connection receives a session UUID; list project names/paths and choose explicitly when multiple matches exist. Only the active project is advertised. All brokers share one execution queue inside each Premiere instance, and queued commands recheck project, installation and deadline before executing. Reconnection creates a new session; it never replays an earlier write or redirects a disconnected session ID.
 
-Installation authorization includes automatic connections to current-user local Codex chats. Only a fully matching managed 0.3.0 installation advertises. Updates and removal protect modified/unknown files. Uninstall removes the managed receipt, extension and owned discovery records; already loaded background code notices revocation and disconnects within a few seconds. An operation already executing may finish. Restart Premiere to unload cached code completely. Codex plugin removal and Premiere extension removal remain separate. No Adobe preferences, debug flags, or projects are changed by setup.
+Installation authorization includes automatic connections to current-user local Codex chats. Only a fully matching managed 0.4.0 installation advertises. Updates and removal protect modified/unknown files. Uninstall removes the managed receipt, extension and owned discovery records; already loaded background code notices revocation and disconnects within a few seconds. An operation already executing may finish. Restart Premiere to unload cached code completely. Codex plugin removal and Premiere extension removal remain separate. No Adobe preferences, debug flags, or projects are changed by setup.
 
 ## Tools
 
@@ -31,3 +31,9 @@ The signed package is produced and verified using Adobe's standalone ZXPSignCmd.
 `tools/build_signed_release.py --signer <absolute ZXPSignCmd.exe> --certificate <external .p12> --password-env BUBBLE_CEP_SIGNING_PASSWORD` builds `adobe/com.popostudio.bubble.premiere.zxp`, extracted `adobe/signed/`, and `adobe/release.json`. The password and private key are never included. The candidate is self-signed without a timestamp, so certificate expiry applies; re-sign before expiry. Any CEP source change requires rebuilding the signed payload.
 
 Sources: [Adobe CEP12 integration/extension folders](https://github.com/Adobe-CEP/CEP-Resources/blob/master/CEP_12.x/Documentation/CEP%2012%20HTML%20Extension%20Cookbook.md), [Adobe signing guide](https://github.com/Adobe-CEP/Getting-Started-guides/blob/master/Package%20Distribute%20Install/readme.md), [Adobe Premiere scripting example](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/jsx/PPRO/Premiere.jsx).
+
+## 0.4 workflow additions
+
+23 tools include bin creation, project-item and sequence renaming, sequence settings inspection, exact-tick playhead positioning, sequence in/out range editing, and sequence-marker listing/creation/update by GUID. Renaming an item does not rename its disk file. Sequence ranges do not trim clips. Marker updates preserve the start time; they can change name, comments, end time and color. All operations require an explicit session and the observed project identity.
+
+This release does not expose undocumented QE editing, clip trimming, marker deletion or arbitrary effect manipulation. The public ExtendScript signatures are evidenced by Adobe's [PProPanel sample](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/jsx/PPRO/Premiere.jsx). Automated host-DOM tests are not Premiere 26 native acceptance. An unchanged managed 0.3 installation can be updated through the installer; modified files are preserved and reported. Restart Premiere after updating the signed bridge.

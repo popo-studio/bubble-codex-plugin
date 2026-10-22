@@ -1,6 +1,6 @@
 [project]
 name = "bubble-after-effects-control"
-version = "0.2.0"
+version = "0.3.0"
 description = "Native Windows After Effects scripting for Codex"
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.28,<2"]

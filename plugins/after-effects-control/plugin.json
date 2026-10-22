@@ -1,6 +1,6 @@
 {
   "name": "after-effects-control",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Control Windows After Effects 26.x using an automatically connected Startup JSX bridge.",
   "author": {
     "name": "popo-studio"

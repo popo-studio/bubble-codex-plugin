@@ -87,6 +87,30 @@ $._bubblePremiere = (function () {
                 }
             }return {sequence:seq(s),clips:rows,truncated:truncated};
         }
+
+        function requireName(value){if(typeof value!=="string"||!value.replace(/\s/g,"")||value.length>255||/[\x00-\x1f]/.test(value))fail("Name must be 1-255 characters");return value;}
+        function finite(value,min,max){if(typeof value!=="number"||!isFinite(value)||value<min||value>max)fail("Numeric value outside allowed range");return value;}
+        if(job.operation==="create_bin"){
+            n=item(p,a.parent_item_id);if(n!==p.rootItem&&n.type!==2)fail("Parent must be a bin or project root");var name=requireName(a.name);if(new Date().getTime()>=job.expires_at*1000)fail("Request expired");var bin=n.createBin(name);if(!bin)fail("Bin creation failed");return {item_id:text(bin.nodeId),name:text(bin.name)};
+        }
+        if(job.operation==="rename_item"){
+            n=item(p,a.item_id);if(n===p.rootItem)fail("Project root cannot be renamed");n.name=requireName(a.name);return {item_id:text(n.nodeId),name:text(n.name)};
+        }
+        if(/^(rename_sequence|sequence_settings|set_playhead|set_sequence_range|sequence_markers|create_marker|update_marker)$/.test(job.operation)){
+            if(p.sequences.numSequences>1000)fail("Sequence list exceeds limit");for(i=0;i<p.sequences.numSequences;i++)if(text(p.sequences[i].sequenceID)===a.sequence_id)s=p.sequences[i];if(!s)fail("Sequence ID not found");
+            if(job.operation==="rename_sequence"){s.name=requireName(a.name);return seq(s);}
+            if(job.operation==="sequence_settings"){var settings=s.getSettings();return {sequence:seq(s),video_width:settings.videoFrameWidth,video_height:settings.videoFrameHeight,pixel_aspect:settings.videoPixelAspectRatio,video_display_format:settings.videoDisplayFormat,audio_display_format:settings.audioDisplayFormat,frame_rate_ticks:settings.videoFrameRate?text(settings.videoFrameRate.ticks):null,playhead_ticks:text(s.getPlayerPosition().ticks),in_seconds:s.getInPointAsTime().seconds,out_seconds:s.getOutPointAsTime().seconds};}
+            if(job.operation==="set_playhead"){if(typeof a.ticks!=="string"||!/^\d{1,18}$/.test(a.ticks))fail("Use a nonnegative integer tick string up to 18 digits");s.setPlayerPosition(a.ticks);return {playhead_ticks:text(s.getPlayerPosition().ticks)};}
+            if(job.operation==="set_sequence_range"){finite(a.start,0,864000);finite(a.end,0,864000);if(a.end<=a.start)fail("End must exceed start");s.setInPoint(a.start);s.setOutPoint(a.end);return {in_seconds:s.getInPointAsTime().seconds,out_seconds:s.getOutPointAsTime().seconds};}
+            var markers=s.markers;if(markers.numMarkers>1000)fail("Marker count exceeds limit");var marker,found=null,markerRows=[];
+            function markerInfo(m){return {guid:text(m.guid),name:text(m.name),comments:text(m.comments),start:m.start.seconds,end:m.end.seconds};}
+            for(marker=markers.getFirstMarker();marker;marker=markers.getNextMarker(marker)){markerRows.push(markerInfo(marker));if(text(marker.guid)===a.guid)found=marker;if(markerRows.length>1000)fail("Marker traversal exceeds limit");}
+            if(job.operation==="sequence_markers")return {markers:markerRows};
+            if(typeof a.name!=="string"||a.name.length>255||typeof a.comments!=="string"||a.comments.length>10000)fail("Marker text exceeds limits");
+            if(job.operation==="create_marker"){finite(a.start,0,864000);finite(a.duration,0,864000);if(a.start+a.duration>864000)fail("Marker range exceeds limit");if(new Date().getTime()>=job.expires_at*1000)fail("Request expired");marker=markers.createMarker(a.start);marker.name=a.name;marker.comments=a.comments;marker.end=a.start+a.duration;return markerInfo(marker);}
+            if(!found)fail("Marker GUID not found");if(a.end!==null){finite(a.end,0,864000);if(a.end<found.start.seconds)fail("Marker end precedes start");}if(a.color!==null){finite(a.color,0,7);if(a.color%1)fail("Color must be an integer");}
+            if(new Date().getTime()>=job.expires_at*1000)fail("Request expired");found.name=a.name;found.comments=a.comments;if(a.end!==null)found.end=a.end;if(a.color!==null)found.setColorByIndex(a.color);return markerInfo(found);
+        }
         fail("Unsupported operation");
     }
     return {dispatch:function(job){try{return json({ok:true,data:execute(job)});}catch(e){return json({ok:false,error:{code:"host",message:text(e.message||e),note:"Partial changes may exist; never retry automatically."}});}}};

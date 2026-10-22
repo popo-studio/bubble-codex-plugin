@@ -105,8 +105,8 @@ class OperationTests(unittest.TestCase):
     def test_snapshot_independent_of_package(self):
         snapshot=Path(main._worker_path)
         self.assertNotEqual(snapshot.parent,Path(worker.__file__).parent)
-        self.assertEqual({p.name for p in snapshot.parent.glob('*.py')},{'native.py','worker.py','operations.py','advanced.py'})
-        for name in ['native.py','worker.py','operations.py','advanced.py']:
+        self.assertEqual({p.name for p in snapshot.parent.glob('*.py')},{'native.py','worker.py','operations.py','advanced.py','workflow.py'})
+        for name in ['native.py','worker.py','operations.py','advanced.py','workflow.py']:
             self.assertEqual((snapshot.parent/name).read_bytes(),Path(worker.__file__).with_name(name).read_bytes())
 
 if __name__=='__main__':unittest.main()

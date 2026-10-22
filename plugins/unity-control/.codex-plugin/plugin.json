@@ -1,6 +1,6 @@
 {
   "name": "unity-control",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Control a local Unity Editor project, invoke existing C# editor methods and inspect loaded scene references.",
   "author": {
     "name": "popo-studio"

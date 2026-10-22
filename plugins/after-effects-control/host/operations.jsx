@@ -27,9 +27,48 @@ try{
  else if(q.operation==='inspect_item')data=itemInfo(app.project.itemByID(a.item_id));
  else {
   if(new Date().getTime()>q.expires_at)throw Error('Request expired before mutation');
-  app.beginUndoGroup('Bubble After Effects');
+  var undoOpened=q.operation!=='new_project'&&q.operation!=='open_project';if(undoOpened)app.beginUndoGroup('Bubble After Effects');
   try{
-   if(q.operation==='create_comp'){x=app.project.items.addComp(a.name,a.width,a.height,1,a.duration,a.frame_rate);data=itemInfo(x);}
+   function finite(v,min,max){if(typeof v!=='number'||!isFinite(v)||v<min||v>max)throw Error('Invalid numeric range');return v;}
+   function layerInfo(v){return {layer_id:v.id,index:v.index,name:v.name,enabled:v.enabled,solo:v.solo,shy:v.shy,locked:v.locked};}
+   function transformProperty(c,l,key){var names={position:'ADBE Position',scale:'ADBE Scale',opacity:'ADBE Opacity',rotation:'ADBE Rotate Z'};if(!names.hasOwnProperty(key))throw Error('Unsupported transform property');var p=l.property('ADBE Transform Group').property(names[key]);if(!p||(p.isSeparationLeader&&p.dimensionsSeparated))throw Error('Separated transform property unsupported');return p;}
+   if(q.operation==='new_project'||q.operation==='open_project'){
+    if(app.project.dirty)throw Error('Current project has unsaved changes; save or close it yourself first');
+    if((app.project.file||app.project.numItems)&&!a.close_clean_current)throw Error('Explicit close_clean_current required for replacing a clean nonempty project');
+    var input=null;if(q.operation==='open_project'){if(typeof a.path!=='string'||!/^[A-Za-z]:[\\\/]/.test(a.path)||!/\.aep$/i.test(a.path))throw Error('Use an absolute .aep path');input=new File(a.path);if(!input.exists)throw Error('Project file missing');}
+    if(new Date().getTime()>q.expires_at)throw Error('Request expired');
+    var opened=input?app.open(input):app.newProject();if(!opened||opened!==app.project)throw Error("Project open/new was cancelled or failed; inspect current project");s.project=app.project;data={path:app.project.file?app.project.file.fsName:null};
+   }else if(q.operation==='update_comp'){
+    c=comp(a.comp_id);if(a.name!==null&&(typeof a.name!=='string'||!a.name.length||a.name.length>255))throw Error('Invalid comp name');
+    if(a.width!==null){finite(a.width,4,30000);if(a.width%1)throw Error('Integer width required');}if(a.height!==null){finite(a.height,4,30000);if(a.height%1)throw Error('Integer height required');}if(a.duration!==null)finite(a.duration,.001,10800);if(a.frame_rate!==null)finite(a.frame_rate,1,99);
+    if(a.name!==null)c.name=a.name;if(a.width!==null)c.width=a.width;if(a.height!==null)c.height=a.height;if(a.duration!==null)c.duration=a.duration;if(a.frame_rate!==null)c.frameRate=a.frame_rate;data=itemInfo(c);
+   }else if(/^(update_layer|duplicate_layer|remove_layer|update_text|keyframes|set_keyframe|remove_keyframe|layer_effects|add_effect)$/.test(q.operation)){
+    c=comp(a.comp_id);l=layer(c,a.layer_id);
+    if(q.operation==='keyframes'||q.operation==='set_keyframe'||q.operation==='remove_keyframe'){
+     var prop=transformProperty(c,l,a.property);if(prop.numKeys>1000)throw Error('Keyframe count exceeds limit');
+     if(q.operation==='keyframes'){var keys=[];for(var k=1;k<=prop.numKeys;k++)keys.push({index:k,time:prop.keyTime(k),value:prop.keyValue(k)});data={layer_id:l.id,property:a.property,expression_enabled:prop.expressionEnabled,keyframes:keys};}
+     else{if(l.locked||prop.expressionEnabled)throw Error('Locked or expression-driven property');finite(a.time,0,c.duration);
+      if(q.operation==='remove_keyframe'){finite(a.index,1,prop.numKeys);if(a.index%1||Math.abs(prop.keyTime(a.index)-a.time)>0.000001)throw Error('Keyframe identity changed');prop.removeKey(a.index);data={removed_index:a.index};}
+      else{var v=a.value,old=prop.value;if(old instanceof Array){if(!(v instanceof Array)||v.length!==old.length)throw Error('Keyframe dimensions mismatch');for(var j=0;j<v.length;j++)finite(v[j],-1000000,1000000);}else{finite(v,a.property==='opacity'?0:-1000000,a.property==='opacity'?100:1000000);}prop.setValueAtTime(a.time,v);data={time:a.time,value:v};}
+     }
+    }else if(q.operation==='layer_effects'||q.operation==='add_effect'){
+     var effects=l.property('ADBE Effect Parade');if(!effects)throw Error('Layer does not support effects');if(effects.numProperties>1000)throw Error('Effect count exceeds limit');
+     if(q.operation==='add_effect'){if(l.locked)throw Error('Layer is locked');if(typeof a.match_name!=='string'||a.match_name.length>255||!effects.canAddProperty(a.match_name))throw Error('Effect match name cannot be added');var effect=effects.addProperty(a.match_name);data={index:effect.propertyIndex,name:effect.name,match_name:effect.matchName};}
+     else{var list=[];for(var j=1;j<=effects.numProperties;j++){var e=effects.property(j);list.push({index:j,name:e.name,match_name:e.matchName,enabled:e.enabled});}data={effects:list};}
+    }else if(q.operation==='update_layer'){
+     if(a.name!==null&&(typeof a.name!=='string'||a.name.length>255))throw Error('Invalid layer name');
+     var fields=['enabled','solo','shy','locked'];for(var j=0;j<fields.length;j++)if(a[fields[j]]!==null&&typeof a[fields[j]]!=='boolean')throw Error('Boolean layer state required');
+     if(l.locked&&a.locked!==false)throw Error('Layer is locked; explicit unlock required');if(a.locked===false)l.locked=false;if(a.name!==null)l.name=a.name;for(var j=0;j<fields.length;j++)if(a[fields[j]]!==null)l[fields[j]]=a[fields[j]];data=layerInfo(l);
+    }else{if(l.locked)throw Error('Layer is locked');
+     if(q.operation==='duplicate_layer'){var copy=l.duplicate();data=layerInfo(copy);}
+     else if(q.operation==='remove_layer'){var removed=l.id;l.remove();data={removed_layer_id:removed};}
+     else{var source=l.property('ADBE Text Properties');if(!source)throw Error('Layer is not text');source=source.property('ADBE Text Document');if(source.numKeys||source.expressionEnabled)throw Error('Animated text requires explicit keyframe editing');if(typeof a.text!=='string'||a.text.length>100000)throw Error('Invalid text');var td=source.value;td.text=a.text;if(a.font_size!==null)td.fontSize=finite(a.font_size,1,1296);source.setValue(td);data=layerInfo(l);}
+    }
+   }else if(q.operation==='render_queue'||q.operation==='queue_comp'){
+    var rq=app.project.renderQueue;if(rq.rendering)throw Error('Render queue is running');if(rq.numItems>1000)throw Error('Render queue exceeds limit');
+    if(q.operation==='queue_comp'){c=comp(a.comp_id);var queued=rq.items.add(c);queued.render=false;data={index:rq.numItems,comp_id:c.id,render_enabled:false};}
+    else{var jobs=[];for(var j=1;j<=rq.numItems;j++){var job=rq.item(j);jobs.push({index:j,comp_id:job.comp.id,status:String(job.status),render_enabled:job.render});}data={items:jobs};}
+   }else if(q.operation==='create_comp'){x=app.project.items.addComp(a.name,a.width,a.height,1,a.duration,a.frame_rate);data=itemInfo(x);}
    else if(q.operation==='import_file'){var input=new File(a.path);if(!input.exists)throw Error('Input file no longer exists');x=app.project.importFile(new ImportOptions(input));data=itemInfo(x);}
    else if(q.operation==='add_layer'){
     c=comp(a.comp_id);
@@ -47,7 +86,7 @@ try{
     var dest=new File(a.path);if(dest.exists&&!a.overwrite)throw Error('Destination exists; explicit overwrite required');app.project.save(dest);data={path:app.project.file.fsName};
    }else if(q.operation==='execute_script'){data={result:String(eval(a.script))};}
    else throw Error('Unknown operation');
-  }finally{app.endUndoGroup();}
+  }finally{if(undoOpened)app.endUndoGroup();}
  }
  result={ok:true,request_id:q.request_id,data:data,project_state:state()};
 }catch(e){result={ok:false,request_id:q.request_id,error:{code:'host_error',message:String(e),line:e.line||null}};}

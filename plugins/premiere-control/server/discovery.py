@@ -60,7 +60,7 @@ def installation_enabled():
     from installation import _target, _safe, _owned
     try:
         owned=_owned(_safe(_target()))
-        return bool(owned and owned.get("version")=="0.3.0")
+        return bool(owned and owned.get("version")=="0.4.0")
     except (ValueError,OSError): return False
 
 class Publisher:

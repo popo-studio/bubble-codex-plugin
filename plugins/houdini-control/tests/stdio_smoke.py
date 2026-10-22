@@ -34,9 +34,20 @@ async def main():
                     await session.initialize()
                     listing = await session.list_tools()
                     names = {tool.name for tool in listing.tools}
-                    assert names == {"houdini_list_sessions", "houdini_status", "houdini_scene_info", "houdini_inspect_scene", "houdini_execute_python", "houdini_installation_status", "houdini_install_bridge", "houdini_uninstall_bridge"}, names
+                    legacy_names = {"houdini_list_sessions", "houdini_status", "houdini_scene_info", "houdini_inspect_scene", "houdini_execute_python", "houdini_installation_status", "houdini_install_bridge", "houdini_uninstall_bridge"}
+                    additional = {"houdini_"+suffix for suffix in ["scene_state","scene_file","query_nodes","create_node","edit_node","select_nodes","node_attribute","node_connections","timeline"]}
+                    assert names == legacy_names | additional, names
                     for name in sorted(names):
                         arguments = {"code": "result = 42"} if name.startswith("houdini_execute_") else {}
+                        suffix=name.removeprefix("houdini_")
+                        common={"pid":123,"expected_snapshot":"fake snapshot"}
+                        if suffix=='scene_file':arguments=dict(common,action='save',path='D:/scratch')
+                        elif suffix=='create_node':arguments=dict(common,kind='transform',name='scratch')
+                        elif suffix=='edit_node':arguments=dict(common,action='rename',node='scratch',name='newName')
+                        elif suffix=='select_nodes':arguments=dict(common,nodes=[])
+                        elif suffix=='node_attribute':arguments=dict(pid=123,node='scratch',attribute='tx')
+                        elif suffix=='node_connections':arguments=dict(pid=123,node='scratch')
+                        elif suffix=='timeline':arguments=dict(pid=123)
                         response = await session.call_tool(name, arguments)
                         assert not response.isError, response
                         payload = json.loads(response.content[0].text)

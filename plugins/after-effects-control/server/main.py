@@ -143,5 +143,89 @@ def after_effects_execute_script(script: str, session_id: str, expected_project_
     return call('execute_script',session_id,expected_project_state,timeout,script=script)
 
 
+@mcp.tool(annotations=WRITE)
+def after_effects_new_project(session_id: str, expected_project_state: dict, close_clean_current: bool = False, timeout: Number = 30) -> dict:
+    """Create new project only if current project is clean; replacing nonempty clean project requires explicit flag."""
+    return call("new_project",session_id,expected_project_state,timeout,close_clean_current=close_clean_current)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_open_project(session_id: str, expected_project_state: dict, path: str, close_clean_current: bool = False, timeout: Number = 30) -> dict:
+    """Open explicit existing .aep only while current project is clean; never discard unsaved work."""
+    return call("open_project",session_id,expected_project_state,timeout,path=path,close_clean_current=close_clean_current)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_update_comp(session_id: str, expected_project_state: dict, comp_id: StrictInt, name: str | None = None, width: StrictInt | None = None, height: StrictInt | None = None, duration: Number | None = None, frame_rate: Number | None = None, timeout: Number = 30) -> dict:
+    """Update composition dimensions/duration/frame rate/name without rescaling layers."""
+    return call("update_comp",session_id,expected_project_state,timeout,comp_id=comp_id,name=name,width=width,height=height,duration=duration,frame_rate=frame_rate)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_update_layer(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, name: str | None = None, enabled: bool | None = None, solo: bool | None = None, shy: bool | None = None, locked: bool | None = None, timeout: Number = 30) -> dict:
+    """Change explicit layer state; modifying a locked layer requires explicit unlock."""
+    return call("update_layer",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,name=name,enabled=enabled,solo=solo,shy=shy,locked=locked)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_duplicate_layer(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, timeout: Number = 30) -> dict:
+    """Duplicate one explicitly selected unlocked layer; returns new layer ID."""
+    return call("duplicate_layer",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_remove_layer(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, timeout: Number = 30) -> dict:
+    """Remove exactly one authorized layer; refuses locked layers."""
+    return call("remove_layer",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_update_text(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, text: str, font_size: Number | None = None, timeout: Number = 30) -> dict:
+    """Update static text contents/size without replacing other text style. Refuses animated or expression text."""
+    return call("update_text",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,text=text,font_size=font_size)
+
+
+@mcp.tool(annotations=READ)
+def after_effects_keyframes(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, property: Literal["position","scale","opacity","rotation"], timeout: Number = 30) -> dict:
+    """Read bounded transform keyframes with indices/times/values."""
+    return call("keyframes",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,property=property)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_set_keyframe(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, property: Literal["position","scale","opacity","rotation"], time: Number, value: Number | list[Number], timeout: Number = 30) -> dict:
+    """Set one transform keyframe at an exact time, replacing a key there if present; preserves other keys."""
+    return call("set_keyframe",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,property=property,time=time,value=value)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_remove_keyframe(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, property: Literal["position","scale","opacity","rotation"], index: StrictInt, time: Number, timeout: Number = 30) -> dict:
+    """Remove one keyframe only if index and expected time both still match."""
+    return call("remove_keyframe",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,property=property,index=index,time=time)
+
+
+@mcp.tool(annotations=READ)
+def after_effects_layer_effects(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, timeout: Number = 30) -> dict:
+    """List effect indices and stable match names for one layer."""
+    return call("layer_effects",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_add_effect(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, match_name: str, timeout: Number = 30) -> dict:
+    """Add a host-supported effect by exact match name. No third-party installer or arbitrary code."""
+    return call("add_effect",session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,match_name=match_name)
+
+
+@mcp.tool(annotations=READ)
+def after_effects_render_queue(session_id: str, expected_project_state: dict, timeout: Number = 30) -> dict:
+    """Inspect render queue without starting rendering."""
+    return call("render_queue",session_id,expected_project_state,timeout)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_queue_comp(session_id: str, expected_project_state: dict, comp_id: StrictInt, timeout: Number = 30) -> dict:
+    """Add one comp to render queue DISABLED. Does not start render or choose/overwrite an output file."""
+    return call("queue_comp",session_id,expected_project_state,timeout,comp_id=comp_id)
+
+
 if __name__=='__main__':
     mcp.run(transport='stdio')

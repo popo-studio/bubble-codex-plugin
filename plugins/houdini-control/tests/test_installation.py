@@ -47,6 +47,25 @@ class InstallationTests(unittest.TestCase):
         self.assertFalse(self.run_install("false")["ok"])
         self.assertFalse(self.app.exists())
 
+    def test_legacy_payload_upgrade_adds_owned_operations(self):
+        legacy={k:v for k,v in install._runtime_files().items() if k!='operations.py'}
+        with patch.object(install,'_runtime_files',return_value=legacy), patch.object(install,'VERSION','legacy'):
+            self.assertTrue(self.run_install()['ok'])
+        self.assertFalse((self.target/'operations.py').exists())
+        self.assertTrue(self.run_install()['ok'])
+        self.assertTrue((self.target/'operations.py').is_file())
+        self.assertTrue(self.run_uninstall()['ok'])
+        self.assertFalse((self.target/'operations.py').exists())
+
+    def test_legacy_upgrade_preserves_unowned_operations_file(self):
+        legacy={k:v for k,v in install._runtime_files().items() if k!='operations.py'}
+        with patch.object(install,'_runtime_files',return_value=legacy):
+            self.assertTrue(self.run_install()['ok'])
+        extra=self.target/'operations.py';extra.write_text('unrelated')
+        self.assertFalse(self.run_install()['ok'])
+        self.assertTrue(self.run_uninstall()['ok'])
+        self.assertEqual(extra.read_text(encoding='utf-8'),'unrelated')
+
     def test_install_idempotence_uninstall_and_reinstall(self):
         result = self.run_install()
         self.assertTrue(result["ok"], result)

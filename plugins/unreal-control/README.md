@@ -47,3 +47,17 @@ uv run --locked --directory plugins/unreal-control tests/stdio_smoke.py
 ## 更新和卸载的两层范围
 
 GitHub 发布后需刷新已注册的 Codex 插件市场，并重新加载聊天或重启 Codex。软件/项目中的桥接独立保存，需预览差异、经同意后更新，再重启或使用该软件支持的刷新方式。完整卸载请先通过本插件工具卸载软件端桥接，再从 Codex 移除插件；只卸载 Codex 插件会保留软件端配置。Windows 旧版缓存被占用时，先停掉明确属于该插件的旧 MCP 进程，再重试，勿关闭创作软件或批量删除配置。
+
+## Structured editing in 0.2.0
+
+Prefer `unreal_list_objects`, `unreal_inspect_object`, `unreal_object_action`, `unreal_scene_action`, and `unreal_settings` for supported routine work instead of generating scripts. List objects first and retain both the explicit PID and returned `scene_token`; pass that token as `expected_scene`. IDs are actor object paths, guarded by the current native editor-world identity; they are not portable asset GUIDs. Re-query after scene/level changes or reconnect.
+
+The object action supports create, select, duplicate, rename, delete, and position/scale transforms. Creation kinds: actor, point_light, camera, static_mesh (empty mesh actor). Transforms use host world position and local scale; this release does not provide rotation, reparenting, animation/keyframe editing or arbitrary property assignment. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
+
+New/open refuse dirty affected scenes (Unreal also refuses dirty content packages), without implicitly saving or discarding anything. Save requires an explicit destination; replacing any existing file requires `overwrite=true` and user authorization. Unity new/open replaces all loaded scenes after checking every scene for unsaved changes. No build or render starts from the settings query.
+
+Update the application-side bridge through the setup tool and restart/reload the relevant application after updating the Codex plugin; an old running bridge does not gain new operations automatically. Existing owned-file update and removal protections remain in place.
+
+API references: [Epic EditorActorSubsystem 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorActorSubsystem?application_version=5.5), [EditorLoadingAndSavingUtils 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorLoadingAndSavingUtils?application_version=5.5).
+
+Validation: 45 existing Python regressions and real MCP stdio (13 tools) pass. In a marked disposable project, actual UE 5.5.4 full Editor mode passed actor creation, transforms, components, duplication/rename/delete, dirty-scene refusal, map save/overwrite refusal, new/open and world-token rejection. No user project was opened. PythonScript commandlet map creation crashed without full editor context; it is not used as evidence for editor lifecycle.

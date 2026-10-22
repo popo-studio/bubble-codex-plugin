@@ -8,12 +8,12 @@
 <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
 </Transforms>
 <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-<DigestValue>DniziCVC4DeP3EGIIiL/BkUeuu+ttCXScMlrVx3wmdw=</DigestValue>
+<DigestValue>UHFfmUn1lN8GoS/bVhhgkHgOw/Y35oL5nS9plX6de/0=</DigestValue>
 </Reference>
 </SignedInfo>
-<SignatureValue Id="PackageSignatureValue">Mc5fBLIVlEui9j0nlJUM5RjfWJZGLW2bgDZof/ysBRnWZ9o4vbS4o4waqN4tWSP3
-tSeENvR9suNqsM6lNcdcOwD4AZ7bl8kOpNtDj/Jc8uzPwOphvQrJcsthiKo+Cxfq
-cQapLvBGa8kwXn0zWqwpd0hnnv4zaQDxTZkgLrw4l/U=</SignatureValue>
+<SignatureValue Id="PackageSignatureValue">iw6SljwCsBxOra9VPUiM3HZmcCPkEkJW8LMgvzWPSkIPdAbRL5EKOhGjVYaHK8iK
+nA4kMmaJebn9uirqE7sGijqNPoy5WpUwdsR7TtaY+sWtFMBnmHE2zgh5NTFtfBdQ
+JZHJNoctbSyQ/vg347AAkvMbCxE9pTICstWCt6xF1gs=</SignatureValue>
 
 <KeyInfo>
 <X509Data>
@@ -34,7 +34,7 @@ oIGStSDGV/HJSXY=
 </KeyInfo>
 <Object>
 <Manifest Id="PackageContents">
-<Reference URI="mimetype"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>b07Onu9cTlGK1WpvgtFOlfk+Tl0HscuNIt6GZtesPX8=</DigestValue></Reference><Reference URI="auto.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>kJzZTQh7E71DpFjxwa5RoDhbJn/Grx/z+D2++Nf7r6k=</DigestValue></Reference><Reference URI="background.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>S1wCs6DlCtFi425Wn45AZ/BvvUwAPaaNY7Im/dpAk80=</DigestValue></Reference><Reference URI="CSXS/manifest.xml"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>uAqS8VP5hhn9kT0oG81OxhaRAG3UteaixDG2Ptx3PQY=</DigestValue></Reference><Reference URI="discovery.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>tj38M3X/ar/ClS8JIZtifWUd88Bgh8oHNg/f8tDq8nU=</DigestValue></Reference><Reference URI="host.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>sx8Yd0nq6vzd9dwm1QHvvn1xKUTgYRS+8z2enXhsLK4=</DigestValue></Reference><Reference URI="host.jsx"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>Pt7mhnJLkpnHahfMkccPbZbBjhcGmb3nmbF7iDWRko4=</DigestValue></Reference><Reference URI="index.html"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>2fw8+YRrLA3GE9BH3r54RH61lfw67FrlbRME+tQZc5Y=</DigestValue></Reference><Reference URI="transport.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>ICQyPEuMOhKTJQEqOdVE9BRKlwD0tVGO2NvS7QyMU6U=</DigestValue></Reference></Manifest>
+<Reference URI="mimetype"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>b07Onu9cTlGK1WpvgtFOlfk+Tl0HscuNIt6GZtesPX8=</DigestValue></Reference><Reference URI="auto.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>kJzZTQh7E71DpFjxwa5RoDhbJn/Grx/z+D2++Nf7r6k=</DigestValue></Reference><Reference URI="background.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>S1wCs6DlCtFi425Wn45AZ/BvvUwAPaaNY7Im/dpAk80=</DigestValue></Reference><Reference URI="CSXS/manifest.xml"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>isPmSZzgLL9JeW11NMHn4+/dtdCzxdDDvb+7CeV+glw=</DigestValue></Reference><Reference URI="discovery.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>oW1jubTKkec5b0GsXqibBqupdVkv5rpwXhBwwU2+v1g=</DigestValue></Reference><Reference URI="host.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>sx8Yd0nq6vzd9dwm1QHvvn1xKUTgYRS+8z2enXhsLK4=</DigestValue></Reference><Reference URI="host.jsx"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>dOzfHcANJBrThLYXg2XpwT18aylO9tE2p5yROK3WRMs=</DigestValue></Reference><Reference URI="index.html"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>HsjVE/ro/+sYuzFy9pN0bASB7RwRI57opHyvLGrvB8I=</DigestValue></Reference><Reference URI="transport.js"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>ICQyPEuMOhKTJQEqOdVE9BRKlwD0tVGO2NvS7QyMU6U=</DigestValue></Reference></Manifest>
 </Object>
 </Signature>
 </signatures>

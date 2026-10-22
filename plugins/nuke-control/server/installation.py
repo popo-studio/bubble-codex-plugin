@@ -16,9 +16,9 @@ import tempfile
 import tokenize
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.3"
+VERSION = "0.2.0"
 OWNER = "bubble-nuke-control"
-FILES = ("bridge.py", "bootstrap.py")
+FILES = ("operations.py", "bridge.py", "bootstrap.py")
 MANIFEST = "installation.json"
 BEGIN = b"# BEGIN BUBBLE NUKE MANAGED STARTUP"
 END = b"# END BUBBLE NUKE MANAGED STARTUP"
@@ -68,7 +68,8 @@ def _paths(nuke_version, nuke_app_dir):
 
 
 def _runtime_files():
-    return {"bridge.py": (ROOT / "nuke" / "bubble_nuke_bridge.py").read_bytes(),
+    return {"operations.py": (ROOT / "nuke" / "operations.py").read_bytes(),
+            "bridge.py": (ROOT / "nuke" / "bubble_nuke_bridge.py").read_bytes(),
             "bootstrap.py": (ROOT / "nuke" / "bootstrap.py").read_bytes()}
 
 
@@ -99,7 +100,7 @@ def _read_state(target, startup):
             raise ValueError("Existing Bubble Nuke startup block has no ownership manifest")
         return None, original, b""
     state = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(state, dict) or state.get("owner") != OWNER or not isinstance(state.get("files"), dict) or set(state["files"]) != set(FILES):
+    if not isinstance(state, dict) or state.get("owner") != OWNER or not isinstance(state.get("files"), dict) or set(state["files"]) not in (set(FILES), set(FILES) - {"operations.py"}):
         raise ValueError("Invalid installation ownership manifest")
     block = base64.b64decode(state["startup_block"], validate=True)
     if BEGIN not in block or END not in block or original.count(block) != 1 or original.count(BEGIN) != 1 or original.count(END) != 1:
@@ -164,6 +165,10 @@ def _plan(nuke_version, nuke_app_dir, uninstall=False):
     scripts, target, startup = _paths(nuke_version, nuke_app_dir)
     state, original, old_block = _read_state(target, startup)
     runtime = _runtime_files()
+    if not uninstall and state:
+        for name in set(runtime) - set(state["files"]):
+            if (target / name).exists():
+                raise ValueError("New runtime path is occupied by an unowned file: %s" % (target / name))
     clean = original.replace(old_block, b"", 1) if old_block else original
     block = _startup_block(target, clean)
     new_startup = clean if uninstall else clean + block
@@ -171,7 +176,7 @@ def _plan(nuke_version, nuke_app_dir, uninstall=False):
     changes = {}
     if uninstall:
         if state:
-            changes.update({target / name: None for name in FILES})
+            changes.update({target / name: None for name in state["files"]})
             changes[startup] = new_startup if new_startup or state["startup_existed"] else None
             changes[target / MANIFEST] = None
     else:

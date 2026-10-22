@@ -34,9 +34,20 @@ async def main():
                     await session.initialize()
                     listing = await session.list_tools()
                     names = {tool.name for tool in listing.tools}
-                    assert names == {"nuke_list_sessions", "nuke_status", "nuke_scene_info", "nuke_inspect_scene", "nuke_execute_python", "nuke_installation_status", "nuke_install_bridge", "nuke_uninstall_bridge"}, names
+                    legacy_names = {"nuke_list_sessions", "nuke_status", "nuke_scene_info", "nuke_inspect_scene", "nuke_execute_python", "nuke_installation_status", "nuke_install_bridge", "nuke_uninstall_bridge"}
+                    additional = {"nuke_"+suffix for suffix in ["scene_state","scene_file","query_nodes","create_node","edit_node","select_nodes","node_attribute","node_connections","timeline"]}
+                    assert names == legacy_names | additional, names
                     for name in sorted(names):
                         arguments = {"code": "result = 42"} if name.startswith("nuke_execute_") else {}
+                        suffix=name.removeprefix("nuke_")
+                        common={"pid":123,"expected_snapshot":"fake snapshot"}
+                        if suffix=='scene_file':arguments=dict(common,action='save',path='D:/scratch')
+                        elif suffix=='create_node':arguments=dict(common,kind='transform',name='scratch')
+                        elif suffix=='edit_node':arguments=dict(common,action='rename',node='scratch',name='newName')
+                        elif suffix=='select_nodes':arguments=dict(common,nodes=[])
+                        elif suffix=='node_attribute':arguments=dict(pid=123,node='scratch',attribute='tx')
+                        elif suffix=='node_connections':arguments=dict(pid=123,node='scratch')
+                        elif suffix=='timeline':arguments=dict(pid=123)
                         response = await session.call_tool(name, arguments)
                         assert not response.isError, response
                         payload = json.loads(response.content[0].text)

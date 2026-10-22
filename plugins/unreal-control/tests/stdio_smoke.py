@@ -36,11 +36,17 @@ async def main():
                     await session.initialize()
                     listing = await session.list_tools()
                     names = {tool.name for tool in listing.tools}
-                    assert names == {"unreal_list_sessions", "unreal_status", "unreal_scene_info", "unreal_inspect_scene", "unreal_execute_python", "unreal_installation_status", "unreal_install_bridge", "unreal_uninstall_bridge"}, names
+                    assert names == {'unreal_list_objects', 'unreal_inspect_object', 'unreal_object_action', 'unreal_scene_action', 'unreal_settings', "unreal_list_sessions", "unreal_status", "unreal_scene_info", "unreal_inspect_scene", "unreal_execute_python", "unreal_installation_status", "unreal_install_bridge", "unreal_uninstall_bridge"}, names
                     for name in sorted(names):
                         arguments = {"code": "result = 42"} if name.startswith("unreal_execute_") else {}
                         if "install" in name:
                             arguments["project_path"] = str(location)
+                        if name in {'unreal_scene_action', 'unreal_settings', 'unreal_list_objects', 'unreal_object_action', 'unreal_inspect_object'}:
+                            arguments["pid"] = 123
+                            if name.endswith(("inspect_object", "object_action", "scene_action")): arguments["expected_scene"] = "fixture"
+                            if name.endswith("inspect_object"): arguments["object_id"] = "actor"
+                            if name.endswith("object_action"): arguments["action"] = "create"
+                            if name.endswith("scene_action"): arguments["action"] = "new"
                         response = await session.call_tool(name, arguments)
                         assert not response.isError, response
                         payload = json.loads(response.content[0].text)

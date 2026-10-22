@@ -92,7 +92,7 @@ def _release():
     release = json.loads((ROOT / "adobe/release.json").read_text(encoding="utf-8"))
     source = ROOT / "adobe/signed"
     actual = _hashes(source)
-    if release.get("plugin_id") != PLUGIN_ID or release.get("version") != "0.3.0" or not actual or actual != release.get("files"):
+    if release.get("plugin_id") != PLUGIN_ID or release.get("version") != "0.4.0" or not actual or actual != release.get("files"):
         raise ValueError("Signed CEP release contents failed integrity validation")
     if "META-INF/signatures.xml" not in actual or "CSXS/manifest.xml" not in actual:
         raise ValueError("Release is missing its Adobe signature or manifest")

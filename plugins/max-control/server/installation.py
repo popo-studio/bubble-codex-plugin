@@ -7,7 +7,7 @@ import stat
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.3"
+VERSION = "0.2.0"
 OWNER = "bubble-max-control"
 
 

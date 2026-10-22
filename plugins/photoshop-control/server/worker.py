@@ -7,6 +7,7 @@ import sys
 import time
 from native import discover, select, failure
 from operations import build, LAYER_HELPERS
+from workflow import build as workflow_build, OPERATIONS as WORKFLOW_OPERATIONS
 from advanced import build as advanced_build, HELPERS as ADVANCED_HELPERS, OPERATIONS as ADVANCED_OPERATIONS
 
 SERIALIZER = r'''function encode(v) { if(v===null||v===undefined)return "null"; if(typeof v==="string")return '"'+v.replace(/[\\"\u0000-\u001f]/g,function(c){var n=c.charCodeAt(0).toString(16);return "\\u"+("0000"+n).slice(-4);})+'"';if(typeof v==="number")return isFinite(v)?String(v):"null";if(typeof v==="boolean")return String(v);var a=[],i;if(v instanceof Array){for(i=0;i<v.length;i++)a.push(encode(v[i]));return "["+a.join(",")+"]";}if(typeof v==="object"){for(i in v)if(v.hasOwnProperty(i))a.push(encode(i)+":"+encode(v[i]));return "{"+a.join(",")+"}";}return encode(String(v));}'''
@@ -59,7 +60,7 @@ def source(request):
                 raise ValueError("code must contain 1–250000 characters")
             body = check + 'return eval(' + json.dumps(code, ensure_ascii=True) + ');'
         else:
-            body = check + (advanced_build(op, request) if op in ADVANCED_OPERATIONS else build(op, request))
+            body = check + (workflow_build(op, request) if op in WORKFLOW_OPERATIONS else advanced_build(op, request) if op in ADVANCED_OPERATIONS else build(op, request))
     deadline = request.get('expires_at', time.time() + 20)
     if not isinstance(deadline, (int, float)) or deadline <= time.time():
         raise ValueError('Request expired before Photoshop execution; not executed')

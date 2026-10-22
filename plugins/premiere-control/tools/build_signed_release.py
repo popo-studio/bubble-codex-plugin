@@ -58,7 +58,7 @@ def main():
             dest.rmdir()
         shutil.copytree(extracted,dest)
         shutil.copy2(candidate,ROOT/"adobe/com.popostudio.bubble.premiere.zxp")
-        release={"plugin_id":"com.popostudio.bubble.premiere","version":"0.3.0",
+        release={"plugin_id":"com.popostudio.bubble.premiere","version":"0.4.0",
             "files":{k:hashlib.sha256(v).hexdigest() for k,v in sorted(payload.items())},
             "zxp_sha256":hashlib.sha256(candidate.read_bytes()).hexdigest(),
             "signer":{"tool":"Adobe ZXPSignCmd","sha256":hashlib.sha256(signer.read_bytes()).hexdigest(),"timestamped":bool(args.timestamp_url)},

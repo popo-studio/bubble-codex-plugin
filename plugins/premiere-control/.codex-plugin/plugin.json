@@ -1,6 +1,6 @@
 {
   "name": "premiere-control",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Control Premiere Pro 26.x through an signed CEP background bridge with automatic local connections.",
   "author": {
     "name": "popo-studio"

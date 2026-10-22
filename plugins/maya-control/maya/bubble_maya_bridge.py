@@ -14,6 +14,14 @@ import threading
 import time
 import traceback
 
+
+# Load the complete managed payload once, before either source can be removed.
+import importlib.util as _importlib_util
+_operations_spec = _importlib_util.spec_from_file_location('_bubble_maya_operations', Path(__file__).with_name('operations.py'))
+_operations = _importlib_util.module_from_spec(_operations_spec)
+_operations_spec.loader.exec_module(_operations)
+STRUCTURED_OPERATIONS = {'structured_' + value for value in ('state','file','query','create','edit','selection','attribute','connections','timeline')}
+
 PROTOCOL = 1
 MAX_MESSAGE = 1024 * 1024
 MAX_OUTPUT = 128 * 1024
@@ -144,10 +152,12 @@ def inspect_scene(cmds, include_namespaces=True):
 
 
 def dispatch(operation, arguments):
+    if operation in STRUCTURED_OPERATIONS:
+        return _operations.dispatch(operation.removeprefix("structured_"), arguments)
     """Main-thread only; may be invoked directly in mayapy standalone tests."""
     from maya import cmds, mel
     if operation == "status":
-        return {"pid": os.getpid(), "maya_version": cmds.about(version=True), "protocol": PROTOCOL}
+        return {"bridge_version": "0.3.0", "pid": os.getpid(), "maya_version": cmds.about(version=True), "protocol": PROTOCOL}
     if operation == "scene_info":
         return scene_info(cmds)
     if operation == "inspect_scene":
@@ -191,7 +201,7 @@ class Bridge(socketserver.TCPServer):
         if request.get("protocol") != PROTOCOL:
             return failure("protocol_mismatch", "Unsupported protocol version")
         operation = request.get("operation")
-        if not isinstance(operation, str) or operation not in {"status", "scene_info", "inspect_scene", "execute_python", "execute_mel"}:
+        if not isinstance(operation, str) or operation not in STRUCTURED_OPERATIONS | {"status", "scene_info", "inspect_scene", "execute_python", "execute_mel"}:
             return failure("invalid_operation", "Unsupported operation")
         arguments = request.get("arguments", {})
         timeout = request.get("timeout", 30)

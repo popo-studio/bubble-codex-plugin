@@ -1,7 +1,7 @@
 """Selection, raster-mask, pixel adjustments/filters and embedded smart objects."""
 import json
 from pathlib import Path
-from operations import number, text
+from operations import number, text, flag
 
 HELPERS=r'''function s(v){return stringIDToTypeID(v);}function c(v){return charIDToTypeID(v);}function layerDescriptor(id,documentId){var r=new ActionReference();r.putIdentifier(s("layer"),id);r.putIdentifier(s("document"),documentId===undefined?app.activeDocument.id:documentId);return executeActionGet(r);}function layerState(id,documentId){var a=layerDescriptor(id,documentId),has=a.hasKey(s("hasUserMask"))&&a.getBoolean(s("hasUserMask")),smart=a.hasKey(s("smartObject")),linked=null;if(smart){var o=a.getObjectValue(s("smartObject"));if(o.hasKey(s("linked")))linked=o.getBoolean(s("linked"));}return {has_user_mask:has,mask_enabled:has?(a.hasKey(s("userMaskEnabled"))?a.getBoolean(s("userMaskEnabled")):null):null,smart_object:smart,smart_object_linked:linked};}function selectionInfo(d){var b=null;try{var v=d.selection.bounds;b=[v[0].as("px"),v[1].as("px"),v[2].as("px"),v[3].as("px")];}catch(e){}return {document_id:d.id,has_selection:b!==null,bounds:b};}function singleLayer(d,l){var r=new ActionReference();r.putIdentifier(s("layer"),l.id);var a=new ActionDescriptor();a.putReference(s("null"),r);a.putBoolean(s("makeVisible"),false);executeAction(s("select"),a,DialogModes.NO);if(d.activeLayer.id!==l.id)throw new Error("Photoshop selected a different layer");}function pixels(d){if(d.mode!==DocumentMode.RGB&&d.mode!==DocumentMode.GRAYSCALE)throw new Error("Only RGB/grayscale component channels are supported");d.activeChannels=d.componentChannels;}function normalPixels(d,l){if(l.typename!=="ArtLayer"||l.kind!==LayerKind.NORMAL)throw new Error("Operation requires a normal pixel layer; no implicit rasterization");if(l.allLocked||l.pixelsLocked)throw new Error("Pixel layer is locked");if(d.bitsPerChannel!==BitsPerChannelType.EIGHT&&d.bitsPerChannel!==BitsPerChannelType.SIXTEEN)throw new Error("Only 8/16-bit pixel operations are supported");}'''
 
@@ -72,6 +72,13 @@ def build(op,r):
             outblack=number(r.get('output_black',0),'output_black',0,255,True);outwhite=number(r.get('output_white',255),'output_white',0,255,True)
             if black>=white or outblack>=outwhite:raise ValueError('Black level must be lower than white level')
             code=f'l.adjustLevels({black},{white},{gamma},{outblack},{outwhite});'
+        elif action=='color_balance':
+            values=[]
+            for key in ['shadows','midtones','highlights']:
+                vector=r.get(key) or [0,0,0]
+                if not isinstance(vector,list) or len(vector)!=3:raise ValueError(key+' must contain three color-axis values')
+                values.append([number(v,key,-100,100,True) for v in vector])
+            code='if(d.mode!==DocumentMode.RGB)throw Error("Color balance requires RGB");l.adjustColorBalance('+','.join(json.dumps(v) for v in values)+','+flag(r.get('preserve_luminosity',True),'preserve_luminosity')+');'
         elif action in ('invert','desaturate'):code='l.'+action+'();'
         else:raise ValueError('Unknown color adjustment')
         return prefix+'normalPixels(d,l);singleLayer(d,l);pixels(d);'+code+'return layerInfo(l);'
@@ -85,6 +92,14 @@ def build(op,r):
             radius=number(r.get('radius',1),'radius',1,100)
             if int(radius)!=radius:raise ValueError('Median radius must be a whole number of pixels')
             code='l.applyMedianNoise('+str(int(radius))+');'
+        elif action=='motion_blur':
+            angle=number(r.get('angle',0),'angle',-360,360);distance=number(r.get('radius',1),'radius',1,999)
+            code=f'l.applyMotionBlur({angle},{distance});'
+        elif action=='add_noise':
+            amount=number(r.get('amount',1),'amount',.1,400);distribution={'uniform':'UNIFORM','gaussian':'GAUSSIAN'}.get(r.get('distribution','uniform'))
+            if distribution is None:raise ValueError('Unknown noise distribution')
+            code=f'l.applyAddNoise({amount},NoiseDistribution.{distribution},'+flag(r.get('monochromatic',True),'monochromatic')+');'
+        elif action=='sharpen':code='l.applySharpen();'
         else:raise ValueError('Unknown filter')
         return prefix+'normalPixels(d,l);singleLayer(d,l);pixels(d);'+code+'return layerInfo(l);'
     if op=='smart_object':

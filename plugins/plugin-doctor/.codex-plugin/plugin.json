@@ -1,6 +1,6 @@
 {
   "name": "plugin-doctor",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Read-only Bubble package, runtime and bridge checks with guided repair, update and uninstall workflows.",
   "author": {
     "name": "popo-studio"
