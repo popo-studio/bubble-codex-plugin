@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["mcp>=1.28,<2"]
+# dependencies = ["mcp>=1.28,<2", "certifi>=2026.10.19"]
 # ///
 """Run with uv's locked script environment outside the installed plugin folder.
 

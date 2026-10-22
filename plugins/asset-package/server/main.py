@@ -18,7 +18,7 @@ def result(fn, *args):
 @mcp.tool(annotations=READ)
 def package_status() -> dict:
     """Harmless plugin status; no files scanned and no DCC connection needed."""
-    return {'ok': True, 'version': '0.1.0', 'max_files': MAX_FILES, 'max_bytes': MAX_BYTES, 'source_changes': False}
+    return {'ok': True, 'version': '0.1.1', 'max_files': MAX_FILES, 'max_bytes': MAX_BYTES, 'source_changes': False}
 
 
 @mcp.tool(annotations=READ)

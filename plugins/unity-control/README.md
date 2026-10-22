@@ -1,5 +1,6 @@
 # Bubble Unity Control
 
+Current Codex package: **0.2.1**. Software-side bridge: **0.2.0**, unchanged by this runtime dependency patch.
 Connect Codex to a selected Unity 6 Editor project. Each Editor uses a different random loopback port, authentication token and PID record. Show project and scene names when selecting among Editors; no shared fixed port and no automatic failover.
 
 The target tested at build time is Windows Unity **6000.1.0f1**. The installer accepts Unity 6 (`6000.x`) on Windows. Both installer and bridge reject other operating systems in this release. Other Unity versions are not claimed as validated. Install `uv` for the Codex-side Python MCP server. The Editor package has no downloaded runtime dependencies and is excluded from player builds by its Editor-only assembly definition.
@@ -72,3 +73,7 @@ Update the application-side bridge through the setup tool and restart/reload the
 API references: [Unity 6000.1 EditorSceneManager](https://docs.unity3d.com/6000.1/Documentation/ScriptReference/SceneManagement.EditorSceneManager.html). Signatures compile against installed 6000.1 editor assemblies.
 
 Validation: 17 Python regressions, actual Unity 6000.1 assembly compilation, and production C# protocol with two mock Editors pass; structured create/transform/rename/duplicate/delete, dirty-scene refusal, save/overwrite and stale-scene-token checks are included. Real MCP stdio exposes 14 tools. Mock scenes are not native Unity Editor acceptance; that remains pending.
+
+## Runtime security patch 0.2.1
+
+The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.

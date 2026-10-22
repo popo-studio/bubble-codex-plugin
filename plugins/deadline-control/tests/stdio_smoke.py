@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 async def main():
-    params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'launch-0.1.0.py')],env=dict(os.environ))
+    params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'launch-0.1.1.py')],env=dict(os.environ))
     async with stdio_client(params) as (read,write):
         async with ClientSession(read,write) as session:
             await session.initialize()

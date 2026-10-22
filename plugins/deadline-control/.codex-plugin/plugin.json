@@ -1,6 +1,6 @@
 {
   "name": "deadline-control",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Inspect Deadline 10 jobs and safely preview and confirm submission or selected task retry.",
   "author": {
     "name": "popo-studio"

@@ -1,5 +1,6 @@
 # Bubble Unreal Engine
 
+Current Codex package: **0.2.1**. Software-side bridge: **0.2.0**, unchanged by this runtime dependency patch.
 连接本机 Unreal Editor 5.5，执行用户请求的 Python、读取地图/项目状态，检查直接资源包依赖。安装目标是单个项目，运行时使用 Unreal 自带 Python；外部 MCP 使用 Python 3.10+ 和 `uv run --locked`。
 
 ## 安装与连接
@@ -61,3 +62,7 @@ Update the application-side bridge through the setup tool and restart/reload the
 API references: [Epic EditorActorSubsystem 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorActorSubsystem?application_version=5.5), [EditorLoadingAndSavingUtils 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorLoadingAndSavingUtils?application_version=5.5).
 
 Validation: 45 existing Python regressions and real MCP stdio (13 tools) pass. In a marked disposable project, actual UE 5.5.4 full Editor mode passed actor creation, transforms, components, duplication/rename/delete, dirty-scene refusal, map save/overwrite refusal, new/open and world-token rejection. No user project was opened. PythonScript commandlet map creation crashed without full editor context; it is not used as evidence for editor lifecycle.
+
+## Runtime security patch 0.2.1
+
+The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.

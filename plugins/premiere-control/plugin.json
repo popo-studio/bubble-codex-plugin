@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "premiere-control",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Control Premiere Pro 26.x through an signed CEP background bridge with automatic local connections.",
   "author": {
     "name": "popo-studio"

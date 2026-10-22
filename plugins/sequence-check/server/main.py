@@ -16,7 +16,7 @@ def result(fn, *args):
 def sequence_status() -> dict:
     """Harmless decoder availability/version and inspection limits. No scan or writes."""
     import PIL
-    return {'ok': True, 'data': {'version': '0.1.0', 'pillow': PIL.__version__, 'openexr': qc.OpenEXR.__version__, 'max_files': qc.MAX_FILES, 'max_pixels': qc.MAX_PIXELS, 'max_decode_bytes': qc.MAX_DECODE_BYTES}}
+    return {'ok': True, 'data': {'version': '0.1.1', 'pillow': PIL.__version__, 'openexr': qc.OpenEXR.__version__, 'max_files': qc.MAX_FILES, 'max_pixels': qc.MAX_PIXELS, 'max_decode_bytes': qc.MAX_DECODE_BYTES}}
 
 @mcp.tool(annotations=READ)
 def sequence_discover(directory: str, pattern: str = '*') -> dict:

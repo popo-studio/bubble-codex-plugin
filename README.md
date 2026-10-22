@@ -34,7 +34,9 @@
 
 也可以使用本地仓库 `D:\Workspace\Bubble\bubble-codex-plugins` 作为来源，Git 引用留空。仓库需同时包含 `.agents/plugins/marketplace.json` 与 `plugins/`，不要填写截图示例中的 `plugins/codex`。SSH 来源需要本机 Git 有仓库访问权限。
 
-在市场中安装所需插件，再请求“连接 Nuke”或“连接这个 Unity 项目”。Codex 端需要 `uv` 和 Python ≥3.10；安装后的服务通过 `launch-<version>.py` 启动，依赖由相邻的 `.py.lock` 锁定，运行环境位于插件目录外。开发环境依赖由 `uv.lock` 锁定。
+在市场中安装所需插件，再请求“连接 Nuke”或“连接这个 Unity 项目”。Codex 端需要 `uv`；一般插件使用 Python ≥3.10，序列检查使用独立的 Python 3.13 环境，由 uv 查找或下载。安装后的服务通过 `launch-<version>.py` 启动，依赖由相邻的 `.py.lock` 锁定，运行环境位于插件目录外。开发环境依赖由 `uv.lock` 锁定，不改动创作软件自身的 Python。
+
+2026-10-22 依赖安全补丁更新了 11 个 Codex 插件包，修复 certifi、Pillow 和 OpenEXR 的已知漏洞；PS、AE 已使用修复后的依赖。本次软件侧桥接未变化，无需因此重装桥接或重启创作软件。依赖范围和回归证据见 [安全更新验收](SECURITY_VALIDATION.md)。
 
 ## 四个流程插件
 

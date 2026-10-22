@@ -1,5 +1,6 @@
 # Bubble Maya
 
+Current Codex package: **0.3.1**. Software-side bridge: **0.3.0**, unchanged by this runtime dependency patch.
 面向 Maya 2027 的本地 Codex 插件。通过 MCP 控制已打开的 Maya，执行 Python/MEL，检查当前场景中的引用与贴图路径。
 
 ```text
@@ -152,3 +153,7 @@ unrelated files at the new module path block update and are preserved by uninsta
 Native acceptance lives in `tests/structured_host_smoke.py`: run only in a fresh isolated
 batch process. It creates its own temporary scene and tests creation/query, parameter write,
 stale guards, selection, timeline, save/overwrite refusal, delete confirmation, and reopening.
+
+## Runtime security patch 0.3.1
+
+The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.

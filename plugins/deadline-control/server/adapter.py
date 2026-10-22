@@ -117,7 +117,7 @@ def status(command=None, probe=False):
         executable = discover(command)
     except ValueError as exc:
         return {"available": False, "reason": str(exc), "farm_checked": False}
-    result = {"available": True, "executable": executable, "farm_checked": False, "plugin_version": "0.1.0"}
+    result = {"available": True, "executable": executable, "farm_checked": False, "plugin_version": "0.1.1"}
     if probe:
         result["version"] = run(executable, ["-Version"], timeout=15).strip()
         result["client_responded"] = True

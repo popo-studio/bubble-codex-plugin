@@ -1,5 +1,6 @@
 # Bubble 3ds Max
 
+Current Codex package: **0.2.1**. Software-side bridge: **0.2.0**, unchanged by this runtime dependency patch.
 为本机 3ds Max 提供 Python / MAXScript 执行、场景信息和常规资源检查。第一版面向 Windows、Python 3 的 Max 2025/2026，兼容 PySide6 / PySide2。宿主运行时只用 Max 自带 Python 与 Qt；外部 MCP 使用 `uv run --locked` 和 Python 3.10+。
 
 ## 安装与连接
@@ -55,3 +56,7 @@ Update the application-side bridge through the setup tool and restart/reload the
 API references: [Autodesk scene files](https://help.autodesk.com/cloudhelp/2025/ENU/MAXDEV-Python/files/using_pymxs/MAXDEV_Python_using_pymxs_pymxs_files_html.html), [Python callbacks](https://help.autodesk.com/cloudhelp/2021/ENU/Max-Python-API/using_pymxs/pymxs_registering_callbacks.html).
 
 Validation: 38 existing Python regressions plus 6 structured-host safety tests pass using fake Max APIs. Real MCP stdio exposes 14 tools. 3ds Max is not installed; native object/controller/callback behavior remains pending.
+
+## Runtime security patch 0.2.1
+
+The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.

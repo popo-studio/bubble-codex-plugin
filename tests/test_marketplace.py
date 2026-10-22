@@ -40,7 +40,9 @@ class MarketplaceTests(unittest.TestCase):
         source = folder / 'cep'
         signed = folder / 'adobe/signed'
         release = read_json(folder / 'adobe/release.json')
-        self.assertEqual(release['version'], read_json(folder / 'plugin.json')['version'])
+        # The signed Adobe bridge has its own release version; Python-only patches
+        # must not force a host reinstall or invalidate existing receipts.
+        self.assertRegex(release['version'], r'^\d+\.\d+\.\d+$')
         manifest = ET.fromstring((source / 'CSXS/manifest.xml').read_text(encoding='utf-8'))
         self.assertEqual(manifest.attrib['ExtensionBundleVersion'], release['version'])
         dispatch = manifest.find('./DispatchInfoList/Extension/DispatchInfo')
@@ -110,8 +112,8 @@ class MarketplaceTests(unittest.TestCase):
                     self.assertEqual({k: v for k, v in config.items() if k != "type"}, overlay[server_name])
                     self.assertEqual(config["command"], "uv")
                     version = read_json(folder / "plugin.json")["version"]
-                    self.assertEqual(config["args"], [
-                        "run", "--no-project", "--no-config",
+                    self.assertEqual(config["args"], ["run"] + (["--python", "3.13"] if name == "sequence-check" else []) + [
+                        "--no-project", "--no-config",
                         "--directory", "/", "--locked", "--script",
                         "${PLUGIN_ROOT}/launch-" + version + ".py",
                     ])

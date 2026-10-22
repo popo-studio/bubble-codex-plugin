@@ -1,4 +1,4 @@
-# Bubble Plugin Doctor
+# Bubble Plugin Doctor 0.1.7
 
 集中检查 Bubble 插件包、软件桥接文件和实例连接，提供修复、更新、卸载流程。全部工具只读；维护操作转交 Codex 官方工具及对应软件插件，沿用它们的预览和确认机制。
 
@@ -18,7 +18,7 @@
 
 支持九个软件插件及 Deadline、Sequence Check、Asset Package、Plugin Doctor。各缓存版本均展示；不会把缓存存在误报为“已启用”或“工具已加载”。启用状态和实际工具发现需要 Codex 宿主确认。本地来源版本不代表远端最新版本，不自动联网刷新市场。
 
-PR 0.4.0 使用签名 CEP 后台扩展，在 PR 启动后自动发现当前用户的 Codex 连接；日常无需打开面板或输入配对码。首次安装或更新后可能需要重启 PR。多个实例按会话和项目路径选择；诊断中心不再要求 Creative Cloud / UPIA 或重复配对。
+PR 的 Codex 插件包为 0.4.1，软件侧桥接仍为 0.4.0，使用签名 CEP 后台扩展，在 PR 启动后自动发现当前用户的 Codex 连接；日常无需打开面板或输入配对码。首次安装或更新软件侧桥接后可能需要重启 PR；仅更新 Codex 包的依赖不需要重装或重启软件侧桥接。多个实例按会话和项目路径选择；诊断中心不再要求 Creative Cloud / UPIA 或重复配对。
 
 AE 0.3.0 面向 26.x，通过自有 Startup 脚本自动连接。首次安装需要程序目录写入权限，并由用户启用一次 AE 脚本文件写入权限后重启。多个实例按项目路径和会话选择，不需面板或配对码，超时不重试。完整卸载先移除自有启动脚本，再卸载 Codex 插件。
 
@@ -42,3 +42,7 @@ uv run --locked tests/stdio_smoke.py
 测试覆盖损坏元数据、路径越界、文件篡改、令牌不回显、日志秘密不输出、多实例以及固定只读 TCP 操作；真实 Codex 加载和运行中卸载由仓库级集成测试验证。
 
 插件结构与生命周期依据 [OpenAI 官方打包文档](https://developers.openai.com/plugins/build/plugins)。图标为本项目原创 SVG。
+
+## Runtime security patch 0.1.7
+
+The Codex package updates its locked Python dependencies. This does not change external software configuration or existing data. Reload the Codex plugin to start the patched runtime.

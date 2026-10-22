@@ -4,7 +4,7 @@ Bubble 的 Git 仓库是发布来源。插件本身没有另一个后台自动�
 
 ## 更新 Codex 插件
 
-1. 维护者修改源码，同步插件版本、软件侧版本和锁文件，将启动脚本及相邻锁文件改为新版本的 `launch-<version>.py` 与 `launch-<version>.py.lock`，同步两份 MCP 配置，再提交到分发分支。根目录的市场测试会检查这些版本与路径一致。
+1. 维护者修改源码，同步 Codex 插件版本和锁文件，将启动脚本及相邻锁文件改为新版本的 `launch-<version>.py` 与 `launch-<version>.py.lock`，同步两份 MCP 配置，再提交到分发分支。仅在软件侧桥接内容变化时更新桥接版本；依赖补丁可以只增加 Codex 包版本。根目录的市场测试会检查包版本与启动路径一致，并独立核对 PR 签名资源与 CEP 桥接版本。
 2. 用户刷新已注册的 Git 市场。例如本仓库注册名称为 `bubble-plugins` 时：
 
    ```powershell
@@ -22,6 +22,8 @@ Bubble 的 Git 仓库是发布来源。插件本身没有另一个后台自动�
 ## 更新软件内桥接
 
 Codex 插件与软件端桥接是分开安装的。即使会话已经连接，用户请求检查更新时，也应调用对应 `*_installation_status`，比较 `installed_version`、`available_version` 和实际文件变化。
+
+2026-10-22 的依赖补丁只更新 Codex 包和服务运行环境。Maya 包为 0.3.1 / 桥接为 0.3.0；Nuke、Houdini、Max、Unreal、Unity 包为 0.2.1 / 桥接为 0.2.0；PR 包为 0.4.1 / 签名 CEP 为 0.4.0。这些差异是正常的，不应仅因包版本不同而要求重装桥接。序列检查包 0.1.1 使用 Python 3.13，首次启动可能需要 uv 下载运行时；离线机器应提前准备该版本与锁定依赖。详情见 [安全更新验收](SECURITY_VALIDATION.md)。
 
 - Maya、Nuke、Houdini、Max：核对具体软件版本和用户配置目录。
 - Unreal、Unity：核对明确的项目路径；不同项目需要分别确认。

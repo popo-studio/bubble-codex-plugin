@@ -1,4 +1,4 @@
-# Bubble Asset Package 0.1.0
+# Bubble Asset Package 0.1.1
 
 Local Codex tools for explicit asset dependency delivery. Requires `uv` and Python 3.10+; uses a locked script environment outside the removable plugin cache. No DCC bridge installation or startup changes. Install/update/uninstall through the Bubble marketplace; uninstalling does not remove deliveries.
 
@@ -13,3 +13,7 @@ Scope: only supplied dependencies. Binary scenes are not parsed, paths are not r
 The icon is original SVG artwork for this repository; no third-party logo assets.
 
 Tests: `python -m unittest discover -s plugins/asset-package/tests -v`; stdio smoke: `python plugins/asset-package/tests/stdio_smoke.py` (MCP SDK required).
+
+## Runtime security patch 0.1.1
+
+The Codex package updates its locked Python dependencies. This does not change external software configuration or existing data. Reload the Codex plugin to start the patched runtime.

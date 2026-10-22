@@ -69,7 +69,7 @@ def children(path, limit):
 
 
 def status():
-    return {"ok": True, "data": {"version": "0.1.6", "mode": "read-only",
+    return {"ok": True, "data": {"version": "0.1.7", "mode": "read-only",
         "python_version": sys.version.split()[0], "uv_available": bool(shutil.which("uv")),
         "supported_plugins": list(PLUGINS)},
         "note": "Disk/cache observations do not prove Codex enabled state or tool loading. Use Codex's own tool discovery for that."}

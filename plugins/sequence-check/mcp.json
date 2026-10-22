@@ -6,13 +6,15 @@
       "command": "uv",
       "args": [
         "run",
+        "--python",
+        "3.13",
         "--no-project",
         "--no-config",
         "--directory",
         "/",
         "--locked",
         "--script",
-        "${PLUGIN_ROOT}/launch-0.1.0.py"
+        "${PLUGIN_ROOT}/launch-0.1.1.py"
       ]
     }
   }

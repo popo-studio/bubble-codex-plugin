@@ -1,5 +1,6 @@
-# Bubble Premiere Pro 0.4.0
+# Bubble Premiere Pro 0.4.1
 
+Current Codex package: **0.4.1**. Software-side bridge: **0.4.0**, unchanged by this runtime dependency patch.
 Candidate integration for **Windows Premiere Pro 26.x only**, using a signed CEP 12 background bridge and local MCP broker. Older versions and untested future major versions are rejected. No Creative Cloud, UPIA, UXP Developer Tool, debugger setting or script pasting is required. This differs from Photoshop COM: Premiere needs a small signed background extension installed in its per-user extensions folder.
 
 ## Setup and lifecycle
@@ -37,3 +38,7 @@ Sources: [Adobe CEP12 integration/extension folders](https://github.com/Adobe-CE
 23 tools include bin creation, project-item and sequence renaming, sequence settings inspection, exact-tick playhead positioning, sequence in/out range editing, and sequence-marker listing/creation/update by GUID. Renaming an item does not rename its disk file. Sequence ranges do not trim clips. Marker updates preserve the start time; they can change name, comments, end time and color. All operations require an explicit session and the observed project identity.
 
 This release does not expose undocumented QE editing, clip trimming, marker deletion or arbitrary effect manipulation. The public ExtendScript signatures are evidenced by Adobe's [PProPanel sample](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/jsx/PPRO/Premiere.jsx). Automated host-DOM tests are not Premiere 26 native acceptance. An unchanged managed 0.3 installation can be updated through the installer; modified files are preserved and reported. Restart Premiere after updating the signed bridge.
+
+## Runtime security patch 0.4.1
+
+The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.

@@ -11,7 +11,7 @@ from mcp.client.stdio import stdio_client
 
 async def main():
     uv = shutil.which('uv') or str(Path.home() / 'AppData/Roaming/Python/Python310/Scripts/uv.exe')
-    launcher = Path(__file__).resolve().parents[1] / 'launch-0.1.0.py'
+    launcher = Path(__file__).resolve().parents[1] / 'launch-0.1.1.py'
     params = StdioServerParameters(command=uv, args=['run', '--no-project', '--no-config', '--directory', '/', '--locked', '--script', str(launcher)], env=dict(os.environ))
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:

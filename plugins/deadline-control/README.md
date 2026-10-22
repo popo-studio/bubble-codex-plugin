@@ -1,6 +1,6 @@
 # Bubble Deadline
 
-对接已安装并配置好的 **Deadline 10 Client**，提供任务查询、失败诊断、提交预览和指定任务重试。当前版本 0.1.0。
+对接已安装并配置好的 **Deadline 10 Client**，提供任务查询、失败诊断、提交预览和指定任务重试。当前 Codex 插件版本 0.1.1。
 
 ## 安装与使用
 
@@ -38,3 +38,7 @@
 - [Version CLI](https://docs.thinkboxsoftware.com/products/deadline/latest/1_User%20Manual/manual/command-line-arguments-version.html)
 
 本插件针对已有 Deadline 10 环境，不是 AWS Deadline Cloud 集成。图标为 Bubble 原创队列图案。
+
+## Runtime security patch 0.1.1
+
+The Codex package updates its locked Python dependencies. This does not change external software configuration or existing data. Reload the Codex plugin to start the patched runtime.

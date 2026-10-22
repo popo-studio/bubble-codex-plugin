@@ -1,6 +1,6 @@
 {
   "name": "nuke-control",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Control local Nuke, execute Python, and inspect scene dependencies.",
   "author": {
     "name": "popo-studio"
