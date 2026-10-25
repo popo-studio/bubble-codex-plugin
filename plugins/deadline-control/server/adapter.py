@@ -117,7 +117,7 @@ def status(command=None, probe=False):
         executable = discover(command)
     except ValueError as exc:
         return {"available": False, "reason": str(exc), "farm_checked": False}
-    result = {"available": True, "executable": executable, "farm_checked": False, "plugin_version": "0.1.1"}
+    result = {"available": True, "executable": executable, "farm_checked": False, "plugin_version": "0.2.0"}
     if probe:
         result["version"] = run(executable, ["-Version"], timeout=15).strip()
         result["client_responded"] = True
@@ -156,6 +156,30 @@ def tasks(identifier, limit=200, command=None):
         raise ValueError("limit must be 1..2000")
     records = ini(run(discover(command), ["-GetJobTasks", job_id(identifier), "True"]))
     return {"tasks": records[:limit], "total_parsed": len(records), "truncated": len(records) > limit}
+
+
+@safe
+def farm_info(kind="pools", limit=200, command=None):
+    commands = {"pools": "-GetPoolNames", "groups": "-GetGroupNames", "workers": "-GetSlaveNames"}
+    if kind not in commands or type(limit) is not int or not 1 <= limit <= 2000:
+        raise ValueError("Choose pools/groups/workers and an integer limit of 1..2000")
+    names = [line.strip() for line in run(discover(command), [commands[kind]]).splitlines() if line.strip()]
+    return {"kind": kind, "names": names[:limit], "total_parsed": len(names), "truncated": len(names) > limit,
+            "note": "Names from the current configured repository. Worker names do not prove availability or license readiness."}
+
+
+@safe
+def worker_info(name, command=None):
+    if not isinstance(name, str) or not name.strip() or len(name) > 128 or name.startswith("-") or "," in name or any(ord(c) < 32 for c in name):
+        raise ValueError("Choose one exact worker name, not a list or command option")
+    executable = discover(command)
+    names = [line.strip() for line in run(executable, ["-GetSlaveNames"]).splitlines() if line.strip()]
+    if name not in names:
+        raise ValueError("Exact worker name not present; list workers before selecting")
+    data = ini(run(executable, ["-GetSlave", name, "True"]))
+    if len(data) != 1:
+        raise ValueError("Worker information unavailable or ambiguous")
+    return {"name": name, "worker": data[0]}
 
 
 @safe
@@ -307,3 +331,34 @@ def retry(identifier, task_ids, action="retry_failed", confirmed=False, preview_
         verified = verified and all(re.search(r"Requeued task " + str(tid) + r"\b", output, re.I) for tid in ids)
     return {"command_completed": True, "state_verified": verified, "task_states": {str(tid): states.get(str(tid)) for tid in ids},
             "output": output[:8000], "note": "No automatic retries. Review current states if any task is not queued/rendering/completed."}
+
+
+@safe
+def job_action(identifier, action, confirmed=False, preview_token=None, command=None):
+    identifier = job_id(identifier)
+    if action not in {"suspend", "resume"} or type(confirmed) is not bool:
+        raise ValueError("action must be suspend/resume and confirmed a boolean")
+    executable = discover(command)
+
+    def read_target():
+        records = ini(run(executable, ["-GetJob", identifier, "True"]))
+        if len(records) != 1 or records[0].get("section", "").lower() != identifier:
+            raise ValueError("The returned job cannot be matched to the selected ID")
+        return records[0]
+
+    before = read_target()
+    allowed = {"Queued", "Rendering", "Pending"} if action == "suspend" else {"Suspended"}
+    if before.get("Status") not in allowed:
+        raise ValueError("Job state does not allow this action; inspect it again")
+    plan = {"action": action, "executable": executable, "job_id": identifier,
+            "job": {key: before.get(key, "") for key in ("Name", "UserName", "Plugin", "Status")},
+            "effect": "Suspends the whole job, including rendering tasks" if action == "suspend" else "Resumes the suspended job; workers may start rendering"}
+    preview = confirm(plan, confirmed, preview_token)
+    if preview:
+        return preview
+    output = run(executable, ["-SuspendJob" if action == "suspend" else "-ResumeJob", identifier])
+    after = read_target()
+    expected = {"Suspended"} if action == "suspend" else {"Queued", "Rendering", "Completed"}
+    return {"command_completed": True, "job_id": identifier, "action": action,
+            "state_verified": after.get("Status") in expected, "status": after.get("Status"), "output": output[:8000],
+            "note": "Observe current state if verification failed. No automatic retry; a concurrent farm/user action may change the result."}

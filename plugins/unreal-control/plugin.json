@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "unreal-control",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Control a local Unreal Engine session, execute Python, and inspect scene dependencies.",
   "author": {
     "name": "popo-studio"

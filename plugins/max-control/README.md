@@ -1,6 +1,6 @@
 # Bubble 3ds Max
 
-Current Codex package: **0.2.1**. Software-side bridge: **0.2.0**, unchanged by this runtime dependency patch.
+Current Codex package: **0.3.0**. Software-side bridge: **0.3.0**. Update the owned host bridge through setup, then restart/reload the application once.
 为本机 3ds Max 提供 Python / MAXScript 执行、场景信息和常规资源检查。第一版面向 Windows、Python 3 的 Max 2025/2026，兼容 PySide6 / PySide2。宿主运行时只用 Max 自带 Python 与 Qt；外部 MCP 使用 `uv run --locked` 和 Python 3.10+。
 
 ## 安装与连接
@@ -24,7 +24,7 @@ Current Codex package: **0.2.1**. Software-side bridge: **0.2.0**, unchanged by 
 
 ## 验证与限制
 
-自动测试涵盖真实回环双实例路由、鉴权、队列截止时间、崩溃残留、文件名歧义、安装预览/回滚/卸载/冲突和宿主 API 替身。真实 MCP SDK stdio 握手测试覆盖全部 9 个工具。**开发机器未安装 Max，原生 GUI 启动、MAXScript bootstrap 和 Qt 主线程操作尚待用户验收。**
+自动测试涵盖真实回环双实例路由、鉴权、队列截止时间、崩溃残留、文件名歧义、安装预览/回滚/卸载/冲突和宿主 API 替身。真实 MCP SDK stdio 握手测试覆盖全部 16 个工具。**开发机器未安装 Max，原生 GUI 启动、MAXScript bootstrap 和 Qt 主线程操作尚待用户验收。**
 
 ```powershell
 uv run --locked --directory plugins/max-control python -m unittest discover -s tests -v
@@ -47,16 +47,27 @@ GitHub 发布后需刷新已注册的 Codex 插件市场，并重新加载聊天
 
 Prefer `max_list_objects`, `max_inspect_object`, `max_object_action`, `max_scene_action`, and `max_settings` for supported routine work instead of generating scripts. List objects first and retain both the explicit PID and returned `scene_token`; pass that token as `expected_scene`. IDs are 3ds Max node handles, protected by a random scene epoch invalidated by new/reset/open callbacks; they are not portable asset GUIDs. Re-query after scene/level changes or reconnect.
 
-The object action supports create, select, duplicate, rename, delete, and position/scale transforms. Creation kinds: box, sphere, plane, cylinder, point. Transforms use host world position and local scale; this release does not provide rotation, reparenting, animation/keyframe editing or arbitrary property assignment. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
+The object action supports create, select, duplicate, rename, delete, and position/rotation/scale transforms. Creation kinds: box, sphere, plane, cylinder, point. Transforms use host world position and local scale; animation/keyframe editing and arbitrary property assignment remain outside structured coverage. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
 
-New/open refuse dirty affected scenes (Unreal also refuses dirty content packages), without implicitly saving or discarding anything. Save requires an explicit destination; replacing any existing file requires `overwrite=true` and user authorization. Unity new/open replaces all loaded scenes after checking every scene for unsaved changes. No build or render starts from the settings query.
+New/open refuse dirty affected scenes, without implicitly saving or discarding anything. Save requires an explicit destination; replacing any existing file requires `overwrite=true` and user authorization. No build or render starts from the settings query.
 
 Update the application-side bridge through the setup tool and restart/reload the relevant application after updating the Codex plugin; an old running bridge does not gain new operations automatically. Existing owned-file update and removal protections remain in place.
 
 API references: [Autodesk scene files](https://help.autodesk.com/cloudhelp/2025/ENU/MAXDEV-Python/files/using_pymxs/MAXDEV_Python_using_pymxs_pymxs_files_html.html), [Python callbacks](https://help.autodesk.com/cloudhelp/2021/ENU/Max-Python-API/using_pymxs/pymxs_registering_callbacks.html).
 
-Validation: 38 existing Python regressions plus 6 structured-host safety tests pass using fake Max APIs. Real MCP stdio exposes 14 tools. 3ds Max is not installed; native object/controller/callback behavior remains pending.
+Validation: 38 existing Python regressions plus 6 structured-host safety tests pass using fake Max APIs. Real MCP stdio exposes 16 tools. 3ds Max is not installed; native object/controller/callback behavior remains pending.
 
-## Runtime security patch 0.2.1
 
-The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.
+## 日常操作补全 0.3.0
+
+- `max_object_action(action="transform")` 增加 `rotation=[x,y,z]`，XYZ Euler 角度转为原生 quaternion；对象查询返回 `rotation_xyz_degrees`。先校验所有向量，避免坏参数导致前半段位置已写入。
+- `max_parent_object`：显式对象 handle 建立/解除父级，保持世界 transform。必须提供场景 token 与读到的旧 `expected_parent_id`；拒绝循环、过时父级、冻结/动画/组/XRef 节点。
+- `max_layers`：列出图层及对象、创建/改名、分配显式对象、设置隐藏/冻结；写入需要 get 返回的 `revision` 作为 `expected_layers`，以及 `scene_token` 作为 `expected_scene`。不删除图层，不隐式更改 current layer；默认图层不可改名，移动成员前验证全部目标。
+
+API：[EulerAngles](https://help.autodesk.com/cloudhelp/2026/ENU/MAXScript-Help/files/MAXScript-Language-Reference/Values/Basic-Data-Values/GUID-87BB6468-79E2-4FA2-9BAB-42E427219C4F.html)、[LayerManager](https://help.autodesk.com/cloudhelp/2026/ENU/MAXScript-Help/files/3ds-Max-Objects-and-Interfaces/Interfaces/Core-Interfaces/Core-Interfaces-Documentation/L/GUID-79537E16-FE25-4567-BEA6-06F39E0A5C1F.html)、[LayerProperties](https://help.autodesk.com/cloudhelp/2021/ENU/3DSMax-MAXScript/files/GUID-78B79975-7BA5-4A03-8FEF-27E78D14B575.htm)。
+
+验证：真实 MCP stdio 与50项 Python contract/安装/路由回归通过。**本机未安装 Max，本轮没有原生 Max 验收；Euler、LayerManager、父级变换语义仍须在实际 Max 中验收。**
+
+当前 MCP 工具共 16 个。优先使用上述结构化工具；每次写入仍须选定实例并传最新场景身份。Maya/Nuke/Houdini 的 snapshot 包含随机桥接 session 身份，重启或重新连接后的旧 snapshot 无效；它不覆盖每个属性编辑。
+
+此版本保留已修复的依赖锁，不升级第三方依赖。软件侧 payload 已改变，需要通过 setup 预览并更新；不会自动更改用户启动配置。安装/卸载所有权、冲突保护、多实例选择逻辑继续生效。

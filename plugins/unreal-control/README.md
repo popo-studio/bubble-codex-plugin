@@ -49,11 +49,11 @@ uv run --locked --directory plugins/unreal-control tests/stdio_smoke.py
 
 GitHub 发布后需刷新已注册的 Codex 插件市场，并重新加载聊天或重启 Codex。软件/项目中的桥接独立保存，需预览差异、经同意后更新，再重启或使用该软件支持的刷新方式。完整卸载请先通过本插件工具卸载软件端桥接，再从 Codex 移除插件；只卸载 Codex 插件会保留软件端配置。Windows 旧版缓存被占用时，先停掉明确属于该插件的旧 MCP 进程，再重试，勿关闭创作软件或批量删除配置。
 
-## Structured editing in 0.2.0
+## Structured editing in 0.3.0
 
 Prefer `unreal_list_objects`, `unreal_inspect_object`, `unreal_object_action`, `unreal_scene_action`, and `unreal_settings` for supported routine work instead of generating scripts. List objects first and retain both the explicit PID and returned `scene_token`; pass that token as `expected_scene`. IDs are actor object paths, guarded by the current native editor-world identity; they are not portable asset GUIDs. Re-query after scene/level changes or reconnect.
 
-The object action supports create, select, duplicate, rename, delete, and position/scale transforms. Creation kinds: actor, point_light, camera, static_mesh (empty mesh actor). Transforms use host world position and local scale; this release does not provide rotation, reparenting, animation/keyframe editing or arbitrary property assignment. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
+The object action supports create, select, duplicate, rename, delete, position/rotation/scale transforms, parent/detach, and Outliner folder organization. Creation kinds: actor, point_light, camera, static_mesh (empty mesh actor). Transforms use world position and world scale and rotation degrees `[pitch,yaw,roll]`. Parenting preserves world transform and rejects cycles and cross-scene/level targets. Use `parent_id=null` to detach; parent must be an observed current-world actor. `folder` uses relative slash-separated names; empty clears it. Animation/keyframes and arbitrary property editing remain outside these structured tools. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
 
 New/open refuse dirty affected scenes (Unreal also refuses dirty content packages), without implicitly saving or discarding anything. Save requires an explicit destination; replacing any existing file requires `overwrite=true` and user authorization. Unity new/open replaces all loaded scenes after checking every scene for unsaved changes. No build or render starts from the settings query.
 
@@ -61,8 +61,16 @@ Update the application-side bridge through the setup tool and restart/reload the
 
 API references: [Epic EditorActorSubsystem 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorActorSubsystem?application_version=5.5), [EditorLoadingAndSavingUtils 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorLoadingAndSavingUtils?application_version=5.5).
 
-Validation: 45 existing Python regressions and real MCP stdio (13 tools) pass. In a marked disposable project, actual UE 5.5.4 full Editor mode passed actor creation, transforms, components, duplication/rename/delete, dirty-scene refusal, map save/overwrite refusal, new/open and world-token rejection. No user project was opened. PythonScript commandlet map creation crashed without full editor context; it is not used as evidence for editor lifecycle.
+Previous0.2.0 native validation: 45 existing Python regressions and real MCP stdio (13 tools) pass. In a marked disposable project, actual UE 5.5.4 full Editor mode passed actor creation, transforms, components, duplication/rename/delete, dirty-scene refusal, map save/overwrite refusal, new/open and world-token rejection. No user project was opened. PythonScript commandlet map creation crashed without full editor context; it is not used as evidence for editor lifecycle.
 
 ## Runtime security patch 0.2.1
 
 The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.
+
+Version0.3.0 also updates the software-side bridge payload to0.3.0; update the owned bridge and restart/reload the application after upgrading. The previous0.2.1 dependency-only update note above describes that older release.
+
+New actor API reference: [Actor 5.5 rotation, attachment and folder APIs](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/Actor?application_version=5.5). `tests/native_runner.py` owns one hidden, disposable full-Editor process; set `BUBBLE_UNREAL_EXE` to the available Editor executable. It never opens a user project.
+
+0.3.0 adds4 isolated host-contract tests for rotation refusal/prevalidation, parent cycles/cross-level guards, stale parent identity and folder validation (49 Python tests total).
+
+0.3.0 native acceptance also passed in UE5.5.4 full Editor mode using `UnrealEditor-Cmd.exe` without a commandlet: rotation, keep-world attach/detach, cycle refusal, Outliner folder/clear and invalid-folder refusal. Only the marked disposable project was opened; no user project or production render/build.

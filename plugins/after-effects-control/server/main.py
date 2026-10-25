@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import sys
 from typing import Literal
-from pydantic import StrictInt, StrictFloat
+from pydantic import StrictInt, StrictFloat, StrictBool
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from transport import call, failure, discover
@@ -225,6 +225,30 @@ def after_effects_render_queue(session_id: str, expected_project_state: dict, ti
 def after_effects_queue_comp(session_id: str, expected_project_state: dict, comp_id: StrictInt, timeout: Number = 30) -> dict:
     """Add one comp to render queue DISABLED. Does not start render or choose/overwrite an output file."""
     return call("queue_comp",session_id,expected_project_state,timeout,comp_id=comp_id)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_project_folder(session_id: str, expected_project_state: dict, action: Literal['create','move'], parent_folder_id: StrictInt, item_id: StrictInt | None = None, name: str | None = None, timeout: Number = 30) -> dict:
+    """Create a named project folder, or move an explicit item into an exact folder/root ID. Inspect project_info parent_folder_id/root_id first. Refuses root moves and cycles; does not move files or save."""
+    return call('project_folder',session_id,expected_project_state,timeout,action=action,parent_folder_id=parent_folder_id,item_id=item_id,name=name)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_parent_layer(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, parent_layer_id: StrictInt | None = None, keep_world: StrictBool = True, timeout: Number = 30) -> dict:
+    """Set/clear parent for exact layer IDs in one comp; rejects cycles and locked child. Default uses Adobe's parent assignment compensation. keep_world=False preserves local transform values via setParentWithJump, changing appearance. Does not bake animation or save."""
+    return call('parent_layer',session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,parent_layer_id=parent_layer_id,keep_world=keep_world)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_order_layer(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, relative_layer_id: StrictInt, placement: Literal['before','after'], timeout: Number = 30) -> dict:
+    """Move one unlocked layer before/after another explicit layer ID in the same comp. Layer order can affect compositing and track mattes; inspect current comp first. Does not save."""
+    return call('order_layer',session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,relative_layer_id=relative_layer_id,placement=placement)
+
+
+@mcp.tool(annotations=WRITE)
+def after_effects_layer_timing(session_id: str, expected_project_state: dict, comp_id: StrictInt, layer_id: StrictInt, start_time: Number, in_point: Number, out_point: Number, timeout: Number = 30) -> dict:
+    """Set explicit source start offset and visible in/out times in comp seconds. 0<=in<out<=comp duration; start -10800..10800. Moving start shifts layer timing including animation according to Adobe; no stretch/time-remap or source-file edit. Refuses locked layers."""
+    return call('layer_timing',session_id,expected_project_state,timeout,comp_id=comp_id,layer_id=layer_id,start_time=start_time,in_point=in_point,out_point=out_point)
 
 
 if __name__=='__main__':

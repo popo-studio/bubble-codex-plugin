@@ -44,6 +44,24 @@ with tempfile.TemporaryDirectory(prefix='bubble-structured-') as directory:
     duplicated=duplicate.get('node') or duplicate['nodes'][0]
     renamed=change('edit',action='rename',node=duplicated,name='bubbleRenamed')['result']['node']
     change('edit',action='delete',node=renamed,confirm_delete=True)
+    keys=read('keyframes',node=created,attribute='tx')['result']
+    keyed=change('keyframes',action='set',node=created,attribute='tx',expected_keys=keys['revision'],frame=12,value=5)['result']
+    assert len(keyed['keys'])==1 and keyed['keys'][0]['value']==5,keyed
+    refuse('keyframes',action='set',node=created,attribute='tx',expected_keys=keys['revision'],frame=13,value=9)
+    refuse('keyframes',action='set',node=created,attribute='tx',expected_keys=keyed['revision'],frame=12,value=9)
+    assert not change('keyframes',action='delete',node=created,attribute='tx',expected_keys=keyed['revision'],frame=12,confirm_delete=True)['result']['keys']
+    box=change('network_box',action='create',parent=created,name='bubbleBox',nodes=[first],comment='Fixture')['result']
+    assert box['nodes']==[first]
+    change('network_box',action='add',parent=created,name='bubbleBox',nodes=[second])
+    refuse('network_box',action='create',parent=created,name='anotherBox',nodes=[second])
+    change('network_box',action='remove',parent=created,name='bubbleBox',nodes=[second])
+    assert read('network_box',parent=created)['result']['boxes'][0]['nodes']==[first]
+    snippet=Path(directory)/'snippet.cpio'
+    change('transfer',action='export',parent=created,path=str(snippet),nodes=[first])
+    refuse('transfer',action='export',parent=created,path=str(snippet),nodes=[first])
+    imported=change('transfer',action='import',parent=other,path=str(snippet))['result']
+    assert imported['created_nodes'] and hou.node(other+'/source')
+    token=read('state')['snapshot'];bridge._operations.new_session();assert read('state')['snapshot']!=token
     change('file',action='save',path=str(p))
     assert p.is_file()
     refuse('file',action='save',path=str(p))

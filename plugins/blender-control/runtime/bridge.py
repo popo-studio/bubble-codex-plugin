@@ -24,7 +24,7 @@ _operations = _importlib_util.module_from_spec(_operations_spec)
 _operations_spec.loader.exec_module(_operations)
 _privacy_spec=_importlib_util.spec_from_file_location('_bubble_blender_privacy',Path(__file__).with_name('privacy.py'))
 _privacy=_importlib_util.module_from_spec(_privacy_spec);_privacy_spec.loader.exec_module(_privacy)
-STRUCTURED_OPERATIONS = {'structured_' + value for value in ('state','file','query','create','edit','selection','material','camera','light','timeline','render_settings','assets')}
+STRUCTURED_OPERATIONS = {'structured_' + value for value in ('state','file','query','create','edit','selection','material','camera','light','timeline','render_settings','assets','collection','parent')}
 
 PROTOCOL = 1
 MAX_MESSAGE = 1024 * 1024
@@ -64,7 +64,7 @@ def dispatch(operation, arguments):
     import bpy
     if tuple(bpy.app.version[:2]) < (4,5):raise ValueError('Blender 4.5 or later required')
     if operation in STRUCTURED_OPERATIONS:return _operations.dispatch(operation.removeprefix('structured_'),arguments)
-    if operation=='status':return {'bridge_version':'0.1.0','pid':os.getpid(),'blender_version':bpy.app.version_string,'protocol':PROTOCOL}
+    if operation=='status':return {'bridge_version':'0.2.0','pid':os.getpid(),'blender_version':bpy.app.version_string,'protocol':PROTOCOL}
     if operation=='scene_info':return scene_info(bpy)
     if operation=='inspect_scene':return _operations.dispatch('assets',{})
     if operation!='execute_python':raise ValueError('Unknown operation')

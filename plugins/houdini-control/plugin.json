@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "houdini-control",
-  "version": "0.2.1",
-  "description": "Control a local Houdini session, execute Python, and inspect scene dependencies.",
+  "version": "0.3.0",
+  "description": "Control a local Houdini session, execute Python, and inspect scene dependencies. Includes scalar animation keys, native network import/export and network boxes.",
   "author": {
     "name": "popo-studio"
   },
@@ -19,7 +19,7 @@
       "interface": {
         "displayName": "Bubble Houdini",
         "shortDescription": "Houdini 脚本执行与场景检查",
-        "longDescription": "Install the Houdini 20.5 bridge with your permission, connect automatically after Houdini restarts, inspect scene resources, and run requested Python scripts.",
+        "longDescription": "Install the Houdini 20.5 bridge with your permission, connect automatically after Houdini restarts, inspect scene resources, and run requested Python scripts. Structured tools support scalar animation keys, native network import/export and network boxes; multi-instance writes use explicit targets and guards.",
         "developerName": "popo-studio",
         "category": "Productivity",
         "capabilities": [

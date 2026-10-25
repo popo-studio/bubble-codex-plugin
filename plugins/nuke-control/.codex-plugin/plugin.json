@@ -1,7 +1,7 @@
 {
   "name": "nuke-control",
-  "version": "0.2.1",
-  "description": "Control local Nuke, execute Python, and inspect scene dependencies.",
+  "version": "0.3.0",
+  "description": "Control local Nuke, execute Python, and inspect scene dependencies. Includes numeric animation keys, native graph import/export and project format/FPS.",
   "author": {
     "name": "popo-studio"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Bubble Nuke",
     "shortDescription": "Nuke 脚本执行与场景检查",
-    "longDescription": "Install the Nuke 15.1 bridge with your permission, connect automatically after Nuke restarts, inspect scene resources, and run requested Python scripts.",
+    "longDescription": "Install the Nuke 15.1 bridge with your permission, connect automatically after Nuke restarts, inspect scene resources, and run requested Python scripts. Structured tools support numeric animation keys, native graph import/export and project format/FPS; multi-instance writes use explicit targets and guards.",
     "developerName": "popo-studio",
     "category": "Productivity",
     "capabilities": [

@@ -1,6 +1,6 @@
 {
   "name": "photoshop-control",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Control an existing Windows Photoshop session through native COM; no Creative Cloud, panel or developer tools required.",
   "author": {
     "name": "popo-studio"

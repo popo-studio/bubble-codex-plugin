@@ -72,9 +72,9 @@ def unreal_inspect_object(object_id: str, expected_scene: str, pid: int) -> dict
     return request("inspect_object", {"object_id": object_id, "expected_scene": expected_scene}, pid)
 
 @mcp.tool(annotations=SCRIPT)
-def unreal_object_action(action: Literal["create", "select", "duplicate", "rename", "delete", "transform"], expected_scene: str, pid: int, object_id: str | None = None, kind: str = "actor", name: str | None = None, position: list[float] | None = None, scale: list[float] | None = None) -> dict:
-    """Edit one explicit object on main thread. scene_token required. Create primitives; select/duplicate/rename/delete by ID; transform position/scale only. No automatic save. Deletion needs user authorization; timeout/partial error must not be retried. List objects after scene changes. Coordinates follow host world position/local scale conventions."""
-    return request("object_action", dict(action=action, expected_scene=expected_scene, object_id=object_id, kind=kind, name=name, position=position, scale=scale), pid)
+def unreal_object_action(action: Literal["create", "select", "duplicate", "rename", "delete", "transform", "parent", "folder"], expected_scene: str, pid: int, object_id: str | None = None, kind: str = "actor", name: str | None = None, position: list[float] | None = None, scale: list[float] | None = None, rotation: list[float] | None = None, parent_id: str | None = None, folder: str | None = None) -> dict:
+    """Edit one explicit object on main thread. scene_token required. Create primitives; select/duplicate/rename/delete by ID; Transform position/world Euler rotation degrees/scale. Parent preserves world transform; parent_id omitted detaches; folder sets slash-separated Outliner folder, empty clears. Rotation order pitch/yaw/roll. No automatic save. Deletion needs user authorization; timeout/partial error must not be retried. List objects after scene changes. Coordinates follow Unreal world position/rotation/scale conventions."""
+    return request("object_action", dict(action=action, expected_scene=expected_scene, object_id=object_id, kind=kind, name=name, position=position, scale=scale, rotation=rotation, parent_id=parent_id, folder=folder), pid)
 
 @mcp.tool(annotations=SCRIPT)
 def unreal_scene_action(action: Literal["new", "open", "save"], expected_scene: str, pid: int, path: str | None = None, overwrite: bool = False) -> dict:

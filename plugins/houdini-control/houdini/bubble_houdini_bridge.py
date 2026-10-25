@@ -22,7 +22,7 @@ import importlib.util as _importlib_util
 _operations_spec = _importlib_util.spec_from_file_location('_bubble_houdini_operations', Path(__file__).with_name('operations.py'))
 _operations = _importlib_util.module_from_spec(_operations_spec)
 _operations_spec.loader.exec_module(_operations)
-STRUCTURED_OPERATIONS = {'structured_' + value for value in ('state','file','query','create','edit','selection','attribute','connections','timeline')}
+STRUCTURED_OPERATIONS = {'structured_' + value for value in ('state','file','query','create','edit','selection','attribute','connections','timeline','keyframes','transfer','network_box')}
 
 PROTOCOL = 1
 MAX_MESSAGE = 1024 * 1024
@@ -155,7 +155,7 @@ def dispatch(operation, arguments):
     """Called only on the host main thread."""
     import hou
     if operation == "status":
-        return {"bridge_version": "0.2.0", "pid": os.getpid(), "houdini_version": hou.applicationVersionString(), "protocol": PROTOCOL}
+        return {"bridge_version": "0.3.0", "pid": os.getpid(), "houdini_version": hou.applicationVersionString(), "protocol": PROTOCOL}
     if operation == "scene_info":
         return scene_info(hou)
     if operation == "inspect_scene":
@@ -278,6 +278,7 @@ def start():
             pending.get_nowait()()
         except queue.Empty:
             pass
+    _operations.new_session()
     bridge = Bridge(dispatch, pending.put_nowait)
     try:
         hou.ui.addEventLoopCallback(drain)

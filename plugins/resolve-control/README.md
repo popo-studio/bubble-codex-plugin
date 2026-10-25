@@ -1,6 +1,6 @@
 # Bubble DaVinci Resolve
 
-Windows local Codex plugin for the official external Python API in **DaVinci Resolve Studio 21+**. Version 0.1.0. No Resolve-side bridge, startup file or copied console code is installed.
+Windows local Codex plugin for the official external Python API in **DaVinci Resolve Studio 21+**. Version 0.2.0. No Resolve-side bridge, startup file or copied console code is installed.
 
 ## Requirements and connection
 
@@ -38,3 +38,9 @@ The tests use native SDK doubles for project guards, closed/restarted/multiple p
 - [Blackmagic staff: external scripting requires Studio](https://forum.blackmagicdesign.com/viewtopic.php?f=21&t=204977)
 - [Blackmagic official features guide: developer documentation location](https://documents.blackmagicdesign.com/SupportNotes/DaVinci_Resolve_20.2_New_Features_Guide.pdf)
 - Authoritative installed reference: Help > Documentation > Developer > Scripting > README.txt. No local copy was available on the development machine. Existing SDK methods were cross-checked against the publicly mirrored vendor README dated 24 July 2026 at [resolve-scripts documentation mirror](https://github.com/thatcherfreeman/resolve-scripts/blob/main/Documentation/scripting_documentation.txt); this mirror is not a Blackmagic-hosted distribution. Runtime capability checks remain mandatory. No claim is made of latest patch-level native certification.
+
+## 0.2 timeline organization
+
+23 tools now include `resolve_manage_timeline`, `resolve_track_state` and `resolve_delete_marker`. Rename/duplicate operates on an exact timeline ID with a unique new name. Track reads expose name/enabled/locked/count; edits require the exact observed state, explicit field values and preview/confirmation. The SDK supplies no stable track ID here: an equal-state track replacement cannot be distinguished, so inspect immediately before editing. Marker deletion compares the entire observed marker dictionary at the explicit relative frame, both before preview and immediately before mutation.
+
+No new Resolve-side installation or preferences are needed. Writes retain the process/project/render-busy checks; no timeline deletion, rendering, source-file moves or automatic save occurs. A multi-field native failure can leave earlier fields changed: inspect before any manually authorized retry. API capability checks fail closed when a method is absent. `tests/test_organization.py` covers these documented SDK contracts; native Resolve Studio 21 acceptance remains pending.

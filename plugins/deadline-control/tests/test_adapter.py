@@ -166,6 +166,49 @@ class AdapterTests(unittest.TestCase):
         output=adapter.run(sys.executable,["-c","import sys; print(sys.argv[1])","a & echo hacked"])
         self.assertEqual(output.strip(),"a & echo hacked")
 
+    def test_farm_and_worker_exact_selection(self):
+        with patch.object(adapter, 'run', return_value='render-a\nrender-b') as run:
+            result = adapter.farm_info('workers', 1, str(self.command))
+            self.assertTrue(result['data']['truncated'])
+            self.assertEqual(run.call_args.args[1], ['-GetSlaveNames'])
+        with patch.object(adapter, 'run', side_effect=['render-a\nrender-b', '[render-a]\nStatus=Idle']) as run:
+            self.assertTrue(adapter.worker_info('render-a', str(self.command))['ok'])
+            self.assertEqual(run.call_args.args[1], ['-GetSlave', 'render-a', 'True'])
+        with patch.object(adapter, 'run') as run:
+            self.assertFalse(adapter.worker_info('-DeleteSlave', str(self.command))['ok'])
+            run.assert_not_called()
+        with patch.object(adapter, 'run', return_value='render-a') as run:
+            self.assertFalse(adapter.worker_info('missing', str(self.command))['ok'])
+            self.assertEqual(run.call_count, 1)
+
+    def test_job_action_preview_once_and_changed_identity(self):
+        before = f'[{JOB}]\nName=hero\nUserName=artist\nPlugin=MayaBatch\nStatus=Rendering'
+        with patch.object(adapter, 'run', return_value=before) as run:
+            preview = adapter.job_action(JOB, 'suspend', command=str(self.command))
+            self.assertEqual(run.call_count, 1)
+        token = preview['data']['preview_token']
+        with patch.object(adapter, 'run', side_effect=[before, 'Success', before.replace('Rendering', 'Suspended')]) as run:
+            result = adapter.job_action(JOB, 'suspend', True, token, str(self.command))
+            self.assertTrue(result['data']['state_verified'], result)
+            self.assertEqual(run.call_args_list[1].args[1], ['-SuspendJob', JOB])
+        with patch.object(adapter, 'run', return_value=before) as run:
+            self.assertFalse(adapter.job_action(JOB, 'suspend', True, token, str(self.command))['ok'])
+            self.assertEqual(run.call_count, 1)
+            token = adapter.job_action(JOB, 'suspend', command=str(self.command))['data']['preview_token']
+        with patch.object(adapter, 'run', return_value=before.replace('hero', 'other')) as run:
+            self.assertFalse(adapter.job_action(JOB, 'suspend', True, token, str(self.command))['ok'])
+            self.assertEqual(run.call_count, 1)
+
+    def test_job_action_resume_noop_not_verified_and_wrong_job_rejected(self):
+        before = f'[{JOB}]\nName=hero\nStatus=Suspended'
+        with patch.object(adapter, 'run', return_value=before):
+            token = adapter.job_action(JOB, 'resume', command=str(self.command))['data']['preview_token']
+            result = adapter.job_action(JOB, 'resume', True, token, str(self.command))
+            self.assertFalse(result['data']['state_verified'])
+        with patch.object(adapter, 'run', return_value=before.replace(JOB, '0' * 24)) as run:
+            self.assertFalse(adapter.job_action(JOB, 'resume', command=str(self.command))['ok'])
+            self.assertEqual(run.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

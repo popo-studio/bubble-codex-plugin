@@ -27,7 +27,7 @@ class InstallationTests(unittest.TestCase):
         self.assertFalse(self.target.exists());self.assertFalse(m._receipt_path(self.target).exists())
     def test_managed_old_receipt_upgrades(self):
         self.assertTrue(m.install_bridge(True)['ok']);rp=m._receipt_path(self.target);r=json.loads(rp.read_text(encoding='utf-8'));r['version']='0.3.0';rp.write_text(json.dumps(r))
-        self.assertTrue(m.install_bridge(True)['ok']);self.assertEqual(json.loads(rp.read_text(encoding='utf-8'))['version'],'0.4.0')
+        self.assertTrue(m.install_bridge(True)['ok']);self.assertEqual(json.loads(rp.read_text(encoding='utf-8'))['version'],'0.5.0')
     def test_old_host_refused(self):
         with patch.object(m,"discover_applications",return_value=[{"supported":False,"version":"15.0"}]):
             self.assertEqual(m.install_bridge(True)["error"]["code"],"unsupported_version")

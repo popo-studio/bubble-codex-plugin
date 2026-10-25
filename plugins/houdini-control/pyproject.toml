@@ -1,6 +1,6 @@
 [project]
 name = "bubble-houdini-control"
-version = "0.2.1"
+version = "0.3.0"
 description = "Local authenticated Houdini bridge for Codex"
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.28,<2", "certifi>=2026.10.19"]

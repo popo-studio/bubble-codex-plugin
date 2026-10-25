@@ -6,6 +6,8 @@ desktop app's bundled executable, not an unrelated older CLI on PATH.
 remain installed and updated; plugins absent before this test are uninstalled
 through Codex in finally. Software-side bridges are never installed or changed.
 The test creates only an ephemeral runtime thread and never starts a model turn.
+Use --marketplace with a clean Git export for release acceptance; installing
+from a development checkout may copy ignored .venv/test files into the cache.
 """
 import argparse
 from collections import deque
@@ -25,8 +27,16 @@ STATUS_TOOLS = {"deadline-control": "deadline_status", "sequence-check": "sequen
                 "asset-package": "package_status", "plugin-doctor": "doctor_status", "cinema4d-control": "cinema4d_setup_status", "resolve-control": "resolve_setup_status"}
 
 
-def server_name(name):
-    config = json.loads((ROOT / "plugins" / name / ".mcp.json").read_text(encoding="utf-8"))
+def package_path(catalog, entry):
+    root = catalog.resolve().parents[2]
+    assert entry['source']['source'] == 'local', entry['name']
+    package = (root / entry['source']['path']).resolve()
+    assert package.is_relative_to(root), (entry['name'], 'package outside catalog root')
+    return package
+
+
+def server_name(name, package=None):
+    config = json.loads(((package or ROOT / "plugins" / name) / ".mcp.json").read_text(encoding="utf-8"))
     names = list(config["mcpServers"])
     assert len(names) == 1, (name, "expected one MCP server")
     return names[0]
@@ -146,7 +156,7 @@ def check_loader(server, catalog, entries, workspace):
     details = {}
     for entry in entries:
         name = entry["name"]
-        expected = server_name(name)
+        expected = server_name(name, package_path(catalog, entry))
         detail = plugin_read(server, catalog, name)
         assert detail["mcpServers"] == [expected], (name, detail["mcpServers"])
         assert len(detail["skills"]) >= 2, name
@@ -157,7 +167,8 @@ def check_loader(server, catalog, entries, workspace):
     # JSON validator or an MCP SDK which bypasses plugin path restrictions.
     negative = workspace / "legacy-cwd"
     package = negative / "plugins/maya-control"
-    shutil.copytree(ROOT / "plugins/maya-control", package, ignore=shutil.ignore_patterns(
+    maya_source = package_path(catalog, next(e for e in entries if e['name'] == 'maya-control'))
+    shutil.copytree(maya_source, package, ignore=shutil.ignore_patterns(
         ".venv", "__pycache__", "*.pyc", ".test-runtime", ".cache", "dist"))
     for filename in ("mcp.json", ".mcp.json"):
         path = package / filename
@@ -193,7 +204,7 @@ def check_installed_runtime(server, catalog, entries, details, workspace):
             }, timeout=120)
             installed = plugin_read(server, catalog, name)
             assert installed["summary"]["installed"], name
-            expected_version = json.loads((ROOT / "plugins" / name / "plugin.json").read_text(encoding="utf-8"))["version"]
+            expected_version = json.loads((package_path(catalog, entry) / "plugin.json").read_text(encoding="utf-8"))["version"]
             assert installed["summary"]["localVersion"] == expected_version, (name, "wrong installed version")
             print(f"PASS {name}: Codex installation", flush=True)
 
@@ -204,7 +215,8 @@ def check_installed_runtime(server, catalog, entries, details, workspace):
         ephemeral_id = thread["thread"]["id"]
         for entry in entries:
             name = entry["name"]
-            app = server_name(name)
+            package = package_path(catalog, entry)
+            app = server_name(name, package)
             status = server.request("mcpServerStatus/list", {
                 "threadId": ephemeral_id, "serverName": app,
                 "detail": "toolsAndAuthOnly",
@@ -216,11 +228,24 @@ def check_installed_runtime(server, catalog, entries, details, workspace):
             tool = STATUS_TOOLS.get(name, f"{app}_list_sessions")
             tools = row["tools"]
             assert any(t.get("name") == tool for t in tools.values()), (app, list(tools))
+            # Every declared tool, including additions, must reach the actual
+            # Codex runtime; checking only the status tool misses partial loads.
+            import ast
+            tree = ast.parse((package / 'server/main.py').read_text(encoding='utf-8'))
+            declared = {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and any(isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute)
+                    and isinstance(d.func.value, ast.Name) and d.func.value.id == 'mcp' and d.func.attr == 'tool'
+                    for d in node.decorator_list)}
+            actual = {item.get('name') for item in tools.values()}
+            assert actual == declared, (app, 'missing', sorted(declared - actual), 'unexpected', sorted(actual - declared))
             response = server.request("mcpServer/tool/call", {
                 "threadId": ephemeral_id, "server": app, "tool": tool, "arguments": {},
             }, timeout=60)
             assert_session_result(response, app, session_list=name not in STATUS_TOOLS)
             print(f"PASS {name}: Codex listed {len(tools)} tools and called {tool}", flush=True)
+    except Exception as exc:
+        print(f"FAIL runtime verification before cleanup: {type(exc).__name__}: {exc}", flush=True)
+        raise
     finally:
         # Exercise official uninstall while the test runtime may still hold its
         # MCP connections. Never manually delete real installed package files.
@@ -246,10 +271,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--codex", default=os.environ.get("CODEX_BIN") or shutil.which("codex"))
     parser.add_argument("--install", action="store_true", help="Explicitly allow real Codex install/update and cleanup")
+    parser.add_argument("--marketplace", type=Path, help="Exact catalog from a clean Git export or published marketplace")
     args = parser.parse_args()
     if not args.codex:
         parser.error("Set CODEX_BIN or --codex to the desktop's bundled Codex executable")
-    catalog = ROOT / ".agents/plugins/marketplace.json"
+    catalog = (args.marketplace or ROOT / ".agents/plugins/marketplace.json").resolve()
     entries = json.loads(catalog.read_text(encoding="utf-8"))["plugins"]
     parent = ROOT / ".test-runtime"
     parent.mkdir(exist_ok=True)

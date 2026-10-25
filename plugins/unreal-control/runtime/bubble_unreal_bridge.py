@@ -142,7 +142,7 @@ def dispatch(operation, arguments):
     if operation in {'scene_action', 'inspect_object', 'list_objects', 'object_action', 'settings'}:
         return _host.structured(operation, arguments)
     if operation == "status":
-        return {"bridge_version": "0.2.0", "pid": os.getpid(), "protocol": PROTOCOL, "version": _host.scene_info()["unreal_version"]}
+        return {"bridge_version": "0.3.0", "pid": os.getpid(), "protocol": PROTOCOL, "version": _host.scene_info()["unreal_version"]}
     if operation == "scene_info":
         return _host.scene_info()
     if operation == "inspect_scene":

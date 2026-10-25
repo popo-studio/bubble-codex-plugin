@@ -35,7 +35,7 @@ async def main():
                     listing = await session.list_tools()
                     names = {tool.name for tool in listing.tools}
                     legacy_names = {"houdini_list_sessions", "houdini_status", "houdini_scene_info", "houdini_inspect_scene", "houdini_execute_python", "houdini_installation_status", "houdini_install_bridge", "houdini_uninstall_bridge"}
-                    additional = {"houdini_"+suffix for suffix in ["scene_state","scene_file","query_nodes","create_node","edit_node","select_nodes","node_attribute","node_connections","timeline"]}
+                    additional = {"houdini_"+suffix for suffix in ["scene_state","scene_file","query_nodes","create_node","edit_node","select_nodes","node_attribute","node_connections","timeline","keyframes","graph_transfer","network_box"]}
                     assert names == legacy_names | additional, names
                     for name in sorted(names):
                         arguments = {"code": "result = 42"} if name.startswith("houdini_execute_") else {}
@@ -48,6 +48,11 @@ async def main():
                         elif suffix=='node_attribute':arguments=dict(pid=123,node='scratch',attribute='tx')
                         elif suffix=='node_connections':arguments=dict(pid=123,node='scratch')
                         elif suffix=='timeline':arguments=dict(pid=123)
+                        elif suffix=='parent_node':arguments=dict(common,node='scratch')
+                        elif suffix=='keyframes':arguments=dict(pid=123,node='scratch',attribute='tx')
+                        elif suffix in ('scene_transfer','graph_transfer'):arguments=dict(common,action='export',path='D:/scratch',nodes=['scratch'])
+                        elif suffix=='project_settings':arguments=dict(pid=123)
+                        elif suffix=='network_box':arguments=dict(pid=123,parent='/obj')
                         response = await session.call_tool(name, arguments)
                         assert not response.isError, response
                         payload = json.loads(response.content[0].text)

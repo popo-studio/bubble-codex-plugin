@@ -13,7 +13,7 @@ async def main():
         async with ClientSession(read,write) as session:
             await session.initialize()
             names={t.name for t in (await session.list_tools()).tools}
-            assert len(names)==20, names
+            assert len(names)==23, names
             for name in ("resolve_setup_status","resolve_install_bridge","resolve_uninstall_bridge"):
                 result=await session.call_tool(name,{})
                 assert not result.isError,result
@@ -22,6 +22,6 @@ async def main():
             result=await session.call_tool("resolve_project_info",{"session_id":"nonexistent:stale"})
             data=json.loads(result.content[0].text)
             assert data["ok"] is False,data
-            print("PASS: 20 real MCP tools, zero-install lifecycle, stale-session refusal; no Resolve host integration claimed")
+            print("PASS: 23 real MCP tools, zero-install lifecycle, stale-session refusal; no Resolve host integration claimed")
 
 if __name__=="__main__": asyncio.run(asyncio.wait_for(main(),60))

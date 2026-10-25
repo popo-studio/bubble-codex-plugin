@@ -1,7 +1,7 @@
 {
   "name": "sequence-check",
-  "version": "0.1.1",
-  "description": "Read-only bounded local image sequence and EXR quality checks.",
+  "version": "0.2.0",
+  "description": "Bounded image sequence QC with optional new JSON/CSV reports.",
   "author": {
     "name": "popo-studio"
   },
@@ -10,11 +10,12 @@
   "interface": {
     "displayName": "Bubble Sequence Check",
     "shortDescription": "图像序列、EXR 与渲染结果检查",
-    "longDescription": "Read-only bounded image sequence QC with real pixel decoding, missing frames, EXR channels and suspected black/repeated frames.",
+    "longDescription": "Decode image sequences, check expected frames, dimensions and channels, and export new JSON/CSV inspection reports without modifying source images.",
     "developerName": "popo-studio",
     "category": "Productivity",
     "capabilities": [
-      "Read"
+      "Read",
+      "Write"
     ],
     "defaultPrompt": [
       "检查渲染序列的缺帧和损坏文件",

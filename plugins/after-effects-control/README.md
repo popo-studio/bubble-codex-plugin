@@ -1,4 +1,4 @@
-# Bubble After Effects 0.3.0
+# Bubble After Effects 0.4.0
 
 Windows **After Effects 26.x** only. A managed Startup JSX bridge automatically registers each running AE instance. No Creative Cloud, UPIA, developer tools, CEP panel, debug mode, manual pairing code, or repeated script-editor paste is required. Native AE 26 acceptance remains pending; tests with a mocked Adobe DOM are not native acceptance.
 
@@ -39,3 +39,9 @@ The implementation uses Adobe’s shipped `Support Files/Scripts/Startup/About t
 Keyframe deletion requires both its observed index and time; animated properties must use keyframe tools instead of static transforms. Expressions, separated dimensions and locked layers retain explicit guards. Effect addition checks `canAddProperty`; it does not install effects. Queued compositions are disabled (`render=false`), have no output path configured by this tool, and are never rendered automatically. Inspect results and configure output before an independently authorized render.
 
 Managed 0.2 receipts remain eligible for a safe update to 0.3, which rotates the installation generation and requires restart. Automated JSX DOM tests are distinct from native AE 26 acceptance, which remains pending.
+
+## 0.4 project and layer organization
+
+31 tools now include `after_effects_project_folder`, `after_effects_parent_layer`, `after_effects_order_layer` and `after_effects_layer_timing`. Folder creation/moves retain stable item IDs, reject ancestor cycles and leave disk files untouched. Parent assignment defaults to Adobe's transform compensation; `keep_world=false` uses `setParentWithJump`, preserving local values and potentially changing appearance. Layer order can affect compositing/mattes. Timing sets explicit source start and visible in/out in composition seconds; it does not stretch footage or enable time remapping. Locked layers are refused.
+
+Inspect item/comp output now reports parent folder/layer IDs and layer timing. Always use the latest returned project_state and explicit layer IDs. Managed 0.2/0.3 receipts remain eligible for update to **0.4.0**, rotating the installation generation; restart AE once after updating. The [scripting guide linked by Adobe help](https://ae-scripting.docsforadobe.dev/layer/layer/) documents parent, moveBefore/moveAfter and timing properties. These commands have DOM contract coverage; AE 26 native acceptance remains pending.

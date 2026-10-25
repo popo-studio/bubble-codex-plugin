@@ -31,7 +31,8 @@ class ParameterTests(unittest.TestCase):
   for v in ['', 'bad\nname','x'*64,'中'*30]:
    with self.assertRaises(ValueError):self.m.label(v)
  def test_previous_session_snapshot_rejected_with_identical_pid_and_scene(self):
-  bpy=types.SimpleNamespace(data=types.SimpleNamespace(objects=[],filepath='',is_dirty=False),context=types.SimpleNamespace(scene=types.SimpleNamespace(name='Scene',library=None,override_library=None)))
+  collection=types.SimpleNamespace(name='Scene Collection',session_uid=1,objects=[],children=[])
+  bpy=types.SimpleNamespace(data=types.SimpleNamespace(objects=[],collections=[],filepath='',is_dirty=False),context=types.SimpleNamespace(scene=types.SimpleNamespace(name='Scene',collection=collection,library=None,override_library=None)))
   previous=self.m.state(bpy)
   self.m.guard(bpy,{'pid':os.getpid(),'expected_snapshot':previous['snapshot']})
   self.m.begin_session()

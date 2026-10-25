@@ -96,6 +96,18 @@ async def sequence(client, workspace):
     assert frames["linear.0003.exr"]["status"] == "error", frames
     assert frames["linear.0003.exr"]["reason"], frames
     assert before == {path.name: path.read_bytes() for path in folder.glob("*.exr")}, "EXR inspection modified source files"
+    result = await call(client, 'sequence_inspect', {'directory': str(folder), 'pattern': 'beauty.*.png',
+        'expected_start': 1, 'expected_end': 5, 'frame_step': 2, 'expected_width': 2, 'expected_height': 2,
+        'required_channels': ['R', 'G', 'B', 'A']})
+    assert result['data'][0]['missing_frames'] == [5], result
+    assert result['data'][0]['frames'][0]['expected_layout_issues'] == [{'issue': 'missing_channels', 'channels': ['A']}]
+    report = workspace / 'inspection.json'
+    args = {'directory': str(folder), 'pattern': 'linear.*.exr', 'output_path': str(report)}
+    result = await call(client, 'sequence_write_report', args)
+    assert not result['written'] and not report.exists()
+    result = await call(client, 'sequence_write_report', {**args, 'confirmed': True})
+    assert result['written'] and json.loads(report.read_text(encoding='utf-8'))['matched_files'] == 3
+    await call(client, 'sequence_write_report', {**args, 'confirmed': True}, ok=False)
 
 
 async def package(client, workspace):
@@ -109,6 +121,11 @@ async def package(client, workspace):
     result = await call(client, "package_execute", {**args, "confirmed": True})
     assert result["verification"]["ok"], result
     await call(client, "package_verify", {"destination": str(destination)})
+    (destination / 'extra.txt').write_text('extra scratch file')
+    result = await call(client, 'package_verify', {'destination': str(destination), 'include_extras': True}, ok=False)
+    assert result['extra_files'] == ['extra.txt'], result
+    result = await call(client, 'package_compare', {'reference': str(destination), 'candidate': str(destination)})
+    assert result['identical_manifests'] and not result['contents_verified'], result
     assert before == {p.name: p.read_bytes() for p in source.iterdir()}, "Sources changed"
     target = destination / "project/beauty.0001.png"
     target.write_bytes(b"deliberate damage to scratch delivery copy")
@@ -120,6 +137,9 @@ async def package(client, workspace):
 async def doctor(client, workspace):
     result = await call(client, "doctor_check_package", {"package_path": str(ROOT / "plugins/plugin-doctor")})
     assert result["data"]["name"] == "plugin-doctor", result
+    result = await call(client, 'doctor_capabilities', {'package_path': str(ROOT / 'plugins/sequence-check')})
+    tools = {item['name']: item for item in result['data']['tools']}
+    assert result['data']['tool_count'] == 4 and tools['sequence_write_report']['read_only_hint'] is False, result
     result = await call(client, "doctor_list_sessions", {"app": "maya", "session_directory": str(workspace / "no-sessions")})
     assert result["data"] == [], result
     log = workspace / "startup.log"

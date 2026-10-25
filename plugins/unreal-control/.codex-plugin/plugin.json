@@ -1,6 +1,6 @@
 {
   "name": "unreal-control",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Control local Unreal Engine, execute Python, and inspect scene dependencies.",
   "author": {
     "name": "popo-studio"

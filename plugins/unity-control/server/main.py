@@ -78,9 +78,9 @@ def unity_inspect_object(object_id: int, expected_scene: str, pid: int) -> dict:
     return request("inspect_object", {"object_id": object_id, "expected_scene": expected_scene}, pid)
 
 @mcp.tool(annotations=SCRIPT)
-def unity_object_action(action: Literal["create", "select", "duplicate", "rename", "delete", "transform"], expected_scene: str, pid: int, object_id: int | None = None, kind: str = "cube", name: str | None = None, position: list[float] | None = None, scale: list[float] | None = None) -> dict:
-    """Edit one explicit object on main thread. scene_token required. Create primitives; select/duplicate/rename/delete by ID; transform position/scale only. No automatic save. Deletion needs user authorization; timeout/partial error must not be retried. List objects after scene changes. Coordinates follow host world position/local scale conventions."""
-    return request("object_action", dict(action=action, expected_scene=expected_scene, object_id=object_id, kind=kind, name=name, position=position, scale=scale), pid)
+def unity_object_action(action: Literal["create", "select", "duplicate", "rename", "delete", "transform", "parent", "active"], expected_scene: str, pid: int, object_id: int | None = None, kind: str = "cube", name: str | None = None, position: list[float] | None = None, scale: list[float] | None = None, rotation: list[float] | None = None, parent_id: int = 0, active: bool | None = None) -> dict:
+    """Edit one explicit object on main thread. scene_token required. Create primitives; select/duplicate/rename/delete by ID; Transform position/world Euler rotation degrees/scale. Parent preserves world transform; parent_id=0 detaches; active requires explicit boolean and may trigger lifecycle callbacks. Prefab hierarchy changes refused. No automatic save. Deletion needs user authorization; timeout/partial error must not be retried. List objects after scene changes. Coordinates follow host world position/local scale conventions."""
+    return request("object_action", dict(action=action, expected_scene=expected_scene, object_id=object_id, kind=kind, name=name, position=position, scale=scale, rotation=rotation, parent_id=parent_id, active=active, has_active=active is not None), pid)
 
 @mcp.tool(annotations=SCRIPT)
 def unity_scene_action(action: Literal["new", "open", "save"], expected_scene: str, pid: int, path: str | None = None, overwrite: bool = False) -> dict:

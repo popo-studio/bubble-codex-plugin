@@ -17,5 +17,9 @@ async def fixture_slow() -> str:
 def fixture_error() -> str:
     raise RuntimeError("SECRET-CREDENTIAL-DO-NOT-PRINT")
 
+@mcp.resource('fixture://scene')
+def fixture_scene() -> str:
+    return 'Fixture scene; SECRET-CREDENTIAL-DO-NOT-PRINT'
+
 if __name__ == "__main__":
     mcp.run(transport=sys.argv[1] if len(sys.argv) > 1 else "stdio")

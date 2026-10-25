@@ -2,6 +2,8 @@
 import os
 import queue
 import uuid
+import hashlib
+import json
 
 _timer = None
 _quit_connection = None
@@ -23,11 +25,20 @@ def structured(operation, a):
             raise ValueError('Expected three finite numbers')
         return rt.Point3(*value)
     def row(n):
+        rotation=rt.quatToEuler(n.rotation,order=1)
         return {'id': int(n.handle), 'name': str(n.name), 'class': str(rt.classOf(n)),
                 'parent_id': int(n.parent.handle) if n.parent else None,
                 'position': [n.position.x,n.position.y,n.position.z], 'scale': [n.scale.x,n.scale.y,n.scale.z],
+                'rotation_xyz_degrees': [rotation.x,rotation.y,rotation.z],
                 'hidden': bool(n.isHidden), 'frozen': bool(n.isFrozen),
                 'material': str(n.material.name) if n.material else None}
+    def editable(n):
+        if n.isFrozen: raise ValueError('Node is frozen')
+        if rt.isAnimated(n): raise ValueError('Animated nodes require explicitly authorized scripting')
+        if rt.isKindOf(n,rt.XRefObject): raise ValueError('XRef objects are protected')
+        if rt.isGroupHead(n) or rt.isGroupMember(n): raise ValueError('Grouped nodes require specialist handling')
+    if operation=='layers':
+        return layers(rt,a,editable)
     if operation == 'list_objects':
         limit = a.get('limit', 1000)
         if type(limit) is not int or not 1 <= limit <= 5000: raise ValueError('limit must be 1..5000')
@@ -60,6 +71,21 @@ def structured(operation, a):
         else: raise ValueError('Unknown scene action')
         if action in ('new', 'open'): invalidate_scene()
         return {'scene': scene_info(), 'scene_token': _scene_token}
+    if operation=='parent_object':
+        n=rt.maxOps.getNodeByHandle(a.get('object_id',0))
+        if not n:raise ValueError('Node no longer exists')
+        editable(n)
+        parent_id=a.get('parent_id');parent=rt.maxOps.getNodeByHandle(parent_id) if parent_id is not None else None
+        if parent_id is not None and not parent:raise ValueError('Parent no longer exists')
+        if parent:editable(parent)
+        ancestor=parent
+        while ancestor:
+            if int(ancestor.handle)==int(n.handle):raise ValueError('Cannot create hierarchy cycle')
+            ancestor=ancestor.parent
+        actual=int(n.parent.handle) if n.parent else None
+        if actual!=a.get('expected_parent_id'):raise ValueError('Parent changed; inspect object again')
+        transform=rt.copy(n.transform);n.parent=parent;n.transform=transform
+        return row(n)
     if operation != 'object_action': raise ValueError('Unknown structured operation')
     if action == 'create':
         kinds = {'box': rt.Box, 'sphere': rt.Sphere, 'plane': rt.Plane, 'cylinder': rt.Cylinder, 'point': rt.Point}
@@ -77,13 +103,56 @@ def structured(operation, a):
     elif action == 'delete':
         handle = int(n.handle); rt.delete(n); return {'deleted_id': handle}
     elif action == 'transform':
-        if n.isFrozen: raise ValueError('Node is frozen')
-        if rt.isAnimated(n): raise ValueError('Animated nodes require explicitly authorized scripting')
+        editable(n)
         values = {k: vector(a[k]) for k in ('position', 'scale') if a.get(k) is not None}
-        if not values: raise ValueError('Specify position or scale')
+        if a.get('rotation') is not None:
+            v=vector(a['rotation']);values['rotation']=rt.eulerToQuat(rt.EulerAngles(v.x,v.y,v.z),order=1)
+        if not values: raise ValueError('Specify position, rotation or scale')
         for k, v in values.items(): setattr(n, k, v)
     else: raise ValueError('Unknown object action')
     return row(n)
+
+
+def layers(rt,a,editable):
+    manager=rt.LayerManager
+    if int(manager.count)>1000 or len(rt.objects)>50000:raise ValueError('Layer inspection limit exceeded')
+    members={}
+    for n in rt.objects:members.setdefault(str(n.layer.name),[]).append(int(n.handle))
+    def row(layer):return {'name':str(layer.name),'hidden':bool(layer.ishidden),'frozen':bool(layer.isfrozen),'object_ids':members.get(str(layer.name),[])}
+    data=[row(manager.getLayer(i)) for i in range(int(manager.count))]
+    revision=hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest()
+    action=a.get('action','get')
+    if action=='get':return {'layers':data,'revision':revision,'scene_token':_scene_token}
+    if a.get('expected_scene')!=_scene_token:raise ValueError('Scene changed; list objects again')
+    if a.get('expected_layers')!=revision:raise ValueError('Layers changed; read layers again')
+    if action not in ('create','rename','assign','flags'):raise ValueError('Unknown layer action')
+    name=a.get('name','')
+    if not isinstance(name,str) or not name.strip() or len(name)>128:raise ValueError('Nonempty layer name up to 128 characters required')
+    layer=manager.getLayerFromName(name)
+    if action=='create':
+        if layer:raise ValueError('Layer already exists')
+        layer=manager.newLayerFromName(name)
+        if not layer:raise RuntimeError('Layer creation failed')
+    else:
+        if not layer:raise ValueError('Layer no longer exists')
+        if action=='rename':
+            target=a.get('new_name','')
+            if name=='0' or not isinstance(target,str) or not target.strip() or len(target)>128 or manager.getLayerFromName(target):raise ValueError('Unique nonempty new name required; default layer cannot be renamed')
+            if not layer.setName(target):raise RuntimeError('Layer rename failed')
+        elif action=='assign':
+            ids=a.get('object_ids')
+            if not isinstance(ids,list) or not 1<=len(ids)<=1000 or any(type(i) is not int for i in ids):raise ValueError('Choose 1..1000 exact object IDs')
+            if layer.isfrozen:raise ValueError('Target layer is frozen')
+            nodes=[rt.maxOps.getNodeByHandle(i) for i in ids]
+            for n in nodes:
+                if not n:raise ValueError('Object no longer exists')
+                editable(n)
+            for n in nodes:layer.addNode(n)
+        else:
+            values={k:a[k] for k in ('hidden','frozen') if a.get(k) is not None}
+            if not values or any(type(v) is not bool for v in values.values()):raise ValueError('Boolean hidden/frozen flags required')
+            for k,v in values.items():setattr(layer,'is'+k,v)
+    return layers(rt,{'action':'get'},editable)
 
 
 def scene_info():

@@ -116,5 +116,24 @@ def nuke_timeline(pid: int, action: str = 'get', expected_snapshot: str = '', st
     return request('structured_timeline',dict(pid=pid,action=action,expected_snapshot=expected_snapshot,start=start,end=end,frame=frame),pid)
 
 
+
+@mcp.tool(annotations=SCRIPT)
+def nuke_keyframes(node: str, attribute: str, pid: int, action: str = 'get', expected_snapshot: str = '', expected_keys: str = '', frame: float = 1, value: float = 0, overwrite: bool = False, confirm_delete: bool = False, component: int = 0) -> dict:
+    """Get/set/delete numeric keys of one exact knob component in a single-view Nuke script. Mutations require fresh scene snapshot and key revision from get. Existing keys require overwrite; deletion requires confirm_delete. Expression-driven/disabled knobs are protected. Uses native interpolation."""
+    return request('structured_keyframes',dict(node=node,attribute=attribute,pid=pid,action=action,expected_snapshot=expected_snapshot,expected_keys=expected_keys,frame=frame,value=value,overwrite=overwrite,confirm_delete=confirm_delete,component=component),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def nuke_graph_transfer(action: str, path: str, pid: int, expected_snapshot: str, nodes: list[str] | None = None, overwrite: bool = False) -> dict:
+    """Import/export a native .nk graph snippet with explicit root-level nodes or whole Groups; imports into Root and restores prior selection. Absolute paths, explicit export targets and overwrite consent required. Import executes native file content and may run callbacks: trusted user-authorized files only. No automatic retry after partial failure. Does not bundle external assets."""
+    return request('structured_transfer',dict(action=action,path=path,pid=pid,expected_snapshot=expected_snapshot,nodes=nodes,overwrite=overwrite),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def nuke_project_settings(pid: int, action: str = 'get', expected_snapshot: str = '', expected_settings: str = '', width: int | None = None, height: int | None = None, pixel_aspect: float | None = None, fps: float | None = None) -> dict:
+    """Get/set project resolution, pixel aspect and FPS. Set writes provided fields, preserving omitted values, and requires fresh scene snapshot plus settings revision from get. FPS-only edits preserve the exact current format; changing resolution creates a full-image-area format. Does not retime keys or render. No automatic save."""
+    return request('structured_project',dict(pid=pid,action=action,expected_snapshot=expected_snapshot,expected_settings=expected_settings,width=width,height=height,pixel_aspect=pixel_aspect,fps=fps),pid)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

@@ -1,8 +1,10 @@
-# Bubble Sequence Check 0.1.1
+# Bubble Sequence Check 0.2.0
 
 本地图像序列检查，使用真实解码器读取像素，不修改素材。通过现有 Bubble 插件市场安装；需要 `uv` 与 Python >=3.11，首次启动自动安装锁定依赖，无需软件侧桥接。
 
-工具：`sequence_status` 检查运行环境；`sequence_discover` 在一个明确目录内分组；`sequence_inspect` 检查缺帧、重复帧号、损坏文件、尺寸/通道变化、非有限像素、疑似黑帧与完全相同像素。传入绝对目录和文件名 glob（例如 `shot.*.exr`）；不递归。帧号采用扩展名前最后一组数字，不支持负帧号语义。
+工具：`sequence_status` 检查运行环境；`sequence_discover` 在一个明确目录内分组；`sequence_inspect` 检查缺帧、重复帧号、损坏文件、尺寸/通道变化、非有限像素、疑似黑帧与完全相同像素。传入绝对目录和文件名 glob（例如 `shot.*.exr`）；不递归。帧号采用扩展名前最后一组数字；负帧号须显式设置 signed_frames=true，因为连字符也可能只是文件名分隔符。
+
+0.2.0 新增 frame_step（须给出对齐的首尾帧）、expected_width/expected_height 和 required_channels。尺寸要求用于每个成功解码部件，通道要求用于部件并集；不支持或损坏的帧仍标记未验证/错误。`sequence_write_report` 预览并写入新建 JSON/CSV 报告，最大 8 MiB；需用户授权具体路径，绝不覆盖已有报告或修改素材。CSV 会中和公式样式文本；报告成功写入不代表质检通过。
 
 必须给出期望首尾帧才能确认两端是否缺帧。没有匹配文件、超限或不支持的文件都不能视作通过。黑帧和重复像素只是线索，静帧或淡出可能完全正常。多组结果分别比较布局；布局基准为组内首个成功解码文件。
 

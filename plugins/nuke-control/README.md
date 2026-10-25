@@ -1,6 +1,6 @@
 # Bubble Nuke Control
 
-Current Codex package: **0.2.1**. Software-side bridge: **0.2.0**, unchanged by this runtime dependency patch.
+Current Codex package: **0.3.0**. Software-side bridge: **0.3.0**. Update the owned host bridge through setup, then restart/reload the application once.
 面向 Nuke 15.1 的本机 Codex 插件，提供 Python 执行、场景信息、文件依赖检查与多实例文件名选择。软件侧仅使用内置 Python；Codex 端依赖 `uv` 和 Python ≥3.10，锁定 MCP 1.x。
 
 ## 安装与使用
@@ -64,6 +64,17 @@ Native acceptance lives in `tests/structured_host_smoke.py`: run only in a fresh
 batch process. It creates its own temporary scene and tests creation/query, parameter write,
 stale guards, selection, timeline, save/overwrite refusal, delete confirmation, and reopening.
 
-## Runtime security patch 0.2.1
 
-The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.
+## 日常操作补全 0.3.0
+
+- `nuke_keyframes`：单 view 数值 knob 的指定 component 关键帧查询、写入、删除；先 get 并传 `expected_keys=revision`，已有键覆盖和删除各需明确标记。保护 expression knob，插值沿用 Nuke 原生默认/现有行为。
+- `nuke_graph_transfer`：显式根层节点/整个 Group 导出 `.nk` 片段、导入用户授权的本地片段。恢复原选择，导入不自动连接已有选中节点，导出禁止覆盖当前工程；同名导入采用 Nuke 原生改名并返回实际节点路径。文件可能执行脚本/回调，不能将导入视为数据沙箱。
+- `nuke_project_settings`：读取/设置项目宽高、pixel aspect、FPS；先 get 获取 `expected_settings=revision`，省略参数保持原值，单改FPS保留原图像区域；改变宽高时建立完整图像区域格式，不重定时关键帧、不启动渲染。格式定义加入当前 Nuke 会话，不写用户首选项。
+
+API：[Double_Knob](https://learn.foundry.com/nuke/developers/151/pythondevguide/_autosummary/nuke.Double_Knob.html)、[nodePaste](https://learn.foundry.com/nuke/developers/151/pythondevguide/_autosummary/nuke.nodePaste.html)。
+
+实机：Nuke 15.1v5 独立 `--safe -t` 临时工程已通过关键帧回读/删除、旧revision/覆盖拒绝、片段往返和选择恢复、512×512/25 FPS 设置与回读。没有连接现有 GUI 场景。
+
+当前 MCP 工具共 20 个。优先使用上述结构化工具；每次写入仍须选定实例并传最新场景身份。Maya/Nuke/Houdini 的 snapshot 包含随机桥接 session 身份，重启或重新连接后的旧 snapshot 无效；它不覆盖每个属性编辑。
+
+此版本保留已修复的依赖锁，不升级第三方依赖。软件侧 payload 已改变，需要通过 setup 预览并更新；不会自动更改用户启动配置。安装/卸载所有权、冲突保护、多实例选择逻辑继续生效。

@@ -20,7 +20,7 @@ async def main():
     startup=subprocess.STARTUPINFO();startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW;startup.wShowWindow=0
     log=open(profile/'blender.log','wb');logs.append(log)
     processes.append(subprocess.Popen([str(EXE),'--disable-autoexec'],env=env,cwd=tmp,stdout=log,stderr=subprocess.STDOUT,startupinfo=startup))
-   params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'launch-0.1.0.py')],env={**os.environ,'BUBBLE_BLENDER_SESSION_DIR':str(registry)})
+   params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'launch-0.2.0.py')],env={**os.environ,'BUBBLE_BLENDER_SESSION_DIR':str(registry)})
    async with stdio_client(params) as streams:
     async with ClientSession(*streams) as session:
      await session.initialize()
@@ -41,6 +41,11 @@ async def main():
        result=await call(operation,pid=p.pid,expected_snapshot=state['data']['snapshot'],**a);assert result['ok'],result
        return result
       await write('create_object',kind='cube',name='Owned_'+str(index))
+      await write('collection',action='create',name='OwnedGroup_'+str(index))
+      await write('collection',action='link',name='OwnedGroup_'+str(index),object_name='Owned_'+str(index))
+      await write('create_object',kind='empty',name='OwnedParent_'+str(index))
+      await write('parent_object',name='Owned_'+str(index),parent='OwnedParent_'+str(index))
+      await write('parent_object',name='Owned_'+str(index),parent='')
       scene=await call('list_objects',pid=p.pid);assert any(o['name']=='Owned_'+str(index) for o in scene['data']['result']['objects'])
       await write('scene_file',action='save',path=str(tmp/str(index)/'hero.blend'))
      listing=await call('list_sessions',scene='hero.blend');assert listing['selection']['status']=='ambiguous',listing

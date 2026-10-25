@@ -7,7 +7,7 @@ import stat
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 OWNER = "bubble-blender-control"
 # Snapshot sources before a running Codex package can be removed.
 PAYLOAD={name:(ROOT/"runtime"/name).read_bytes() for name in ("startup.py","bridge.py","operations.py","privacy.py")}

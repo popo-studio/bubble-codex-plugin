@@ -39,6 +39,29 @@ with tempfile.TemporaryDirectory(prefix='bubble-structured-') as directory:
     assert read('connections',node=other)['result']['inputs'][0]['node']==created
     other=change('edit',action='rename',node=other,name='bubbleRenamed')['result']['node']
     change('edit',action='position',node=other,values={'x':20,'y':40})
+    keys=read('keyframes',node=created,attribute='size',component=0)['result']
+    keyed=change('keyframes',action='set',node=created,attribute='size',component=0,expected_keys=keys['revision'],frame=12,value=5)['result']
+    assert keyed['keys']==[{'frame':12.0,'value':5.0}],keyed
+    refuse('keyframes',action='set',node=created,attribute='size',expected_keys=keys['revision'],frame=13,value=9)
+    refuse('keyframes',action='set',node=created,attribute='size',expected_keys=keyed['revision'],frame=12,value=9)
+    assert not change('keyframes',action='delete',node=created,attribute='size',expected_keys=keyed['revision'],frame=12,confirm_delete=True)['result']['keys']
+    snippet=Path(directory)/'snippet.nk'
+    change('selection',nodes=[other]);selected=[n.fullName() for n in nuke.selectedNodes()]
+    change('transfer',action='export',path=str(snippet),nodes=[created])
+    assert [n.fullName() for n in nuke.selectedNodes()]==selected
+    refuse('transfer',action='export',path=str(snippet),nodes=[created])
+    imported=change('transfer',action='import',path=str(snippet))['result'];assert imported['created_nodes']
+    assert [n.fullName() for n in nuke.selectedNodes()]==selected
+    settings=read('project')['result']
+    nuke.root()['format'].setValue(nuke.addFormat('1920 1080 10 20 1800 1000 1 bubbleCropped'))
+    settings=read('project')['result']
+    preserved=change('project',action='set',expected_settings=settings['revision'],fps=30)['result']
+    assert preserved['image_area']==[10,20,1800,1000] and preserved['format_name']=='bubbleCropped',preserved
+    settings=read('project')['result']
+    configured=change('project',action='set',expected_settings=settings['revision'],width=512,height=512,pixel_aspect=1,fps=25)['result']
+    assert (configured['width'],configured['height'],configured['fps'])==(512,512,25),configured
+    refuse('project',action='set',expected_settings=settings['revision'],width=10,height=10,pixel_aspect=1,fps=24)
+    token=read('state')['snapshot'];bridge._operations.new_session();assert read('state')['snapshot']!=token
     change('file',action='save',path=str(p))
     assert p.is_file()
     refuse('file',action='save',path=str(p))

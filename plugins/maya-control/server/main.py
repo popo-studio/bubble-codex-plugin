@@ -122,5 +122,23 @@ def maya_timeline(pid: int, action: str = 'get', expected_snapshot: str = '', st
     return request('structured_timeline',dict(pid=pid,action=action,expected_snapshot=expected_snapshot,start=start,end=end,frame=frame),pid)
 
 
+@mcp.tool(annotations=SCRIPT)
+def maya_parent_node(node: str, pid: int, expected_snapshot: str, parent: str = '') -> dict:
+    """Reparent an exact ordinary transform, or parent='' to unparent, preserving world transform. Rejects cycles, instances, locked/referenced/animated transforms and sibling name collisions. Fresh scene snapshot required."""
+    return request('structured_hierarchy', dict(node=node,parent=parent,pid=pid,expected_snapshot=expected_snapshot),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_keyframes(node: str, attribute: str, pid: int, action: str = 'get', expected_snapshot: str = '', expected_keys: str = '', frame: float = 1, value: float = 0, overwrite: bool = False, confirm_delete: bool = False) -> dict:
+    """Get/set/delete one direct numeric attribute's time keys. Mutations require fresh scene snapshot and revision from get. Existing keys require overwrite; deletion requires confirm_delete. New keys use linear tangents. Rejects layered/driven animation."""
+    return request('structured_keyframes',dict(node=node,attribute=attribute,pid=pid,action=action,expected_snapshot=expected_snapshot,expected_keys=expected_keys,frame=frame,value=value,overwrite=overwrite,confirm_delete=confirm_delete),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def maya_scene_transfer(action: str, path: str, pid: int, expected_snapshot: str, nodes: list[str] | None = None, namespace: str = '', overwrite: bool = False) -> dict:
+    """Import native .ma/.mb into a new namespace, or export explicit nodes. Absolute paths only; export never overwrites the current scene. Script-node execution and reference loading disabled on import, but installed plugin callbacks may run. No automatic retry."""
+    return request('structured_transfer',dict(action=action,path=path,pid=pid,expected_snapshot=expected_snapshot,nodes=nodes,namespace=namespace,overwrite=overwrite),pid)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

@@ -19,6 +19,23 @@ token=call('list_objects')['scene_token']
 actor=call('object_action',action='create',expected_scene=token,kind='point_light',name='Fixture light')
 changed=call('object_action',action='transform',expected_scene=token,object_id=actor['id'],position=[10,20,30],scale=[1,1,1])
 assert changed['position']==[10,20,30]
+changed=call('object_action',action='transform',expected_scene=token,object_id=actor['id'],rotation=[10,20,30])
+assert all(abs(a-b)<.001 for a,b in zip(changed['rotation'],[10,20,30])),changed
+parent=call('object_action',action='create',expected_scene=token,kind='point_light',name='Fixture parent')
+call('object_action',action='transform',expected_scene=token,object_id=parent['id'],position=[100,200,300],rotation=[45,50,60],scale=[2,2,2])
+attached=call('object_action',action='parent',expected_scene=token,object_id=actor['id'],parent_id=parent['id'])
+assert attached['parent_id']==parent['id'] and all(abs(a-b)<.001 for a,b in zip(attached['position'],changed['position'])),attached
+try:call('object_action',action='parent',expected_scene=token,object_id=parent['id'],parent_id=actor['id'])
+except ValueError:pass
+else:raise AssertionError('Parent cycle accepted')
+detached=call('object_action',action='parent',expected_scene=token,object_id=actor['id'])
+assert detached['parent_id'] is None and all(abs(a-b)<.001 for a,b in zip(detached['rotation'],changed['rotation'])),detached
+folder=call('object_action',action='folder',expected_scene=token,object_id=actor['id'],folder='Bubble/Lights')
+assert folder['folder']=='Bubble/Lights',folder
+try:call('object_action',action='folder',expected_scene=token,object_id=actor['id'],folder='../Invalid')
+except ValueError:pass
+else:raise AssertionError('Invalid folder accepted')
+call('object_action',action='folder',expected_scene=token,object_id=actor['id'],folder='')
 assert call('inspect_object',expected_scene=token,object_id=actor['id'])['components']
 duplicate=call('object_action',action='duplicate',expected_scene=token,object_id=actor['id'])
 assert duplicate['id']!=actor['id']
@@ -39,5 +56,5 @@ except ValueError:pass
 else:raise AssertionError('Old world token accepted')
 call('scene_action',action='open',expected_scene=new['scene_token'],path='/Game/BubbleFixture')
 assert any(x['name']=='Fixture light' for x in call('list_objects')['objects'])
-(project/'native-result.json').write_text(json.dumps({'ok':True,'engine':unreal.SystemLibrary.get_engine_version(),'structured_operations':True,'dirty_overwrite_world_guards':True}),encoding='utf-8')
+(project/'native-result.json').write_text(json.dumps({'ok':True,'engine':unreal.SystemLibrary.get_engine_version(),'structured_operations':True,'rotation_parent_folder_guards':True,'dirty_overwrite_world_guards':True}),encoding='utf-8')
 print('BUBBLE_STRUCTURED_NATIVE_PASS')

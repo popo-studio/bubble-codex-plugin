@@ -1,4 +1,4 @@
-# Bubble Photoshop 0.5.0
+# Bubble Photoshop 0.6.0
 
 Windows Photoshop control through its native COM automation. Install this plugin in Codex, open Photoshop normally, and list sessions. **No Creative Cloud Desktop, UPIA, UXP Developer Tool, CCX, panel, pairing code, or Photoshop-side files are required.** The plugin never changes Adobe licensing, security, COM registration, startup or user documents during setup.
 
@@ -85,3 +85,11 @@ Smart-object replacement safety limit: native testing confirmed that ordinary du
 Existing adjustment/filter tools additionally expose RGB color balance, motion blur, noise and sharpening. These operate on the selected normal pixel layer, with the existing channel and lock guards. They do not create adjustment layers or bypass unsupported modes. Photoshop native acceptance is reported separately from DOM simulations.
 
 History snapshots compare document ID, action names and active index, not persistent history-state identity. An undo followed by a same-named action can reproduce that fingerprint. Read immediately before restoring with no intervening edits; never present this guard as a full revision check.
+
+## 0.6 layer and channel organization
+
+42 tools now include `photoshop_layer_lock`, `photoshop_clipping_mask` and `photoshop_channels`. Lock/unlock targets an explicit stable layer/group ID and never unlocks an ancestor or converts a background. Clipping toggles one art layer against the layer below in the same group; inspect order first. Channel listing identifies alpha channels; rename/delete requires a unique name and protects component/spot channels. Channel deletion discards that saved selection, without saving the document.
+
+Prefer these structured tools to raw JSX/UI automation. `tests/organization_native.py` exercises the three tools through real MCP/COM in a newly created disposable canvas, closes only that canvas, and restores the previously active document. Native acceptance and contracts are reported separately.
+
+Native result on 2026-10-25: real MCP stdio to Photoshop 26.2.0 passed layer and group lock/unlock, clipping create/release, alpha list/rename/delete, and document inspection in a new 512x512 transparent canvas. The canvas was closed without saving; the session started and ended with zero documents. No user project, Photoshop preferences or Adobe component installation was changed. This verifies the named subset, not every Photoshop feature.

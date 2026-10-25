@@ -18,7 +18,7 @@ function createDiscoveryReader(fs,path,env,extensionPath){
         safe(target);safe(receipt);
         if(!fs.existsSync(target)||!fs.existsSync(receipt)||path.resolve(extensionPath).toLowerCase()!==path.resolve(target).toLowerCase())return [];
         const owner=readJSON(receipt);
-        if(owner.plugin_id!=="com.popostudio.bubble.premiere"||owner.version!=="0.4.0"||path.resolve(owner.target).toLowerCase()!==path.resolve(target).toLowerCase())return [];
+        if(owner.plugin_id!=="com.popostudio.bubble.premiere"||owner.version!=="0.5.0"||path.resolve(owner.target).toLowerCase()!==path.resolve(target).toLowerCase())return [];
         safe(root);if(!fs.existsSync(root))return [];
         const rows=[];
         const candidates=fs.readdirSync(root).filter(name=>/^[0-9a-f-]{36}\.json$/.test(name)).map(name=>{

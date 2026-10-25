@@ -26,6 +26,12 @@ def doctor_check_package(package_path: str) -> dict:
 
 
 @mcp.tool(annotations=READ)
+def doctor_capabilities(package_path: str) -> dict:
+    """List statically declared tool names, descriptions, parameters and read/write hints in one exact Bubble package. Reports duplicate names and package issues without importing or executing its code. Does not prove runtime loading or native software support."""
+    return d.capabilities(package_path)
+
+
+@mcp.tool(annotations=READ)
 def doctor_check_bridge(app: str, runtime_directory: str) -> dict:
     """Read ownership metadata and verify hashes in an explicit installed runtime directory. app: maya/nuke/houdini/max/unreal/unity/blender. For Blender pass user scripts directory. Reports modified/missing files; does not inspect startup scripts or prove loaded version. For complete checks use the owning plugin's installation_status."""
     return d.bridge_check(app, runtime_directory)

@@ -13,10 +13,10 @@ async def main():
  try:
   with tempfile.TemporaryDirectory() as tmp:
    Path(tmp,'123.json').write_text(json.dumps({'protocol':1,'pid':123,'host':'127.0.0.1','port':server.server_address[1],'token':server.token}))
-   params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'launch-0.1.0.py')],env={**os.environ,'BUBBLE_BLENDER_SESSION_DIR':tmp})
+   params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'launch-0.2.0.py')],env={**os.environ,'BUBBLE_BLENDER_SESSION_DIR':tmp})
    async with stdio_client(params) as streams:
     async with ClientSession(*streams) as session:
-     await session.initialize();tools=await session.list_tools();assert len(tools.tools)==19
+     await session.initialize();tools=await session.list_tools();assert len(tools.tools)==21
      for tool in tools.tools:
       suffix=tool.name.removeprefix('blender_');a={'pid':123,'expected_snapshot':'fixture'}
       if suffix in ('installation_status','install_bridge','uninstall_bridge'):a={'scripts_directory':str(Path(tmp)/'scripts')}
@@ -25,6 +25,7 @@ async def main():
       elif suffix=='scene_file':a.update(action='new')
       elif suffix=='create_object':a.update(kind='cube',name='fixture')
       elif suffix=='edit_object':a.update(action='rename',name='fixture',new_name='new')
+      elif suffix=='parent_object':a.update(name='fixture')
       elif suffix=='select_objects':a.update(names=[])
       elif suffix in ('material','camera','light'):a.update(name='fixture')
       elif suffix=='execute_python':a.update(code='result=42')
@@ -32,7 +33,7 @@ async def main():
       payload=result.structuredContent or json.loads(result.content[0].text);assert payload['ok'],payload
       assert server.token not in str(result)
      assert not (Path(tmp)/'scripts').exists()
-     print('PASS19tools realMCP -> authenticated fakeBlender; previews made no writes')
+     print('PASS21tools realMCP -> authenticated fakeBlender; previews made no writes')
  finally:server.shutdown();server.server_close()
 
 if __name__=='__main__':asyncio.run(main())

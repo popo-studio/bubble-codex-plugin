@@ -116,5 +116,24 @@ def houdini_timeline(pid: int, action: str = 'get', expected_snapshot: str = '',
     return request('structured_timeline',dict(pid=pid,action=action,expected_snapshot=expected_snapshot,start=start,end=end,frame=frame),pid)
 
 
+
+@mcp.tool(annotations=SCRIPT)
+def houdini_keyframes(node: str, attribute: str, pid: int, action: str = 'get', expected_snapshot: str = '', expected_keys: str = '', frame: float = 1, value: float = 0, overwrite: bool = False, confirm_delete: bool = False) -> dict:
+    """Get/set/delete keys of one exact numeric scalar Houdini parm (such as tx). Mutations require fresh scene snapshot and key revision from get. Existing keys require overwrite; deletion requires confirm_delete. Locked/referenced parms and custom expressions are protected. New keys use linear Hscript interpolation."""
+    return request('structured_keyframes',dict(node=node,attribute=attribute,pid=pid,action=action,expected_snapshot=expected_snapshot,expected_keys=expected_keys,frame=frame,value=value,overwrite=overwrite,confirm_delete=confirm_delete),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def houdini_graph_transfer(action: str, path: str, pid: int, expected_snapshot: str, nodes: list[str] | None = None, parent: str = '/obj', overwrite: bool = False) -> dict:
+    """Import/export a native .cpio network snippet containing explicit immediate child nodes of an editable parent. Import returns actual created paths. Absolute paths, explicit export targets and overwrite consent required. Import executes native file content and may run callbacks: trusted user-authorized files only. No automatic retry after partial failure. Does not bundle external assets."""
+    return request('structured_transfer',dict(action=action,path=path,pid=pid,expected_snapshot=expected_snapshot,nodes=nodes,parent=parent,overwrite=overwrite),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def houdini_network_box(parent: str, pid: int, action: str = 'get', expected_snapshot: str = '', name: str = '', nodes: list[str] | None = None, comment: str = '') -> dict:
+    """List/create a network box or add/remove explicit immediate child nodes. Create accepts comment. Mutation requires fresh scene snapshot; refuses silently moving nodes from another box. Remove only unboxes nodes, never deletes them. No automatic cooking/rendering."""
+    return request('structured_network_box',dict(parent=parent,pid=pid,action=action,expected_snapshot=expected_snapshot,name=name,nodes=nodes,comment=comment),pid)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

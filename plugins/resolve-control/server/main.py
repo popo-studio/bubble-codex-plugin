@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import Literal
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import StrictBool, StrictInt
@@ -184,6 +185,24 @@ def resolve_set_render_settings(project_id: str, settings: dict, confirmed: Stri
 def resolve_execute_python(project_id: str, code: str, confirmed: StrictBool = False, session_id: str | None = None, timeout: float = 30) -> dict:
     """Preview then execute explicitly authorized external Python with official resolve/project objects and full user privileges. Return result; stdout capped at 64KiB. Not an in-editor eval. Never auto-render/export/delete/close projects. Process and project checked before execution; concurrent manual edits are not locked. Errors/timeouts must never trigger automatic retry."""
     return call("execute_python", session_id, timeout=timeout, project_id=project_id, code=code, confirmed=confirmed)
+
+
+@mcp.tool(annotations=WRITE)
+def resolve_manage_timeline(project_id: str, timeline_id: str, action: Literal['rename','duplicate'], name: str, confirmed: StrictBool = False, session_id: str | None = None) -> dict:
+    """Preview then rename/duplicate an exact timeline ID with a unique name. Duplicate returns a new ID; Resolve may activate it. Does not save, delete source, or render."""
+    return call('manage_timeline',session_id,project_id=project_id,timeline_id=timeline_id,action=action,name=name,confirmed=confirmed)
+
+
+@mcp.tool(annotations=WRITE)
+def resolve_track_state(project_id: str, timeline_id: str, track_type: Literal['video','audio','subtitle'], index: StrictInt, name: str | None = None, enabled: StrictBool | None = None, locked: StrictBool | None = None, expected_state: dict | None = None, confirmed: StrictBool = False, session_id: str | None = None) -> dict:
+    """Read one-based track name/enabled/locked/count. For edits pass exact fresh returned state plus requested fields and confirmed after preview. Fingerprint detects observed changes, not equal-state track replacement. No clip trimming/deletion or rendering; failures may leave partial field changes."""
+    return call('track_state',session_id,project_id=project_id,timeline_id=timeline_id,track_type=track_type,index=index,name=name,enabled=enabled,locked=locked,expected_state=expected_state,confirmed=confirmed)
+
+
+@mcp.tool(annotations=WRITE)
+def resolve_delete_marker(project_id: str, timeline_id: str, frame: StrictInt, expected_marker: dict, confirmed: StrictBool = False, session_id: str | None = None) -> dict:
+    """Preview then delete one timeline-relative marker frame only if its full timeline_info marker dictionary still matches. Never clears all markers or changes clips. Requires deletion intent; no save/render."""
+    return call('delete_marker',session_id,project_id=project_id,timeline_id=timeline_id,frame=frame,expected_marker=expected_marker,confirmed=confirmed)
 
 
 if __name__ == "__main__":

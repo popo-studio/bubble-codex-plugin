@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 MAX_ROWS = 1000
-MUTATIONS = {"create_project", "open_project", "save_project", "import_media", "create_timeline", "select_timeline", "move_media", "create_bin", "add_marker", "set_render_settings", "execute_python"}
+MUTATIONS = {"create_project", "open_project", "save_project", "import_media", "create_timeline", "select_timeline", "move_media", "create_bin", "add_marker", "set_render_settings", "execute_python", "manage_timeline", "track_state", "delete_marker"}
 
 
 def invoke(obj, method, *args):
@@ -63,6 +63,19 @@ def timeline(current, selected):
     if len(matches) != 1:
         raise ValueError("Selected timeline no longer exists or is ambiguous")
     return matches[0]
+
+
+def track_state(selected, args):
+    kind, index = args.get('track_type'), args.get('index')
+    if kind not in ('video', 'audio', 'subtitle') or type(index) is not int:
+        raise ValueError('Explicit track type and one-based integer index required')
+    count = invoke(selected, 'GetTrackCount', kind)
+    if type(count) is not int or not 1 <= index <= count <= MAX_ROWS:
+        raise ValueError('Track index missing or count exceeds limit')
+    enabled, locked = invoke(selected, 'GetIsTrackEnabled', kind, index), invoke(selected, 'GetIsTrackLocked', kind, index)
+    if type(enabled) is not bool or type(locked) is not bool:
+        raise ValueError('SDK did not return complete track state')
+    return {'track_type': kind, 'index': index, 'count': count, 'name': invoke(selected, 'GetTrackName', kind, index), 'enabled': enabled, 'locked': locked}
 
 
 def folder(current, selected):
@@ -169,11 +182,64 @@ def dispatch(resolve, request, recheck):
         return {"project": summary(current), "jobs": bounded(invoke(current, "GetRenderJobList")), "presets": bounded(invoke(current, "GetRenderPresetList")),
                 "rendering": invoke(current, "IsRenderingInProgress"), "format_codec": invoke(current, "GetCurrentRenderFormatAndCodec"), "mode": invoke(current, "GetCurrentRenderMode"),
                 "note": "Read only. No undocumented GetRenderSettings call; full Deliver-panel settings are not exposed by this query."}
+    if operation == 'track_state' and all(args.get(key) is None for key in ('name', 'enabled', 'locked')):
+        return track_state(timeline(current, args.get('timeline_id')), args)
     if operation not in MUTATIONS:
         raise ValueError("Unknown operation")
     if type(args.get("confirmed")) is not bool:
         raise ValueError("confirmed must be a boolean")
-    if operation == "save_project":
+    if operation == 'manage_timeline':
+        selected = timeline(current, args.get('timeline_id'))
+        name, mode = args.get('name'), args.get('action')
+        if mode not in ('rename','duplicate') or not isinstance(name,str) or not name.strip() or len(name)>255:
+            raise ValueError('Choose rename/duplicate and a nonempty name under 256 characters')
+        def check_name():
+            if any(invoke(t,'GetName') == name for t in timelines(current)):
+                raise ValueError('Timeline name already exists; choose a unique name')
+        check_name()
+        def action():
+            check_name()
+            if mode == 'duplicate':
+                result = invoke(selected,'DuplicateTimeline',name)
+                if result is None or identity(result) == identity(selected):
+                    raise RuntimeError('Timeline duplicate outcome unverified; inspect before retry')
+                return {'timeline':summary(result)}
+            if not invoke(selected,'SetName',name):
+                raise RuntimeError('Timeline rename rejected; inspect before retry')
+            return {'timeline':summary(selected)}
+    elif operation == 'track_state':
+        selected = timeline(current, args.get('timeline_id'))
+        before = track_state(selected,args)
+        expected_state = args.get('expected_state')
+        if not isinstance(expected_state,dict) or before != expected_state:
+            raise ValueError('Track state changed; read track_state and pass its exact result')
+        if args.get('name') is not None and (not isinstance(args['name'],str) or not args['name'].strip() or len(args['name'])>255):
+            raise ValueError('Track name must be nonempty and under 256 characters')
+        for field in ('enabled','locked'):
+            if args.get(field) is not None and type(args[field]) is not bool:
+                raise ValueError(field+' must be boolean')
+        def action():
+            if track_state(selected,args) != expected_state:
+                raise ValueError('Track changed before applying; inspect again')
+            for field,method in (('name','SetTrackName'),('enabled','SetTrackEnable'),('locked','SetTrackLock')):
+                if args.get(field) is not None and not invoke(selected,method,args['track_type'],args['index'],args[field]):
+                    raise RuntimeError('Track change rejected; earlier changes may exist. Inspect before retry')
+            return track_state(selected,args)
+    elif operation == 'delete_marker':
+        selected = timeline(current, args.get('timeline_id'))
+        frame, expected_marker = args.get('frame'), args.get('expected_marker')
+        if type(frame) is not int or frame < 0 or not isinstance(expected_marker,dict) or not expected_marker:
+            raise ValueError('Nonnegative relative integer frame and exact marker row required')
+        def check_marker():
+            markers = invoke(selected,'GetMarkers')
+            if not isinstance(markers,dict):raise ValueError('Markers unavailable')
+            actual = markers.get(frame,markers.get(str(frame)))
+            if actual is None or actual != expected_marker:raise ValueError('Marker missing or changed; inspect timeline again')
+        check_marker()
+        def action():
+            check_marker()
+            return invoke(selected,'DeleteMarkerAtFrame',frame)
+    elif operation == "save_project":
         action = lambda: invoke(invoke(resolve, "GetProjectManager"), "SaveProject")
     elif operation == "select_timeline":
         selected = timeline(current, args.get("timeline_id"))

@@ -1,6 +1,6 @@
 # Bubble Deadline
 
-对接已安装并配置好的 **Deadline 10 Client**，提供任务查询、失败诊断、提交预览和指定任务重试。当前 Codex 插件版本 0.1.1。
+对接已安装并配置好的 **Deadline 10 Client**，提供任务查询、失败诊断、提交预览和指定任务重试。当前 Codex 插件版本 0.2.0。
 
 ## 安装与使用
 
@@ -17,8 +17,13 @@
 | deadline_job_reports | 有界读取日志/错误报告，支持 bz2，标记不可读项 |
 | deadline_submit_job | 已存在的 JobInfo/PluginInfo/辅助文件的预览与一次确认提交 |
 | deadline_retry_tasks | Failed 任务恢复或 Completed 任务重新排队，精确选择并确认 |
+| deadline_farm_info | 列出当前 Repository 的 pools/groups/workers，有界返回 |
+| deadline_worker_info | 检查精确 Worker 名称的状态和属性 |
+| deadline_job_action | 精确任务暂停/恢复，预览后以一次性令牌确认 |
 
 提交和重试均默认只预览，需一次性、10 分钟有效的 preview_token 和 confirmed=true；文件或任务状态改变后需重新预览。令牌绑定路径、内容哈希、设置、CLI 路径和选定任务。每次写操作只尝试一次；超时/不明结果不自动重试，防止重复提交。JobInfo/PluginInfo 只检查结构，不替代软件专用提交规则；不承诺节点能访问场景/素材或许可证可用。任务 ID 不是帧号。命令使用参数数组且 shell=false。
+
+暂停/恢复同样需一次性预览令牌，绑定任务名称、所有者、插件和当前状态。暂停会影响正在渲染的任务；恢复可能立即开始渲染。命令完成后重新读取状态，不能确认时明确返回未验证，不自动重放。农场读取依赖现有客户端权限；测试使用 CLI 协议替身，不暂停或恢复生产任务。
 
 默认查询 30 秒超时，提交 60 秒；每个输出流最多 1 MiB，报告最多 10 个、每个解码后最多 64 KiB。最多 32 个辅助文件，每个最多 128 MiB；超过此范围请通过 Deadline 原生提交器完成。报告中的错误行仅为线索。命令输出采用 UTF-8 解码，非 UTF-8 的少数字符可能替换显示。大型农场请缩小筛选条件，插件不会将截断结果说成完整检查。
 
@@ -36,6 +41,8 @@
 - [Deadline Tasks CLI](https://docs.thinkboxsoftware.com/products/deadline/latest/1_User%20Manual/manual/command-line-arguments-tasks.html)
 - [Manual Job Submission](https://docs.thinkboxsoftware.com/products/deadline/latest/1_User%20Manual/manual/manual-submission.html)
 - [Version CLI](https://docs.thinkboxsoftware.com/products/deadline/latest/1_User%20Manual/manual/command-line-arguments-version.html)
+- [Pools / Groups CLI](https://docs.thinkboxsoftware.com/products/deadline/10.3/1_User%20Manual/manual/command-line-arguments-pools-groups.html)
+- [Workers CLI](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/command-line-arguments-workers.html)
 
 本插件针对已有 Deadline 10 环境，不是 AWS Deadline Cloud 集成。图标为 Bubble 原创队列图案。
 

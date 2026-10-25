@@ -3,13 +3,21 @@ import json
 import re
 from operations import number,text,flag
 
-OPERATIONS={'duplicate_document','transform_layer','move_layer','set_blend_mode','set_text_style','history_info','restore_history','save_selection','load_selection'}
+OPERATIONS={'duplicate_document','transform_layer','move_layer','set_blend_mode','set_text_style','history_info','restore_history','save_selection','load_selection','layer_lock','clipping_mask','channels'}
 HISTORY='function historyInfo(d){var a=[],active=-1;if(d.historyStates.length>1000)throw Error("History exceeds 1000 states");for(var i=0;i<d.historyStates.length;i++){a.push(d.historyStates[i].name);if(d.historyStates[i]===d.activeHistoryState)active=i;}return {document_id:d.id,names:a,active_index:active};}'
 
 def build(op,r):
     prefix='var d=app.activeDocument;'
     if op=='duplicate_document':return prefix+'var copy=d.duplicate('+text(r.get('name','Copy'),'name')+','+flag(r.get('merged',False),'merged')+');return docInfo(copy);'
     if op=='history_info':return prefix+HISTORY+'return historyInfo(d);'
+    if op=='channels':
+        action=r.get('action','list')
+        setup=prefix+'if(d.channels.length>1000)throw Error("Channel count exceeds limit");var rows=[],matches=[];'
+        if action=='list':return setup+'for(var i=0;i<d.channels.length;i++){var c=d.channels[i];rows.push({name:c.name,kind:String(c.kind),alpha:c.kind===ChannelType.MASKEDAREA||c.kind===ChannelType.SELECTEDAREA});}return {channels:rows};'
+        if action not in ('rename','delete'):raise ValueError('Unsupported channel action')
+        setup+='var name='+text(r.get('name'),'name')+';for(var i=0;i<d.channels.length;i++)if(d.channels[i].name===name)matches.push(d.channels[i]);if(matches.length!==1)throw Error("Choose a unique channel name from channels list");var c=matches[0];if(c.kind!==ChannelType.MASKEDAREA&&c.kind!==ChannelType.SELECTEDAREA)throw Error("Only alpha channels can be changed; component and spot channels are protected");'
+        if action=='rename':return setup+'var wanted='+text(r.get('new_name'),'new_name')+';for(var j=0;j<d.channels.length;j++)if(d.channels[j]!==c&&d.channels[j].name===wanted)throw Error("Channel name already exists");c.name=wanted;return {renamed:true,name:c.name};'
+        return setup+'c.remove();return {deleted:true,name:name};'
     if op=='restore_history':
         index=number(r.get('index'),'index',0,999,True);expected=r.get('expected_history')
         if not isinstance(expected,dict) or set(expected)!={'document_id','names','active_index'} or not isinstance(expected['names'],list) or len(expected['names'])>1000:raise ValueError('Use exact history_info result for expected_history')
@@ -21,7 +29,12 @@ def build(op,r):
         if mode is None:raise ValueError('Unknown selection mode')
         return setup+'if(matches.length!==1||matches[0].kind===ChannelType.COMPONENT)throw Error("Choose a unique alpha channel");d.selection.load(matches[0],SelectionType.'+mode+');return selectionInfo(d);'
     lid=number(r.get('layer_id'),'layer_id',0,2147483647,True)
-    prefix+=f'var l=findLayer(d.layers,{lid});if(!l)throw Error("Selected layer missing");if(l.allLocked)throw Error("Layer is locked");'
+    prefix+=f'var l=findLayer(d.layers,{lid});if(!l)throw Error("Selected layer missing");'
+    if op=='layer_lock':return prefix+'var parent=l.parent;while(parent&&parent.typename!=="Document"){if(parent.allLocked)throw Error("Parent group is locked");parent=parent.parent;}if(l.isBackgroundLayer)throw Error("Background lock cannot be changed implicitly");l.allLocked='+flag(r.get('locked'),'locked')+';return {layer_id:l.id,locked:l.allLocked};'
+    prefix+='if(l.allLocked)throw Error("Layer is locked");'
+    if op=='clipping_mask':
+        enabled=flag(r.get('enabled'),'enabled')
+        return prefix+'if(l.typename!=="ArtLayer"||l.isBackgroundLayer)throw Error("Choose a non-background art layer");var parent=l.parent;while(parent&&parent.typename!=="Document"){if(parent.allLocked)throw Error("Parent group is locked");parent=parent.parent;}var siblings=l.parent.layers,index=-1;for(var i=0;i<siblings.length;i++)if(siblings[i].id===l.id)index=i;if('+enabled+'&&(index<0||index+1>=siblings.length))throw Error("Clipping mask needs a layer below in the same group");l.grouped='+enabled+';return {layer_id:l.id,clipped:l.grouped};'
     if op=='transform_layer':
         x=number(r.get('scale_x',100),'scale_x',.01,10000);y=number(r.get('scale_y',100),'scale_y',.01,10000);angle=number(r.get('angle',0),'angle',-360,360)
         return prefix+'if(l.isBackgroundLayer||(l.linkedLayers&&l.linkedLayers.length))throw Error("Background or linked layers cannot be transformed implicitly");singleLayer(d,l);pixels(d);'+f'l.resize({x},{y},AnchorPosition.MIDDLECENTER);l.rotate({angle},AnchorPosition.MIDDLECENTER);return layerInfo(l);'

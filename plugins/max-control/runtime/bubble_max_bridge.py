@@ -63,7 +63,7 @@ class Bridge(socketserver.TCPServer):
         if request.get("protocol") != PROTOCOL:
             return failure("protocol_mismatch", "Unsupported protocol version")
         operation = request.get("operation")
-        if not isinstance(operation, str) or operation not in {"status", "scene_info", "inspect_scene", 'list_objects', 'inspect_object', 'object_action', 'scene_action', 'settings', "execute_python", "execute_maxscript"}:
+        if not isinstance(operation, str) or operation not in {"status", "scene_info", "inspect_scene", 'list_objects', 'inspect_object', 'parent_object', 'layers', 'object_action', 'scene_action', 'settings', "execute_python", "execute_maxscript"}:
             return failure("invalid_operation", "Unsupported operation")
         arguments = request.get("arguments", {})
         timeout = request.get("timeout", 30)
@@ -139,10 +139,10 @@ _host_spec.loader.exec_module(_host)
 
 
 def dispatch(operation, arguments):
-    if operation in {'scene_action', 'inspect_object', 'list_objects', 'object_action', 'settings'}:
+    if operation in {'scene_action', 'inspect_object', 'list_objects', 'parent_object', 'layers', 'object_action', 'settings'}:
         return _host.structured(operation, arguments)
     if operation == "status":
-        return {"bridge_version": "0.2.0", "pid": os.getpid(), "protocol": PROTOCOL, "version": _host.scene_info()["max_version"]}
+        return {"bridge_version": "0.3.0", "pid": os.getpid(), "protocol": PROTOCOL, "version": _host.scene_info()["max_version"]}
     if operation == "scene_info":
         return _host.scene_info()
     if operation == "inspect_scene":

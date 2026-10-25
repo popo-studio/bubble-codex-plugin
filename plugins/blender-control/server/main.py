@@ -70,6 +70,16 @@ def blender_edit_object(action: str,name: str,pid: int,expected_snapshot: str,ne
     return request('structured_edit',dict(action=action,name=name,pid=pid,expected_snapshot=expected_snapshot,new_name=new_name,values=values,confirm_delete=confirm_delete),pid)
 
 @mcp.tool(annotations=WRITE)
+def blender_collection(pid: int,action: str='get',expected_snapshot: str='',name: str='',parent: str='',new_name: str='',object_name: str='')->dict:
+    """List current-scene collections or create/rename/link/unlink. Empty collection name/parent selects scene root. Link destination before unlinking source; refuses removing last scene membership, linked/overridden/shared collections. Writes require fresh snapshot. No collection/object deletion."""
+    return request('structured_collection',dict(pid=pid,action=action,expected_snapshot=expected_snapshot,name=name,parent=parent,new_name=new_name,object_name=object_name),pid)
+
+@mcp.tool(annotations=WRITE)
+def blender_parent_object(name: str,pid: int,expected_snapshot: str,parent: str='')->dict:
+    """Parent current-scene object to exact parent name, or detach with empty parent. Preserves world matrix; rejects cycles, singular parents, linked, animated, constrained or locked children and bone/vertex parenting."""
+    return request('structured_parent',dict(name=name,pid=pid,expected_snapshot=expected_snapshot,parent=parent),pid)
+
+@mcp.tool(annotations=WRITE)
 def blender_select_objects(names: list[str],pid: int,expected_snapshot: str)->dict:
     """Replace selection by exact names in current view layer, first becomes active; empty clears. Max1000."""
     return request('structured_selection',dict(names=names,pid=pid,expected_snapshot=expected_snapshot),pid)

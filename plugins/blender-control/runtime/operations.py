@@ -29,10 +29,13 @@ def vector(v,size=3,low=-1e9,high=1e9):
 
 def state(bpy):
     if len(bpy.data.objects)>50000:raise ValueError('Scene exceeds 50000 object limit')
+    if len(bpy.data.collections)>10000:raise ValueError('File exceeds 10000 collection limit')
+    if sum(len(c.objects)+len(c.children) for c in [bpy.context.scene.collection,*bpy.data.collections])>100000:raise ValueError('File exceeds 100000 collection membership limit')
     rows=sorted((o.name,o.session_uid,o.type) for o in bpy.data.objects)
     scene={'path':bpy.data.filepath,'modified':bpy.data.is_dirty,'scene':bpy.context.scene.name}
-    digest=hashlib.sha256(json.dumps([SESSION_NONCE,GENERATION,scene,rows],sort_keys=True).encode()).hexdigest()
-    return {'scene':scene,'snapshot':digest,'object_count':len(rows),'guard_scope':'bridge session nonce, file path, dirty flag, scene name, object session IDs and bridge file generation; not every property edit'}
+    collections=sorted((c.name,c.session_uid,sorted(o.session_uid for o in c.objects),sorted(x.session_uid for x in c.children)) for c in [bpy.context.scene.collection,*bpy.data.collections])
+    digest=hashlib.sha256(json.dumps([SESSION_NONCE,GENERATION,scene,rows,collections],sort_keys=True).encode()).hexdigest()
+    return {'scene':scene,'snapshot':digest,'object_count':len(rows),'guard_scope':'bridge session nonce, file path, dirty flag, scene name, object session IDs, collection identities/memberships and bridge file generation; not every property edit'}
 
 def guard(bpy,a):
     if type(a.get('pid')) is not int or a['pid']!=os.getpid():raise ValueError('Explicit current PID required')
@@ -56,13 +59,27 @@ def static(o,paths):
 def info(o):
     return {'name':o.name,'session_uid':o.session_uid,'type':o.type,'location':list(o.location),'rotation_euler':list(o.rotation_euler),'scale':list(o.scale),'parent':o.parent.name if o.parent else None,'hide_render':o.hide_render,'materials':[m.name if m else None for m in o.data.materials] if o.data and hasattr(o.data,'materials') else []}
 
+def scene_collections(scene):
+    return [scene.collection,*scene.collection.children_recursive]
+
+def get_collection(bpy,name,write=False):
+    c=bpy.context.scene.collection if not name else bpy.data.collections.get(name)
+    if c is None or c not in scene_collections(bpy.context.scene):raise ValueError('Collection is not in the current scene')
+    if write:
+        if c.library or c.override_library:raise ValueError('Linked or overridden collection protected')
+        if any(c in scene_collections(s) for s in bpy.data.scenes if s!=bpy.context.scene):raise ValueError('Collection shared with another scene protected')
+    return c
+
+def collection_info(c,scene):
+    return {'name':c.name,'session_uid':c.session_uid,'scene_root':c==scene.collection,'children':[x.name for x in c.children],'objects':[o.name for o in c.objects]}
+
 def dispatch(op,a):
     global GENERATION
     import bpy
     if tuple(bpy.app.version[:2])<(4,5):raise ValueError('Blender 4.5+ required')
     scene=bpy.context.scene
     if op=='state':return {**state(bpy),'frame':scene.frame_current,'engine':scene.render.engine}
-    reads=op in ('query','assets') or (op in ('material','camera','light','timeline','render_settings') and a.get('action','get')=='get')
+    reads=op in ('query','assets') or (op in ('material','camera','light','timeline','render_settings','collection') and a.get('action','get')=='get')
     if not reads:guard(bpy,a)
     if op=='query':
         limit=a.get('limit',200)
@@ -125,6 +142,58 @@ def dispatch(op,a):
             if a.get('confirm_delete') is not True:raise ValueError('Explicit confirm_delete required')
             name=o.name;bpy.data.objects.remove(o,do_unlink=True);return {'result':{'deleted':name},**state(bpy)}
         else:raise ValueError('Unknown edit action')
+        result=info(o)
+    elif op=='collection':
+        action=a.get('action','get');name=a.get('name','')
+        if action=='get':
+            rows=scene_collections(scene)
+            if len(rows)>1000 or sum(len(c.objects) for c in rows)>10000:raise ValueError('Collection listing exceeds 1000 collections/10000 memberships')
+            result={'collections':[collection_info(c,scene) for c in rows]}
+        elif action=='create':
+            label(name)
+            if bpy.data.collections.get(name):raise ValueError('Collection name exists')
+            parent=get_collection(bpy,a.get('parent',''),True)
+            c=bpy.data.collections.new(name);parent.children.link(c);result=collection_info(c,scene)
+        else:
+            c=get_collection(bpy,name,True)
+            if action=='rename':
+                if c==scene.collection:raise ValueError('Scene root cannot be renamed here')
+                new_name=label(a.get('new_name'))
+                if bpy.data.collections.get(new_name):raise ValueError('Collection name exists')
+                c.name=new_name
+            elif action in ('link','unlink'):
+                o=obj(bpy,a.get('object_name'),True)
+                if o.name not in scene.objects:raise ValueError('Object is not in the current scene')
+                if action=='link':
+                    if o.name in c.objects:raise ValueError('Object is already linked')
+                    c.objects.link(o)
+                else:
+                    if o.name not in c.objects:raise ValueError('Object is not linked to this collection')
+                    if not any(other!=c and other in scene_collections(scene) for other in o.users_collection):raise ValueError('Unlink would remove object from current scene; link destination first')
+                    c.objects.unlink(o)
+            else:raise ValueError('Use get/create/rename/link/unlink')
+            result=collection_info(c,scene)
+    elif op=='parent':
+        o=obj(bpy,a['name'],True);parent=obj(bpy,a['parent'],True) if a.get('parent') else None
+        if o.name not in scene.objects or (parent and parent.name not in scene.objects):raise ValueError('Parent and child must be in the current scene')
+        if len(o.users_scene)>1:raise ValueError('Object shared with another scene protected')
+        static(o,('location','rotation_euler','scale'))
+        if o.parent and o.parent_type!='OBJECT':raise ValueError('Bone/vertex parenting requires explicit scripting')
+        ancestor=parent
+        while ancestor:
+            if ancestor==o:raise ValueError('Parenting cycle refused')
+            ancestor=ancestor.parent
+        bpy.context.view_layer.update()
+        if parent and abs(parent.matrix_world.determinant())<1e-12:raise ValueError('Parent has singular world transform')
+        world=o.matrix_world.copy();old_parent=o.parent;old_inverse=o.matrix_parent_inverse.copy();old_basis=o.matrix_basis.copy()
+        o.parent=parent;o.parent_type='OBJECT'
+        if parent:o.matrix_parent_inverse=parent.matrix_world.inverted()
+        else:o.matrix_parent_inverse.identity()
+        o.matrix_basis=world
+        bpy.context.view_layer.update()
+        if any(abs(o.matrix_world[r][c]-world[r][c])>1e-4 for r in range(4) for c in range(4)):
+            o.parent=old_parent;o.matrix_parent_inverse=old_inverse;o.matrix_basis=old_basis
+            bpy.context.view_layer.update();raise ValueError('World transform could not be preserved; original parenting restored')
         result=info(o)
     elif op=='selection':
         names=a.get('names',[])

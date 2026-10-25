@@ -1,6 +1,6 @@
 # Bubble Maya
 
-Current Codex package: **0.3.1**. Software-side bridge: **0.3.0**, unchanged by this runtime dependency patch.
+Current Codex package: **0.4.0**. Software-side bridge: **0.4.0**. Update the owned host bridge through setup, then restart/reload the application once.
 面向 Maya 2027 的本地 Codex 插件。通过 MCP 控制已打开的 Maya，执行 Python/MEL，检查当前场景中的引用与贴图路径。
 
 ```text
@@ -154,6 +154,17 @@ Native acceptance lives in `tests/structured_host_smoke.py`: run only in a fresh
 batch process. It creates its own temporary scene and tests creation/query, parameter write,
 stale guards, selection, timeline, save/overwrite refusal, delete confirmation, and reopening.
 
-## Runtime security patch 0.3.1
 
-The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.
+## 日常操作补全 0.4.0
+
+- `maya_parent_node`：普通 transform 建立父子关系或脱离父级，保持世界变换；拒绝循环、实例、骨骼、锁定/引用节点、动画/连接通道以及会导致自动改名的同级冲突。
+- `maya_keyframes`：查询/写入/删除一个数值属性的时间关键帧。先 get 取得 `revision`，写操作传 `expected_keys`，覆盖已有帧需 `overwrite`，删除需 `confirm_delete`。新增/替换键采用 linear 切线，动画层、驱动关键帧和表达式连接不在范围内。
+- `maya_scene_transfer`：指定节点导出 `.ma/.mb`，或将用户授权的本地文件导入新 namespace。导出恢复原选择，禁止覆盖当前场景，已有输出需明确覆盖；导入关闭 script nodes 与引用加载，但插件回调仍可能运行。外部素材不会被打包。
+
+API：[parent](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Tech-Docs/CommandsPython/parent.html)、[setKeyframe](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Tech-Docs/CommandsPython/setKeyframe.html)、[file](https://help.autodesk.com/cloudhelp/2027/ENU/Maya-Tech-Docs/CommandsPython/file.html)。
+
+实机：Maya 2027 独立 mayapy 临时配置/场景已通过层级世界矩阵保持、循环/动画拒绝、关键帧回读/删除/旧revision拒绝、原生场景片段导出/导入与覆盖保护。没有连接或改变现有 GUI 场景。
+
+当前 MCP 工具共 21 个。优先使用上述结构化工具；每次写入仍须选定实例并传最新场景身份。Maya/Nuke/Houdini 的 snapshot 包含随机桥接 session 身份，重启或重新连接后的旧 snapshot 无效；它不覆盖每个属性编辑。
+
+此版本保留已修复的依赖锁，不升级第三方依赖。软件侧 payload 已改变，需要通过 setup 预览并更新；不会自动更改用户启动配置。安装/卸载所有权、冲突保护、多实例选择逻辑继续生效。

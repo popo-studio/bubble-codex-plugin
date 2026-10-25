@@ -184,21 +184,41 @@ def execute(plan, plan_hash, confirmed=False):
                 'error': str(exc), 'recovery': 'Partial destination retained; inspect it and choose a NEW destination for retry. No source files deleted.'}
 
 
-def verify(destination):
+def manifest_entries(destination):
     dest = safe(destination)
     path = safe(dest / 'package-manifest.json')
     if path.stat().st_size > MAX_JSON:
         raise ValueError('Manifest too large')
     manifest = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(manifest, dict):
+        raise ValueError('Invalid package manifest')
     entries = manifest.get('files')
     if manifest.get('version') != 1 or not isinstance(entries, list) or not entries or len(entries) > MAX_FILES:
         raise ValueError('Invalid package manifest')
-    problems, seen, total = [], set(), 0
+    seen, total = set(), 0
     for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get('relative'), str):
+            raise ValueError('Invalid manifest entry')
         rel = Path(entry['relative'])
         if rel.is_absolute() or '..' in rel.parts or not rel.parts or rel.parts[0] not in ('project', 'external') or str(rel).casefold() in seen:
             raise ValueError('Unsafe or duplicate manifest relative path')
         seen.add(str(rel).casefold())
+        if type(entry.get('size')) is not int or entry['size'] < 0 or not isinstance(entry.get('sha256'), str) or not re.fullmatch('[0-9a-f]{64}', entry['sha256']):
+            raise ValueError('Invalid manifest size or SHA256')
+        total += entry['size']
+        if total > MAX_BYTES:
+            raise ValueError('Manifest byte limit exceeded')
+        safe(dest / rel, False)
+    return dest, entries
+
+
+def verify(destination, include_extras=False):
+    if type(include_extras) is not bool:
+        raise ValueError('include_extras must be a boolean')
+    dest, entries = manifest_entries(destination)
+    problems, total = [], 0
+    for entry in entries:
+        rel = Path(entry['relative'])
         p = safe(dest / rel, False)
         if not p.is_file():
             problems.append({'path': str(rel), 'issue': 'missing'})
@@ -209,4 +229,47 @@ def verify(destination):
         actual = fingerprint(p)
         if actual['size'] != entry['size'] or actual['sha256'] != entry['sha256']:
             problems.append({'path': str(rel), 'issue': 'hash_or_size_mismatch'})
-    return {'ok': not problems, 'checked_files': len(entries), 'problems': problems, 'coverage': 'Manifest entries only; extra files not checked. Hashes detect accidental changes, not malicious manifest replacement.'}
+    extras = []
+    if include_extras:
+        expected = {Path(e['relative']).as_posix().casefold() for e in entries} | {'package-manifest.json'}
+        pending, scanned = [dest], 0
+        while pending:
+            current = safe(pending.pop())
+            with os.scandir(current) as contents:
+                for item in contents:
+                    scanned += 1
+                    if scanned > MAX_FILES * 4:
+                        raise ValueError('Strict verification directory entry limit exceeded')
+                    path = safe(item.path)
+                    if path.is_dir():
+                        pending.append(path)
+                    elif path.is_file():
+                        relative = path.relative_to(dest).as_posix()
+                        if relative.casefold() not in expected:
+                            extras.append(relative)
+                    else:
+                        raise ValueError('Unsupported filesystem entry')
+        problems.extend({'path': p, 'issue': 'unexpected_file'} for p in sorted(extras))
+    return {'ok': not problems, 'checked_files': len(entries), 'problems': problems, 'extra_files': sorted(extras),
+            'extras_checked': include_extras, 'coverage': ('Manifest entries hashed; additional files enumerated, not hashed. ' if include_extras else 'Manifest entries only; extra files not checked. ') + 'Hashes detect accidental changes, not malicious manifest replacement. Empty directories and scene portability are not verified.'}
+
+
+def compare(reference, candidate):
+    left_root, left_entries = manifest_entries(reference)
+    right_root, right_entries = manifest_entries(candidate)
+    def index(entries):
+        return {Path(e['relative']).as_posix().casefold(): e for e in entries}
+    left, right = index(left_entries), index(right_entries)
+    added = [right[k]['relative'] for k in sorted(right.keys() - left.keys())]
+    removed = [left[k]['relative'] for k in sorted(left.keys() - right.keys())]
+    changed, unchanged = [], 0
+    for key in sorted(left.keys() & right.keys()):
+        a, b = left[key], right[key]
+        if (a['size'], a['sha256']) != (b['size'], b['sha256']):
+            changed.append({'path': b['relative'], 'before_size': a['size'], 'after_size': b['size'],
+                            'before_sha256': a['sha256'], 'after_sha256': b['sha256']})
+        else:
+            unchanged += 1
+    return {'ok': True, 'reference': str(left_root), 'candidate': str(right_root), 'added': added, 'removed': removed,
+            'changed': changed, 'unchanged_count': unchanged, 'identical_manifests': not (added or removed or changed),
+            'contents_verified': False, 'coverage': 'Compares declared relative paths, sizes and SHA256 only. Run package_verify on both deliveries to verify actual files. External parent mapping changes appear as added/removed paths. No files modified.'}

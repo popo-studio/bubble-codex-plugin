@@ -15,3 +15,5 @@ description: Control connected local Unreal Engine sessions, execute authorized 
 
 ## Routine structured work
 Use `unreal_list_objects` before object edits; select the explicit PID and retain `scene_token` as `expected_scene`. Prefer `unreal_inspect_object`, `unreal_object_action`, `unreal_scene_action` and `unreal_settings` for supported operations. New/open must not discard dirty scenes; existing save destinations require explicit overwrite permission. Never automatically retry timed-out writes. If an operation is unknown, inspect/update the software-side bridge before considering authorized raw scripting. See README for primitive kinds and scope.
+
+Use structured `object_action` for rotation, parent/detach and Outliner folders. Rotation degrees order is pitch/yaw/roll; omitted parent_id detaches, folder empty string clears. Read selected scene/objects first and retain expected_scene. Parent/detach preserves world transform and refuses cycles/cross-scene changes. Do not fall back to scripts or UI merely because an old bridge lacks these operations; update owned bridge first.

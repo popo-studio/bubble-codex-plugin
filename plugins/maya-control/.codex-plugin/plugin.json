@@ -1,7 +1,7 @@
 {
   "name": "maya-control",
-  "version": "0.3.1",
-  "description": "Control local Maya, execute Python or MEL, and inspect scene dependencies.",
+  "version": "0.4.0",
+  "description": "Control local Maya, execute Python or MEL, and inspect scene dependencies. Includes hierarchy, scalar animation keys and native scene import/export.",
   "author": {
     "name": "popo-studio"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "Bubble Maya",
     "shortDescription": "Maya 脚本执行与场景检查",
-    "longDescription": "Install the Maya 2027 bridge with your permission, connect automatically after Maya restarts, inspect scene resources, and run requested Python or MEL scripts.",
+    "longDescription": "Install the Maya 2027 bridge with your permission, connect automatically after Maya restarts, inspect scene resources, and run requested Python or MEL scripts. Structured tools support hierarchy, scalar animation keys and native scene import/export; multi-instance writes use explicit targets and guards.",
     "developerName": "popo-studio",
     "category": "Productivity",
     "capabilities": [

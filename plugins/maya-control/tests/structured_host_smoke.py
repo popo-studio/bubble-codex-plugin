@@ -45,6 +45,28 @@ with tempfile.TemporaryDirectory(prefix='bubble-structured-') as directory:
     duplicated=duplicate.get('node') or duplicate['nodes'][0]
     renamed=change('edit',action='rename',node=duplicated,name='bubbleRenamed')['result']['node']
     change('edit',action='delete',node=renamed,confirm_delete=True)
+    from maya import cmds
+    world=cmds.xform(created,q=True,worldSpace=True,matrix=True)
+    created=change('hierarchy',node=created,parent=other)['result']['node']
+    assert all(abs(x-y)<1e-6 for x,y in zip(world,cmds.xform(created,q=True,worldSpace=True,matrix=True)))
+    refuse('hierarchy',node=other,parent=created)
+    created=change('hierarchy',node=created,parent='')['result']['node']
+    keys=read('keyframes',node=created,attribute='translateX')['result']
+    keyed=change('keyframes',action='set',node=created,attribute='translateX',expected_keys=keys['revision'],frame=12,value=5)['result']
+    assert keyed['keys']==[{'frame':12.0,'value':5.0}],keyed
+    refuse('keyframes',action='set',node=created,attribute='translateX',expected_keys=keys['revision'],frame=13,value=9)
+    refuse('keyframes',action='set',node=created,attribute='translateX',expected_keys=keyed['revision'],frame=12,value=9)
+    refuse('hierarchy',node=created,parent=other)
+    assert not change('keyframes',action='delete',node=created,attribute='translateX',expected_keys=keyed['revision'],frame=12,confirm_delete=True)['result']['keys']
+    snippet=Path(directory)/'snippet.ma'
+    change('selection',nodes=[other])
+    change('transfer',action='export',path=str(snippet),nodes=[created])
+    assert cmds.ls(selection=True,long=True)==[other]
+    refuse('transfer',action='export',path=str(snippet),nodes=[created])
+    imported=change('transfer',action='import',path=str(snippet),namespace='bubbleImport')['result']
+    assert imported['created_nodes'] and cmds.objExists('bubbleImport:bubbleFixture')
+    refuse('transfer',action='import',path=str(snippet),namespace='bubbleImport')
+    token=read('state')['snapshot'];bridge._operations.new_session();assert read('state')['snapshot']!=token
     change('file',action='save',path=str(p))
     assert p.is_file()
     refuse('file',action='save',path=str(p))

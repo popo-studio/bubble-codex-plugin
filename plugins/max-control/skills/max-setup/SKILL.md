@@ -25,3 +25,6 @@ GitHub 推送只发布源码。Codex 端需刷新已注册的 Git 插件市场�
 用户说“卸载插件”但范围不明时，区分只移除 Codex 集成与完整移除软件接入。完整移除应先在插件工具仍可用时预览并授权 `max_uninstall_bridge`，提醒重启/刷新停止已加载的桥接，再移除 Codex 插件。保留用户改动、备份和其他文件。软件端卸载授权不自动扩展到其他项目或软件版本。
 
 若旧版 Codex 缓存删除报 Windows 拒绝访问，定位明确属于该插件旧缓存的 MCP 进程；获得停止这些连接的授权后再停止并重试卸载。不要终止 Maya/其他创作软件、所有 Python 进程，或删除整个 Codex 缓存。卸载 Codex 插件不会自动删除软件端配置。
+
+
+Current bridge payload is 0.3.0; this release adds structured workflow operations. After installing/updating, verify `max_status` reports bridge_version `0.3.0` before using new tools. A still-running older bridge needs one restart or the returned authorized no-restart bootstrap; do not replace user scenes. Codex package update alone does not reload the host payload.

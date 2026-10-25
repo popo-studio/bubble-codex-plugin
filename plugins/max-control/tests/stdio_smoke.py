@@ -35,15 +35,15 @@ async def main():
                     await session.initialize()
                     listing = await session.list_tools()
                     names = {tool.name for tool in listing.tools}
-                    assert names == {'max_list_objects', 'max_inspect_object', 'max_object_action', 'max_scene_action', 'max_settings', "max_list_sessions", "max_status", "max_scene_info", "max_inspect_scene", "max_execute_python", "max_execute_maxscript", "max_installation_status", "max_install_bridge", "max_uninstall_bridge"}, names
+                    assert names == {'max_layers', 'max_parent_object', 'max_list_objects', 'max_inspect_object', 'max_object_action', 'max_scene_action', 'max_settings', "max_list_sessions", "max_status", "max_scene_info", "max_inspect_scene", "max_execute_python", "max_execute_maxscript", "max_installation_status", "max_install_bridge", "max_uninstall_bridge"}, names
                     for name in sorted(names):
                         arguments = {"code": "result = 42"} if name.startswith("max_execute_") else {}
                         if "install" in name:
                             arguments["startup_directory"] = str(location)
-                        if name in {'max_settings', 'max_scene_action', 'max_list_objects', 'max_inspect_object', 'max_object_action'}:
+                        if name in {'max_settings', 'max_scene_action', 'max_layers', 'max_parent_object', 'max_list_objects', 'max_inspect_object', 'max_object_action'}:
                             arguments["pid"] = 123
-                            if name.endswith(("inspect_object", "object_action", "scene_action")): arguments["expected_scene"] = "fixture"
-                            if name.endswith("inspect_object"): arguments["object_id"] = 1
+                            if name.endswith(("inspect_object", "object_action", "scene_action", "parent_object")): arguments["expected_scene"] = "fixture"
+                            if name.endswith(("inspect_object", "parent_object")): arguments["object_id"] = 1
                             if name.endswith("object_action"): arguments["action"] = "create"
                             if name.endswith("scene_action"): arguments["action"] = "new"
                         response = await session.call_tool(name, arguments)

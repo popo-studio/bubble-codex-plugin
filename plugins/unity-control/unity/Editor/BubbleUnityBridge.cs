@@ -30,8 +30,8 @@ namespace Bubble.UnityControl
         static volatile bool closed = true;
         static string sceneEpoch = Guid.NewGuid().ToString("N");
 
-        [Serializable] public class Args { public string type_name, method_name, payload, menu_path, action, expected_scene, kind, name, path; public bool with_payload, overwrite; public int max_objects = 5000, limit = 1000, object_id; public float[] position, scale; }
-        [Serializable] public class ObjectRow { public int id, parent_id; public string name, path, scene; public bool active; public float[] position, scale; public string[] components; }
+        [Serializable] public class Args { public string type_name, method_name, payload, menu_path, action, expected_scene, kind, name, path; public bool with_payload, overwrite, active, has_active; public int max_objects = 5000, limit = 1000, object_id, parent_id; public float[] position, scale, rotation; }
+        [Serializable] public class ObjectRow { public int id, parent_id; public string name, path, scene; public bool active, active_in_hierarchy; public float[] position, scale, rotation; public string[] components; }
         [Serializable] public class Request { public int protocol; public string token, operation; public Args arguments; public double timeout, expires_at; }
         [Serializable] public class Error { public string code, message; public bool execution_uncertain; }
         [Serializable] public class Response { public bool ok; public Data data; public Error error; }
@@ -41,7 +41,7 @@ namespace Bubble.UnityControl
         [Serializable] public class Data
         {
             public string path, project, project_name, unity_version, result, result_type, note;
-            public string bridge_version = "0.2.0";
+            public string bridge_version = "0.3.0";
             public int pid, inspected_objects;
             public bool modified, is_playing, is_compiling, is_updating, truncated, executed;
             public SceneRow[] scenes;
@@ -79,7 +79,7 @@ namespace Bubble.UnityControl
             if (!closed || EditorApplication.isPlayingOrWillChangePlaymode) return;
             if (Application.platform != RuntimePlatform.WindowsEditor)
             {
-                Debug.LogWarning("Bubble Unity 0.2.0 supports Windows Editor only; bridge was not started.");
+                Debug.LogWarning("Bubble Unity 0.3.0 supports Windows Editor only; bridge was not started.");
                 return;
             }
             if (Application.isBatchMode && Environment.GetEnvironmentVariable("BUBBLE_UNITY_ALLOW_BATCH") != "1") return;
@@ -294,7 +294,7 @@ namespace Bubble.UnityControl
         static ObjectRow Row(GameObject go)
         {
             var t=go.transform;
-            return new ObjectRow { id=go.GetInstanceID(), parent_id=t.parent ? t.parent.gameObject.GetInstanceID():0, name=go.name, path=ObjectPath(t), scene=go.scene.path, active=go.activeSelf, position=new[]{t.position.x,t.position.y,t.position.z}, scale=new[]{t.localScale.x,t.localScale.y,t.localScale.z}, components=go.GetComponents<Component>().Select(c=>c ? c.GetType().FullName : "<missing script>").ToArray() };
+            return new ObjectRow { id=go.GetInstanceID(), parent_id=t.parent ? t.parent.gameObject.GetInstanceID():0, name=go.name, path=ObjectPath(t), scene=go.scene.path, active=go.activeSelf, active_in_hierarchy=go.activeInHierarchy, position=new[]{t.position.x,t.position.y,t.position.z}, scale=new[]{t.localScale.x,t.localScale.y,t.localScale.z}, rotation=new[]{t.eulerAngles.x,t.eulerAngles.y,t.eulerAngles.z}, components=go.GetComponents<Component>().Select(c=>c ? c.GetType().FullName : "<missing script>").ToArray() };
         }
         static Vector3 Vector(float[] values)
         {
@@ -353,9 +353,22 @@ namespace Bubble.UnityControl
                 else if(a.action=="rename"){if(String.IsNullOrWhiteSpace(a.name))throw new ArgumentException("Name required");Undo.RecordObject(target,"Bubble rename");target.name=a.name;}
                 else if(a.action=="delete"){Undo.DestroyObjectImmediate(target);data.result="Deleted "+a.object_id;data.executed=true;return new Response{ok=true,data=data};}
                 else if(a.action=="transform"){
-                    if(a.position==null&&a.scale==null)throw new ArgumentException("Specify position or scale");
-                    Vector3 p=a.position==null?target.transform.position:Vector(a.position),s=a.scale==null?target.transform.localScale:Vector(a.scale);
-                    Undo.RecordObject(target.transform,"Bubble transform");target.transform.position=p;target.transform.localScale=s;PrefabUtility.RecordPrefabInstancePropertyModifications(target.transform);
+                    if(a.position==null&&a.scale==null&&a.rotation==null)throw new ArgumentException("Specify position, rotation or scale");
+                    Vector3 p=a.position==null?target.transform.position:Vector(a.position),s=a.scale==null?target.transform.localScale:Vector(a.scale),r=a.rotation==null?target.transform.eulerAngles:Vector(a.rotation);
+                    Undo.RecordObject(target.transform,"Bubble transform");
+                    if(a.position!=null)target.transform.position=p;
+                    if(a.scale!=null)target.transform.localScale=s;
+                    if(a.rotation!=null)target.transform.eulerAngles=r;
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(target.transform);
+                } else if(a.action=="parent"){
+                    var parent=a.parent_id==0?null:EditorUtility.InstanceIDToObject(a.parent_id) as GameObject;
+                    if(a.parent_id!=0&&(!parent||EditorUtility.IsPersistent(parent)||!parent.scene.IsValid()||!parent.scene.isLoaded||parent.scene.handle!=target.scene.handle))throw new ArgumentException("Parent must be a loaded GameObject in the same scene, or 0 to detach");
+                    if(parent&&(parent==target||parent.transform.IsChildOf(target.transform)))throw new ArgumentException("Parenting cycle refused");
+                    if(PrefabUtility.IsPartOfPrefabInstance(target)||(parent&&PrefabUtility.IsPartOfPrefabInstance(parent)))throw new ArgumentException("Prefab hierarchy changes require explicit prefab workflow");
+                    Undo.SetTransformParent(target.transform,parent?parent.transform:null,"Bubble parent");
+                } else if(a.action=="active"){
+                    if(!a.has_active)throw new ArgumentException("Explicit active boolean required");
+                    Undo.RecordObject(target,"Bubble active state");target.SetActive(a.active);PrefabUtility.RecordPrefabInstancePropertyModifications(target);
                 } else throw new ArgumentException("Unknown object action");
             }
             if(a.action!="select")EditorSceneManager.MarkSceneDirty(target.scene);

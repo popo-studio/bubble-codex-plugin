@@ -78,9 +78,9 @@ def max_inspect_object(object_id: int, expected_scene: str, pid: int) -> dict:
     return request("inspect_object", {"object_id": object_id, "expected_scene": expected_scene}, pid)
 
 @mcp.tool(annotations=SCRIPT)
-def max_object_action(action: Literal["create", "select", "duplicate", "rename", "delete", "transform"], expected_scene: str, pid: int, object_id: int | None = None, kind: str = "box", name: str | None = None, position: list[float] | None = None, scale: list[float] | None = None) -> dict:
-    """Edit one explicit object on main thread. scene_token required. Create primitives; select/duplicate/rename/delete by ID; transform position/scale only. No automatic save. Deletion needs user authorization; timeout/partial error must not be retried. List objects after scene changes. Coordinates follow host world position/local scale conventions."""
-    return request("object_action", dict(action=action, expected_scene=expected_scene, object_id=object_id, kind=kind, name=name, position=position, scale=scale), pid)
+def max_object_action(action: Literal["create", "select", "duplicate", "rename", "delete", "transform"], expected_scene: str, pid: int, object_id: int | None = None, kind: str = "box", name: str | None = None, position: list[float] | None = None, scale: list[float] | None = None, rotation: list[float] | None = None) -> dict:
+    """Edit one explicit object on main thread. scene_token required. Create primitives; select/duplicate/rename/delete by ID; transform position/scale or XYZ Euler rotation in degrees. No automatic save. Deletion needs user authorization; timeout/partial error must not be retried. List objects after scene changes. Coordinates follow host world position/rotation and local scale conventions."""
+    return request("object_action", dict(action=action, expected_scene=expected_scene, object_id=object_id, kind=kind, name=name, position=position, scale=scale,rotation=rotation), pid)
 
 @mcp.tool(annotations=SCRIPT)
 def max_scene_action(action: Literal["new", "open", "save"], expected_scene: str, pid: int, path: str | None = None, overwrite: bool = False) -> dict:
@@ -91,6 +91,18 @@ def max_scene_action(action: Literal["new", "open", "save"], expected_scene: str
 def max_settings(pid: int) -> dict:
     """Inspect render/editor configuration and asset metadata without modifying settings or starting a render/build."""
     return request("settings", {}, pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def max_parent_object(object_id: int, expected_scene: str, pid: int, parent_id: int | None = None, expected_parent_id: int | None = None) -> dict:
+    """Set exact object's parent, or null to unparent, preserving world transform. Requires scene token and old parent ID from inspect_object. Rejects cycles, frozen/animated/grouped/XRef objects. Read back after changes; no retries on error."""
+    return request('parent_object',dict(object_id=object_id,expected_scene=expected_scene,parent_id=parent_id,expected_parent_id=expected_parent_id),pid)
+
+
+@mcp.tool(annotations=SCRIPT)
+def max_layers(pid: int, action: Literal['get','create','rename','assign','flags'] = 'get', expected_scene: str = '', expected_layers: str = '', name: str = '', new_name: str = '', object_ids: list[int] | None = None, hidden: bool | None = None, frozen: bool | None = None) -> dict:
+    """Inspect/create/rename layers, assign explicit object IDs, set hidden/frozen flags. Writes require scene token and layer revision from get. Assign protects frozen/animated/grouped/XRef objects. No layer deletion, merge or implicit current-layer changes."""
+    return request('layers',dict(action=action,expected_scene=expected_scene,expected_layers=expected_layers,name=name,new_name=new_name,object_ids=object_ids,hidden=hidden,frozen=frozen),pid)
 
 
 if __name__ == "__main__":

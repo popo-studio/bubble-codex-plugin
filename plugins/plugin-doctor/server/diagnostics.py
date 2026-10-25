@@ -1,5 +1,6 @@
 """Bounded read-only diagnostics. Never import or execute inspected packages."""
 from concurrent.futures import ThreadPoolExecutor
+import ast
 import hashlib
 import json
 import os
@@ -69,7 +70,7 @@ def children(path, limit):
 
 
 def status():
-    return {"ok": True, "data": {"version": "0.1.8", "mode": "read-only",
+    return {"ok": True, "data": {"version": "0.2.0", "mode": "read-only",
         "python_version": sys.version.split()[0], "uv_available": bool(shutil.which("uv")),
         "supported_plugins": list(PLUGINS)},
         "note": "Disk/cache observations do not prove Codex enabled state or tool loading. Use Codex's own tool discovery for that."}
@@ -161,6 +162,57 @@ def inventory(codex_home=None, source_root=None):
             "All cached versions are shown; cache presence is not installed/enabled status. Source comparison is local, not a remote update check. No Codex auth/config contents read."}
     except (OSError, ValueError, TypeError) as exc:
         return fail("inventory_failed", str(exc))
+
+
+def capabilities(package_path):
+    """Static inventory for these packages' declarative FastMCP entrypoints."""
+    try:
+        check = package_check(package_path)
+        if not check.get('ok'):
+            return check
+        root = absolute(package_path)
+        tree = ast.parse(read_bytes(root / 'server/main.py', 1024 * 1024).decode('utf-8-sig'))
+        hints, tools, seen, issues = {}, [], set(), []
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name) and node.value.func.id == 'ToolAnnotations':
+                values = {k.arg: k.value.value for k in node.value.keywords if isinstance(k.value, ast.Constant) and type(k.value.value) is bool}
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        hints[target.id] = values
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for decorator in node.decorator_list:
+                if not (isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute)
+                        and isinstance(decorator.func.value, ast.Name) and decorator.func.value.id == 'mcp' and decorator.func.attr == 'tool'):
+                    continue
+                name, annotations = node.name, {}
+                for keyword in decorator.keywords:
+                    if keyword.arg == 'name' and isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
+                        name = keyword.value.value
+                    elif keyword.arg == 'annotations' and isinstance(keyword.value, ast.Name):
+                        annotations = hints.get(keyword.value.id, {})
+                if len(name) > 128 or not re.fullmatch(r'[A-Za-z0-9_.-]+', name):
+                    raise ValueError('Unsupported tool name in entrypoint')
+                if name in seen:
+                    issues.append('duplicate_tool_name:' + name)
+                seen.add(name)
+                args = [*node.args.posonlyargs, *node.args.args]
+                required = len(args) - len(node.args.defaults)
+                parameters = [{'name': item.arg, 'required': i < required} for i, item in enumerate(args)]
+                parameters += [{'name': item.arg, 'required': default is None} for item, default in zip(node.args.kwonlyargs, node.args.kw_defaults)]
+                tools.append({'name': name, 'description': (ast.get_docstring(node) or '')[:600], 'parameters': parameters,
+                              'read_only_hint': annotations.get('readOnlyHint'), 'destructive_hint': annotations.get('destructiveHint')})
+                if len(tools) > 200:
+                    raise ValueError('Tool inventory limit exceeded')
+                break
+        if not tools:
+            issues.append('no_static_tools_discovered')
+        return {'ok': True, 'data': {'name': check['data']['name'], 'version': check['data']['version'],
+                'tool_count': len(tools), 'tools': tools, 'issues': sorted(set(issues)), 'package_check': check['data']},
+                'note': 'Static declarations only; source code is not imported or executed. Dynamic/imported tools may be omitted. Hints are declarations, not a security boundary. This does not prove Codex loading or native software compatibility.'}
+    except (OSError, ValueError, TypeError, SyntaxError, RecursionError) as exc:
+        return fail('capabilities_unreadable', str(exc))
 
 
 def bridge_check(app, runtime_directory):
@@ -315,7 +367,7 @@ def guidance(plugin_name, action):
         steps.extend([
             "Use premiere_installation_status to distinguish signed CEP release files, user-profile installation and an actually connected Premiere 26.x background extension.",
             "Use premiere_install_bridge or premiere_uninstall_bridge with a preview and explicit authorization. Preserve modified/unknown extensions. No Creative Cloud, UPIA or PlayerDebugMode is required; never edit Adobe private plugin stores or registry debug switches.",
-            "Premiere 0.4.0 starts its signed background extension when Premiere activates. Use premiere_list_sessions for automatic discovery; select an explicit session and project by name/path when multiple instances match.",
+            "Premiere starts its signed background extension when Premiere activates. Use premiere_list_sessions for automatic discovery; select an explicit session and project by name/path when multiple instances match.",
             "First installation or software-side update may require restarting Premiere. No routine panel opening or pairing code is needed. Reconnection creates a new session; never replay a timed-out write or silently switch instances."])
     if app == "after-effects":
         steps.extend([

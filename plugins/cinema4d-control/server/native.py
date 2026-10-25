@@ -11,12 +11,29 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamable_http_client
+from jsonschema.validators import validator_for
+from referencing import Registry
+from referencing.exceptions import NoSuchResource
+from pydantic import AnyUrl
 from configuration import load_connection
 
 
 def local_http(headers=None, timeout=None, auth=None):
     # Credentials must not follow redirects or workstation proxy settings.
     return httpx.AsyncClient(headers=headers, timeout=timeout or 30, auth=auth, follow_redirects=False, trust_env=False)
+
+
+def validate_arguments(schema, arguments):
+    """Validate native JSON schema locally. Never retrieve external schema URLs."""
+    def refuse(uri):
+        raise NoSuchResource(ref=uri)
+    try:
+        validator = validator_for(schema)
+        validator.check_schema(schema)
+        validator(schema, registry=Registry(retrieve=refuse)).validate(arguments)
+    except Exception:
+        # Validation exceptions contain submitted values and credential-bearing refs.
+        raise ValueError('Arguments do not match the discovered native schema, or its schema requires unsupported external references; no call submitted') from None
 
 
 def redactor(cfg):
@@ -49,6 +66,8 @@ class NativeSession:
         self.task = None
         self.alive = False
         self.tools = {}
+        self.resources = {}
+        self.has_resources = False
 
     async def run(self, cfg, kind):
         pending = None
@@ -66,6 +85,7 @@ class NativeSession:
                     streams = await stack.enter_async_context(streamable_http_client(cfg["url"], http_client=http_client))
                 client = await stack.enter_async_context(ClientSession(streams[0], streams[1], read_timeout_seconds=timedelta(seconds=60)))
                 info = await client.initialize()
+                self.has_resources = info.capabilities.resources is not None
                 self.alive = True
                 # Credential values supplied by the export must not appear in responses.
                 scrub = redactor(cfg)
@@ -96,6 +116,24 @@ class NativeSession:
                     elif operation == "call":
                         result = await client.call_tool(args["tool"], args["arguments"])
                         value = {"error": "Native tool reported failure. Its details are withheld to protect credentials; inspect Cinema 4D's local console. Partial work may have happened. Do not replay."} if result.isError else result.model_dump(mode="json")
+                    elif operation == "resources":
+                        resources = {}
+                        cursor = None
+                        seen = set()
+                        for _ in range(100):
+                            result = await client.list_resources(cursor=cursor)
+                            for resource in result.resources:
+                                resources[str(resource.uri)] = resource
+                            if len(resources)>10000: raise ValueError('Resource listing exceeds 10000 entries')
+                            cursor=result.nextCursor
+                            if not cursor: break
+                            if cursor in seen: raise ValueError('Repeated resources cursor')
+                            seen.add(cursor)
+                        else: raise ValueError('Too many resource pages')
+                        self.resources=resources
+                        value={'session_id':self.id,'resources':[r.model_dump(mode='json') for r in resources.values()], 'coverage':'Concrete resources advertised by selected server; URI templates are not expanded.'}
+                    elif operation == "read_resource":
+                        value=(await client.read_resource(AnyUrl(args['uri']))).model_dump(mode='json')
                     else:
                         raise ValueError("Unsupported operation")
                     if not pending.done():
@@ -160,6 +198,18 @@ class Manager:
     async def tools(self, session_id):
         return await self.select(session_id).request("tools", {}, 20)
 
+    async def resources(self, session_id):
+        session=self.select(session_id)
+        if not session.has_resources:
+            return {'session_id':session_id,'supported':False,'resources':[],'note':'Selected native server did not advertise resources capability'}
+        return await session.request('resources',{},20)
+
+    async def read_resource(self, session_id, uri):
+        session=self.select(session_id)
+        if not isinstance(uri,str) or uri not in session.resources:
+            raise ValueError('List resources in this session first and select an exact advertised URI; arbitrary paths/URLs and templates are not accepted')
+        return await session.request('read_resource',{'uri':uri},30)
+
     async def call(self, session_id, tool, arguments, request_id, authorized=False, timeout=30):
         session = self.select(session_id)
         if not authorized:
@@ -172,6 +222,7 @@ class Manager:
             raise ValueError("Timeout must be 1-120 seconds")
         if request_id in self.used_requests:
             raise ValueError("Request ID was already submitted; never replay it")
+        validate_arguments(session.tools[tool].inputSchema, arguments)
         # Retain failed/timeout IDs too; a native operation may already have happened.
         self.used_requests.add(request_id)
         return await session.request("call", {"tool": tool, "arguments": arguments}, timeout)

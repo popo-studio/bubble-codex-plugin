@@ -148,6 +148,35 @@ class PackageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.preview([str(link)])
 
+    def test_strict_extra_files_and_manifest_comparison(self):
+        self.assertTrue(self.execute()['ok'])
+        (self.dest / 'notes.txt').write_text('extra')
+        self.assertTrue(core.verify(self.dest)['ok'])
+        strict = core.verify(self.dest, True)
+        self.assertFalse(strict['ok']); self.assertEqual(strict['extra_files'], ['notes.txt'])
+        self.source.write_bytes(b'new revision')
+        other = self.project / 'new.tx'; other.write_bytes(b'texture')
+        new_dest = self.base / 'revision2'
+        plan = core.prepare([str(self.source), str(other)], str(new_dest), str(self.project))
+        self.assertTrue(core.execute(plan['plan'], plan['plan_hash'], True)['ok'])
+        diff = core.compare(self.dest, new_dest)
+        self.assertEqual(diff['added'], ['project/new.tx'])
+        self.assertEqual(diff['changed'][0]['path'], 'project/场景.ma')
+        self.assertFalse(diff['contents_verified'])
+        self.assertEqual(core.compare(new_dest, self.dest)['removed'], ['project/new.tx'])
+        self.assertTrue(core.compare(new_dest, new_dest)['identical_manifests'])
+
+    def test_bad_manifest_size_and_hash_rejected_even_if_file_missing(self):
+        self.execute()
+        path = self.dest / 'package-manifest.json'
+        data = json.loads(path.read_text(encoding='utf-8'))
+        (self.dest / 'project/场景.ma').unlink()
+        for key, value in [('size', -1), ('sha256', 'untrusted')]:
+            damaged = json.loads(json.dumps(data)); damaged['files'][0][key] = value
+            path.write_text(json.dumps(damaged), encoding='utf-8')
+            with self.assertRaises(ValueError): core.verify(self.dest)
+            with self.assertRaises(ValueError): core.compare(self.dest, self.dest)
+
 
 if __name__ == '__main__':
     unittest.main()

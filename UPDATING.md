@@ -23,6 +23,8 @@ Bubble 的 Git 仓库是发布来源。插件本身没有另一个后台自动�
 
 Codex 插件与软件端桥接是分开安装的。即使会话已经连接，用户请求检查更新时，也应调用对应 `*_installation_status`，比较 `installed_version`、`available_version` 和实际文件变化。
 
+2026-10-25 功能补全包含软件侧操作代码变化：Maya、Nuke、Houdini、Max、Unreal、Unity、Blender、PR、AE 需检查并更新所选软件/项目的桥接，再重启或按对应插件步骤刷新。PS、C4D、Resolve 以及四个流程插件不安装 Bubble 软件侧桥接。具体版本和验收范围见 [功能补全验收](FEATURE_EXPANSION_VALIDATION.md)。下述 2026-10-22 版本差异描述的是此前安全补丁。
+
 2026-10-22 的依赖补丁只更新 Codex 包和服务运行环境。Maya 包为 0.3.1 / 桥接为 0.3.0；Nuke、Houdini、Max、Unreal、Unity 包为 0.2.1 / 桥接为 0.2.0；PR 包为 0.4.1 / 签名 CEP 为 0.4.0。这些差异是正常的，不应仅因包版本不同而要求重装桥接。序列检查包 0.1.1 使用 Python 3.13，首次启动可能需要 uv 下载运行时；离线机器应提前准备该版本与锁定依赖。详情见 [安全更新验收](SECURITY_VALIDATION.md)。
 
 - Maya、Nuke、Houdini、Max：核对具体软件版本和用户配置目录。

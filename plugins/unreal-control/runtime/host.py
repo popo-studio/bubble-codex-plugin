@@ -37,7 +37,7 @@ def structured(operation, a):
     def row(n):
         _observed_actors[n.get_path_name()] = n
         parent = n.get_attach_parent_actor()
-        return {'id': n.get_path_name(), 'name': n.get_actor_label(), 'class': n.get_class().get_path_name(), 'parent_id': parent.get_path_name() if parent else None, 'position': xyz(n.get_actor_location()), 'scale': xyz(n.get_actor_scale3d()), 'rotation': [n.get_actor_rotation().pitch, n.get_actor_rotation().yaw, n.get_actor_rotation().roll]}
+        return {'id': n.get_path_name(), 'name': n.get_actor_label(), 'class': n.get_class().get_path_name(), 'parent_id': parent.get_path_name() if parent else None, 'folder': str(n.get_folder_path()), 'position': xyz(n.get_actor_location()), 'scale': xyz(n.get_actor_scale3d()), 'rotation': [n.get_actor_rotation().pitch, n.get_actor_rotation().yaw, n.get_actor_rotation().roll]}
     if operation == 'list_objects':
         limit = a.get('limit', 1000)
         if type(limit) is not int or not 1 <= limit <= 5000: raise ValueError('limit must be 1..5000')
@@ -92,14 +92,39 @@ def structured(operation, a):
             if not actors.destroy_actor(n): raise RuntimeError('Delete failed')
             return {'deleted_id': identity}
         elif action == 'transform':
-            values = {k: vec(a[k]) for k in ('position', 'scale') if a.get(k) is not None}
-            if not values: raise ValueError('Specify position or scale')
+            values = {k: vec(a[k]) for k in ('position', 'scale', 'rotation') if a.get(k) is not None}
+            if not values: raise ValueError('Specify position, rotation or scale')
             n.modify()
             if 'position' in values:
                 n.set_actor_location(values['position'], False, True)
                 actual = n.get_actor_location()
                 if any(abs(getattr(actual,k)-getattr(values['position'],k))>0.001 for k in ('x','y','z')): raise RuntimeError('Actor rejected requested location; inspect before retrying')
             if 'scale' in values: n.set_actor_scale3d(values['scale'])
+            if 'rotation' in values:
+                v=values['rotation']
+                if not n.set_actor_rotation(unreal.Rotator(pitch=v.x,yaw=v.y,roll=v.z), True): raise RuntimeError('Actor rejected rotation; inspect before retrying')
+        elif action == 'parent':
+            parent_id=a.get('parent_id')
+            parent=nodes.get(parent_id) if parent_id else None
+            if parent_id and (parent is None or _observed_actors.get(parent_id)!=parent): raise ValueError('Parent identity is not observed in current world; list objects again')
+            if parent and parent.get_level()!=n.get_level(): raise ValueError('Parent and child must belong to the same level')
+            ancestor=parent
+            while ancestor:
+                if ancestor==n: raise ValueError('Parenting cycle refused')
+                ancestor=ancestor.get_attach_parent_actor()
+            n.modify()
+            if parent:
+                rule=unreal.AttachmentRule.KEEP_WORLD
+                n.attach_to_actor(parent,unreal.Name(''),rule,rule,rule,False)
+            else:
+                rule=unreal.DetachmentRule.KEEP_WORLD
+                n.detach_from_actor(rule,rule,rule)
+            if n.get_attach_parent_actor()!=parent: raise RuntimeError('Actor rejected parenting; inspect before retrying')
+        elif action == 'folder':
+            folder=a.get('folder')
+            if not isinstance(folder,str) or len(folder)>512 or folder.lower()=='none' or any(ord(c)<32 for c in folder) or (folder and any(not part.strip() or part in ('.','..') for part in folder.split('/'))) or '\\' in folder: raise ValueError('Use relative Outliner folder path with slash-separated names, or empty string to clear; None is a reserved Unreal name')
+            n.modify();n.set_folder_path(unreal.Name(folder))
+            if str(n.get_folder_path()) not in (folder,'None' if not folder else folder): raise RuntimeError('Actor rejected folder; inspect before retrying')
         else: raise ValueError('Unknown object action')
     return row(n)
 

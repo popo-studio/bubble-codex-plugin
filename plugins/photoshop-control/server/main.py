@@ -295,5 +295,23 @@ def photoshop_load_selection(document_id: StrictInt, session_id: str, name: str,
     return call("load_selection",session_id,timeout,document_id=document_id,name=name,mode=mode)
 
 
+@mcp.tool(annotations=WRITE)
+def photoshop_layer_lock(document_id: StrictInt, session_id: str, layer_id: StrictInt, locked: StrictBool, timeout: float = 20) -> dict:
+    """Explicitly lock/unlock one stable layer or group ID. Refuses background layers and locked parent groups; never unlocks ancestors or converts backgrounds. Does not save."""
+    return call("layer_lock",session_id,timeout,document_id=document_id,layer_id=layer_id,locked=locked)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_clipping_mask(document_id: StrictInt, session_id: str, layer_id: StrictInt, enabled: StrictBool, timeout: float = 20) -> dict:
+    """Create/release a clipping mask on one explicit non-background art layer against the layer below in the same group. Inspect layer order first; locked layers/ancestors are refused. Does not rasterize, merge or save."""
+    return call("clipping_mask",session_id,timeout,document_id=document_id,layer_id=layer_id,enabled=enabled)
+
+
+@mcp.tool(annotations=WRITE)
+def photoshop_channels(document_id: StrictInt, session_id: str, action: Literal["list","rename","delete"] = "list", name: str | None = None, new_name: str | None = None, timeout: float = 20) -> dict:
+    """List channels, or rename/delete one uniquely named alpha channel after reading its name. Component and spot channels are protected. Delete discards saved selection data; needs user intent. No save; list is read-only."""
+    return call("channels",session_id,timeout,document_id=document_id,action=action,name=name,new_name=new_name)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

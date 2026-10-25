@@ -2,6 +2,8 @@
 import atexit
 import threading
 import time
+from typing import Literal
+from pydantic import StrictInt, StrictBool
 from discovery import Publisher, installation_enabled
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -190,6 +192,30 @@ def premiere_create_marker(project_id: str, sequence_id: str, start: float, name
 def premiere_update_marker(project_id: str, sequence_id: str, guid: str, name: str, comments: str, end: float | None = None, color: int | None = None, session_id: str | None = None) -> dict:
     """Update exact sequence marker GUID text/end/color index0-7; never changes marker start."""
     return call("update_marker", {"project_id":project_id,"sequence_id":sequence_id,"guid":guid,"name":name,"comments":comments,"end":end,"color":color},session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_move_item(project_id: str, item_id: str, parent_item_id: str, session_id: str) -> dict:
+    """Move one project item/bin into an explicit bin/root ID. Refuses root moves and descendant cycles. Does not move media files or save. Inspect state after any failure; never replay."""
+    return call("move_item",dict(project_id=project_id,item_id=item_id,parent_item_id=parent_item_id),session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_duplicate_sequence(project_id: str, sequence_id: str, name: str, session_id: str) -> dict:
+    """Clone one exact sequence using public DOM and assign a unique name. Returns new sequence ID, leaving source clips unchanged. No save/export; uncertain outcomes require reinspection."""
+    return call("duplicate_sequence",dict(project_id=project_id,sequence_id=sequence_id,name=name),session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_track_state(project_id: str, sequence_id: str, kind: Literal["video","audio"], index: StrictInt, session_id: str, muted: StrictBool | None = None, expected_state: dict | None = None) -> dict:
+    """Read zero-based track ID/name/mute state. To change mute, pass exact returned state and explicit boolean; rejects changed track identity or state. Does not remove/trim clips or save. Read with muted omitted first."""
+    return call("track_state",dict(project_id=project_id,sequence_id=sequence_id,kind=kind,index=index,muted=muted,expected_state=expected_state),session_id)
+
+
+@mcp.tool(annotations=WRITE)
+def premiere_delete_marker(project_id: str, sequence_id: str, guid: str, expected_marker: dict, session_id: str) -> dict:
+    """Delete exactly one sequence marker GUID after comparing the fresh sequence_markers row (name/comments/start/end). Requires deletion intent; refuses changed marker data. Does not delete clips or save."""
+    return call("delete_marker",dict(project_id=project_id,sequence_id=sequence_id,guid=guid,expected_marker=expected_marker),session_id)
 
 
 if __name__ == "__main__":

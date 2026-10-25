@@ -1,6 +1,6 @@
 [project]
 name = "bubble-sequence-check"
-version = "0.1.1"
+version = "0.2.0"
 requires-python = ">=3.11"
 dependencies = ["mcp>=1.28,<2", "certifi>=2026.10.19", "Pillow==13.0.0", "OpenEXR==3.4.9", "numpy==2.2.6"]
 

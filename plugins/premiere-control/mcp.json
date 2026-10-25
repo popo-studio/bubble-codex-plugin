@@ -12,7 +12,7 @@
         "/",
         "--locked",
         "--script",
-        "${PLUGIN_ROOT}/launch-0.4.1.py"
+        "${PLUGIN_ROOT}/launch-0.5.0.py"
       ]
     }
   }

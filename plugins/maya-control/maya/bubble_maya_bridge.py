@@ -20,7 +20,7 @@ import importlib.util as _importlib_util
 _operations_spec = _importlib_util.spec_from_file_location('_bubble_maya_operations', Path(__file__).with_name('operations.py'))
 _operations = _importlib_util.module_from_spec(_operations_spec)
 _operations_spec.loader.exec_module(_operations)
-STRUCTURED_OPERATIONS = {'structured_' + value for value in ('state','file','query','create','edit','selection','attribute','connections','timeline')}
+STRUCTURED_OPERATIONS = {'structured_' + value for value in ('state','file','query','create','edit','selection','attribute','connections','timeline','hierarchy','keyframes','transfer')}
 
 PROTOCOL = 1
 MAX_MESSAGE = 1024 * 1024
@@ -157,7 +157,7 @@ def dispatch(operation, arguments):
     """Main-thread only; may be invoked directly in mayapy standalone tests."""
     from maya import cmds, mel
     if operation == "status":
-        return {"bridge_version": "0.3.0", "pid": os.getpid(), "maya_version": cmds.about(version=True), "protocol": PROTOCOL}
+        return {"bridge_version": "0.4.0", "pid": os.getpid(), "maya_version": cmds.about(version=True), "protocol": PROTOCOL}
     if operation == "scene_info":
         return scene_info(cmds)
     if operation == "inspect_scene":
@@ -275,6 +275,7 @@ def start():
     from maya import cmds, utils
     if cmds.about(batch=True):
         raise RuntimeError("Bridge requires interactive Maya; batch has no idle main-thread dispatcher")
+    _operations.new_session()
     bridge = Bridge(dispatch, utils.executeDeferred)
     temporary = None
     try:

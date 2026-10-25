@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "max-control",
-  "version": "0.2.1",
-  "description": "Control a local Autodesk 3ds Max session, execute Python and MAXScript, and inspect scene dependencies.",
+  "version": "0.3.0",
+  "description": "Control a local Autodesk 3ds Max session, execute Python and MAXScript, and inspect scene dependencies. Includes Euler rotation, guarded parenting and scene layers.",
   "author": {
     "name": "popo-studio"
   },
@@ -19,7 +19,7 @@
       "interface": {
         "displayName": "Bubble 3ds Max",
         "shortDescription": "3ds Max 脚本执行与场景检查",
-        "longDescription": "Install the 3ds Max 2025/2026 bridge with your permission, connect automatically after 3ds Max restarts, inspect Bitmaptexture maps and scene XRefs, and run requested Python and MAXScript scripts.",
+        "longDescription": "Install the 3ds Max 2025/2026 bridge with your permission, connect automatically after 3ds Max restarts, inspect Bitmaptexture maps and scene XRefs, and run requested Python and MAXScript scripts. Structured tools support Euler rotation, guarded parenting and scene layers; multi-instance writes use explicit targets and guards.",
         "developerName": "popo-studio",
         "category": "Productivity",
         "capabilities": [

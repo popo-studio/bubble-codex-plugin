@@ -167,6 +167,32 @@ class NativeTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await self.manager.tools(sid)
 
+    async def test_resources_require_discovery_and_exact_session_uri(self):
+        sid=await self.connect()
+        with self.assertRaises(ValueError):
+            await self.manager.read_resource(sid,'file:///arbitrary/path')
+        resources=await self.manager.resources(sid)
+        self.assertEqual([r['uri'] for r in resources['resources']],['fixture://scene'])
+        result=await self.manager.read_resource(sid,'fixture://scene')
+        self.assertIn('Fixture scene',json.dumps(result))
+        self.assertNotIn('SECRET',json.dumps(result))
+        with self.assertRaises(ValueError):
+            await self.manager.read_resource(sid,'https://example.com/scene')
+
+    async def test_schema_validation_precedes_submit_and_does_not_break_session(self):
+        sid=await self.connect();await self.manager.tools(sid)
+        for args in ({},{'value':123}):
+            with self.assertRaisesRegex(ValueError,'no call submitted'):
+                await self.manager.call(sid,'fixture_echo',args,'schema-request',True)
+        self.assertNotIn('schema-request',self.manager.used_requests)
+        tool=self.manager.sessions[sid].tools['fixture_echo'];original=tool.inputSchema
+        tool.inputSchema={'$ref':'https://127.0.0.1:1/must-not-fetch'}
+        with self.assertRaisesRegex(ValueError,'no call submitted'):
+            await self.manager.call(sid,'fixture_echo',{'value':'secret'},'schema-request',True)
+        tool.inputSchema=original
+        result=await self.manager.call(sid,'fixture_echo',{'value':'valid'},'schema-request',True)
+        self.assertIn('valid',json.dumps(result))
+
     async def test_concurrent_connect_rejected_before_initialization(self):
         first = asyncio.create_task(self.manager.connect("studio", True))
         await asyncio.sleep(0)

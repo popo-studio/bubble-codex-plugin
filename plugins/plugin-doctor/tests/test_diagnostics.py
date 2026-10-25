@@ -76,6 +76,22 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertTrue(result["ok"], result)
         self.assertTrue(result["data"]["healthy"], result)
 
+    def test_static_capabilities_never_executes_source(self):
+        target = self.root / 'package'
+        shutil.copytree(ROOT, target, ignore=shutil.ignore_patterns('.venv', '__pycache__', '.test-runtime'))
+        path = target / 'server/main.py'
+        path.write_text('raise RuntimeError("must never execute")\n' + path.read_text(encoding='utf-8'), encoding='utf-8')
+        result = d.capabilities(str(target))
+        self.assertTrue(result['ok'], result)
+        tools = {item['name']: item for item in result['data']['tools']}
+        self.assertIn('doctor_capabilities', tools)
+        self.assertTrue(tools['doctor_capabilities']['read_only_hint'])
+        self.assertEqual(tools['doctor_capabilities']['parameters'], [{'name': 'package_path', 'required': True}])
+        path.write_text(path.read_text(encoding='utf-8') + '\n@mcp.tool(name="doctor_status", annotations=READ)\ndef duplicate(): pass\n', encoding='utf-8')
+        self.assertIn('duplicate_tool_name:doctor_status', d.capabilities(str(target))['data']['issues'])
+        path.write_text('not valid Python(', encoding='utf-8')
+        self.assertFalse(d.capabilities(str(target))['ok'])
+
     def test_after_effects_automatic_bridge_guidance(self):
         result = d.guidance('after-effects-control', 'uninstall')
         self.assertTrue(result['ok'])

@@ -1,19 +1,19 @@
 {
   "plugin_id": "com.popostudio.bubble.premiere",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "files": {
-    "CSXS/manifest.xml": "8ac3e6499ce02cbf49796d7534c1e7e3efddb5d0b3c5d0c3bdbfbb09e57e825c",
-    "META-INF/signatures.xml": "1112a6c49aa28ca393100f28b1bf6efe624294af63c2e2253e2764ef5e845fda",
+    "CSXS/manifest.xml": "ef628bbe7be8c0c89af8a83f285c74d0f3bae6ebe1f02fb80be7691c3ebc8d31",
+    "META-INF/signatures.xml": "894f5fd9c880bbb16eef61067ba26a7be1696da274f26a1543ed8d38f3a6a4e2",
     "auto.js": "909cd94d087b13bd43a458f1c1ae51a0385b267fc6af1ff3f83dbef8d7fbafa9",
     "background.js": "4b5c02b3a0e50ad162e36e569f8e4067f06fbd4c003da68d63b226fdda4093cd",
-    "discovery.js": "a16d63b9b4ca91e7396f41ac5ea89b06aba975592fe6ba705e1070c14dbebf58",
+    "discovery.js": "84a416666a9fe70a69b9197a1f0f2d8566b47824e29c17c52b1170730fdfce21",
     "host.js": "b31f187749eaeafcddf5dc26d501efbe7d712944e06114bef33d9e9d786c2cae",
-    "host.jsx": "74ecdf1dc00d241ad384b6178365e9c13d7c6b294ef6d136a79c9138add644cb",
+    "host.jsx": "7543f54e290d1eebb19e6c3fe0c664ac32ce5b3a9a3a7be83e5faeab055030b4",
     "index.html": "1ec8d513fae8ffeb18bb3172f693746c0481ed1c11239ee8a47caf2c6aef07c2",
     "mimetype": "6f4ece9eef5c4e518ad56a6f82d14e95f93e4e5d07b1cb8d22de8666d7ac3d7f",
     "transport.js": "2024323c4b8c3a129325012a39d544f4144a9700f4b5518ed8dbd2ed0c8c53a5"
   },
-  "zxp_sha256": "f968b2945956c7d4450b5f92e545d11a9ff495c3bd4a2057410d0bedb6c4a3ad",
+  "zxp_sha256": "c01549272664f0c4f256cdb82123cbf9632d62d9f51d1104897a37aec9ef89e6",
   "signer": {
     "tool": "Adobe ZXPSignCmd",
     "sha256": "ffc2223167225ce61d024eb463fc5ad1a1be16133f99ef334a646f7311916c98",

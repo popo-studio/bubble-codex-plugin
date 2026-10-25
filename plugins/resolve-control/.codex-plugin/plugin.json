@@ -1,6 +1,6 @@
 {
   "name": "resolve-control",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Inspect and control existing Windows DaVinci Resolve Studio 21+ through its official external Python API.",
   "author": {
     "name": "popo-studio"

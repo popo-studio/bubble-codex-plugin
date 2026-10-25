@@ -18,7 +18,7 @@ async def main():
             async with ClientSession(*streams) as client:
                 await client.initialize()
                 tools = await client.list_tools()
-                assert len(tools.tools) == 7
+                assert len(tools.tools) == 8
                 for name, args in (("doctor_status", {}),
                     ("doctor_inventory", {"codex_home": directory}),
                     ("doctor_check_package", {"package_path": str(ROOT)}),
@@ -28,7 +28,7 @@ async def main():
                     assert not response.isError, response
                     result = json.loads(response.content[0].text)
                     assert result["ok"], result
-                print("PASS doctor stdio: 7 tools; read-only status, inventory, package, sessions and maintenance guidance")
+                print("PASS doctor stdio: 8 tools; read-only status, inventory, package, sessions and maintenance guidance")
 
 
 if __name__ == "__main__":

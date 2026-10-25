@@ -14,12 +14,12 @@ async def main():
     with tempfile.TemporaryDirectory() as directory:
         source = Path(directory) / "native.json"
         source.write_text(json.dumps({"mcpServers": {"native": {"command": sys.executable, "args": [str(ROOT / "tests" / "fixture_native.py")]}}}))
-        params = StdioServerParameters(command=sys.executable, args=[str(ROOT / "launch-0.1.0.py")], env={**os.environ, "BUBBLE_CINEMA4D_CONFIG_DIR": str(Path(directory) / "registry")})
+        params = StdioServerParameters(command=sys.executable, args=[str(ROOT / "launch-0.2.0.py")], env={**os.environ, "BUBBLE_CINEMA4D_CONFIG_DIR": str(Path(directory) / "registry")})
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools = (await session.list_tools()).tools
-                assert len(tools) == 7
+                assert len(tools) == 9
                 async def call(tool_name, **args):
                     result = await session.call_tool(tool_name, args)
                     assert not result.isError, result
@@ -36,6 +36,9 @@ async def main():
                 await call("cinema4d_discover_tools", session_id=sid)
                 result = await call("cinema4d_call_tool", session_id=sid, tool="fixture_echo", arguments={"value": "nested MCP works"}, request_id="smoke-test-1", authorized=True)
                 assert "nested MCP works" in json.dumps(result)
+                resources = await call("cinema4d_list_resources", session_id=sid)
+                uri = resources["resources"][0]["uri"]
+                assert "Fixture scene" in json.dumps(await call("cinema4d_read_resource", session_id=sid, uri=uri))
                 await call("cinema4d_disconnect", session_id=sid)
                 print(json.dumps({"ok": True, "tools": len(tools), "transport": "real MCP stdio -> Bubble -> synthetic native MCP stdio", "native_c4d_tested": False}))
 

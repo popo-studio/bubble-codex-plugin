@@ -20,7 +20,7 @@ def main():
     args = parser.parse_args()
     editor = Path(args.editor)
     data = editor.parent / "Data"
-    scratch_root = ROOT.parents[1] / ".test-runtime"
+    scratch_root = ROOT / ".test-runtime"
     scratch_root.mkdir(exist_ok=True)
     scratch = Path(tempfile.mkdtemp(prefix="unity-smoke-", dir=scratch_root))
     mono = data / "MonoBleedingEdge/bin/mono.exe"

@@ -22,7 +22,7 @@ async def run(profile):
     target=profile/"Adobe/CEP/extensions/com.popostudio.bubble.premiere"
     target.mkdir(parents=True)
     (target/"fixture.txt").write_text("simulated host installation")
-    receipt={"plugin_id":"com.popostudio.bubble.premiere","version":"0.4.0","target":str(target),
+    receipt={"plugin_id":"com.popostudio.bubble.premiere","version":"0.5.0","target":str(target),
         "files":{"fixture.txt":hashlib.sha256((target/"fixture.txt").read_bytes()).hexdigest()}}
     target.with_name(target.name+".bubble-install.json").write_text(json.dumps(receipt))
     profile_env={"APPDATA":str(profile),"LOCALAPPDATA":str(profile)}
@@ -32,7 +32,7 @@ async def run(profile):
         async with ClientSession(read, write) as session:
             await session.initialize()
             names = {t.name for t in (await session.list_tools()).tools}
-            assert len(names) == 23, names
+            assert len(names) == 27, names
 
             async def call(name, args=None):
                 result = await session.call_tool(name, args or {})

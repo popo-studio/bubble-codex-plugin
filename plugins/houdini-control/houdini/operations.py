@@ -3,9 +3,16 @@ import hashlib
 import json
 import math
 import os
+import secrets
 from pathlib import Path
 
 GENERATION=0
+SESSION_NONCE=secrets.token_hex(32)
+
+
+def new_session():
+    global SESSION_NONCE
+    SESSION_NONCE=secrets.token_hex(32)
 
 
 def finite(v):
@@ -25,15 +32,15 @@ def snapshot(hou):
     nodes=hou.node('/').allSubChildren()
     if len(nodes)>50000: raise ValueError('Scene exceeds 50000-node snapshot limit')
     scene={'path':'' if hou.hipFile.isNewFile() else hou.hipFile.path(),'modified':bool(hou.hipFile.hasUnsavedChanges())}
-    raw=[GENERATION,scene,sorted((n.path(),n.sessionId()) for n in nodes)]
-    return {'scene':scene,'snapshot':hashlib.sha256(json.dumps(raw,sort_keys=True).encode()).hexdigest(),'node_count':len(nodes),'guard_scope':'path, dirty flag, node session identities, bridge scene generation; not every parameter edit'}
+    raw=[SESSION_NONCE,GENERATION,scene,sorted((n.path(),n.sessionId()) for n in nodes)]
+    return {'scene':scene,'snapshot':hashlib.sha256(json.dumps(raw,sort_keys=True).encode()).hexdigest(),'node_count':len(nodes),'guard_scope':'path, dirty flag, node session identities, bridge session and scene generation; not every parameter edit'}
 
 
 def dispatch(op,a):
     global GENERATION
     import hou
     state=snapshot(hou)
-    reads=op in ('state','query') or (op in ('attribute','timeline','connections') and a.get('action','get')=='get')
+    reads=op in ('state','query') or (op in ('attribute','timeline','connections','keyframes','network_box') and a.get('action','get')=='get')
     if not reads:
         if type(a.get('pid')) is not int or a['pid']!=os.getpid(): raise ValueError('Explicit current PID required for changes')
         if a.get('expected_snapshot')!=state['snapshot']: raise ValueError('Scene changed; read scene_state again')
@@ -131,5 +138,85 @@ def dispatch(op,a):
             hou.playbar.setFrameRange(start,end);hou.playbar.setPlaybackRange(start,end);hou.setFrame(frame)
         elif a.get('action','get')!='get': raise ValueError('action must be get or set')
         result={'start':hou.playbar.frameRange()[0],'end':hou.playbar.frameRange()[1],'frame':hou.frame(),'fps':hou.fps()}
+    elif op=='keyframes':result=keyframes(hou,a)
+    elif op=='transfer':result=transfer(hou,a)
+    elif op=='network_box':result=network_box(hou,a)
     else: raise ValueError('Unsupported structured operation')
     return {'result':result,**snapshot(hou)}
+
+
+def keyframes(hou,a):
+    n=node(hou,a['node']);p=n.parm(a['attribute'])
+    if p is None or p.parmTemplate().type() not in (hou.parmTemplateType.Int,hou.parmTemplateType.Float):raise ValueError('Numeric scalar parameter required')
+    if p.getReferencedParm()!=p:raise ValueError('Referenced parameter is protected')
+    raw=p.keyframes()
+    if len(raw)>2000:raise ValueError('More than 2000 keys')
+    keys=[]
+    for key in raw:
+        try:expression=key.expression()
+        except hou.KeyframeValueNotSet:expression=''
+        if expression and expression not in ('linear()','bezier()','cubic()','constant()','qlinear()'):raise ValueError('Expression-driven keys require specialist handling')
+        if expression and key.expressionLanguage()!=hou.exprLanguage.Hscript:raise ValueError('Python key expressions are protected')
+        try:value=key.value()
+        except hou.KeyframeValueNotSet:raise ValueError('Key has no numeric value')
+        keys.append({'frame':key.frame(),'value':value,'expression':expression})
+    revision=hashlib.sha256(json.dumps(keys,sort_keys=True).encode()).hexdigest();action=a.get('action','get')
+    if action=='get':return {'keys':keys,'revision':revision}
+    if action not in ('set','delete'):raise ValueError('action must be get, set or delete')
+    node(hou,a['node'],True)
+    if p.isLocked():raise ValueError('Parameter is locked')
+    if a.get('expected_keys')!=revision:raise ValueError('Key list changed; read keyframes again')
+    frame=finite(a['frame']);exists=any(x['frame']==frame for x in keys)
+    if action=='set':
+        value=finite(a['value'])
+        if exists and a.get('overwrite') is not True:raise ValueError('Existing key requires overwrite=true')
+        key=hou.Keyframe();key.setFrame(frame);key.setValue(value);key.setExpression('linear()',hou.exprLanguage.Hscript);p.setKeyframe(key)
+    else:
+        if a.get('confirm_delete') is not True or not exists:raise ValueError('Deletion requires existing exact frame and confirm_delete=true')
+        p.deleteKeyframeAtFrame(frame)
+    return keyframes(hou,{**a,'action':'get'})
+
+
+def transfer(hou,a):
+    parent=node(hou,a['parent'],True);action=a['action'];p=Path(a['path'])
+    if not parent.isNetwork():raise ValueError('Parent must be an editable network')
+    if action not in ('import','export') or not p.is_absolute() or p.suffix.lower()!='.cpio':raise ValueError('Absolute .cpio file and import/export required')
+    if action=='import':
+        if not p.is_file():raise ValueError('Snippet file does not exist')
+        before={n.sessionId() for n in parent.children()};parent.loadItemsFromFile(str(p),ignore_load_warnings=False)
+        created=[n.path() for n in parent.children() if n.sessionId() not in before]
+        return {'path':str(p),'created_nodes':created[:1000],'truncated':len(created)>1000}
+    if not p.parent.is_dir() or (p.exists() and a.get('overwrite') is not True):raise ValueError('Existing parent and explicit overwrite authorization required')
+    paths=a.get('nodes')
+    if not isinstance(paths,list) or not 1<=len(paths)<=1000:raise ValueError('Choose 1..1000 child nodes')
+    selected=[node(hou,x) for x in paths]
+    if any(n.parent()!=parent for n in selected):raise ValueError('Every node must be an immediate child of parent')
+    parent.saveItemsToFile(tuple(selected),str(p),save_hda_fallbacks=False)
+    return {'path':str(p),'exported_nodes':[n.path() for n in selected],'note':'External assets and HDA definitions are not bundled.'}
+
+
+def network_box(hou,a):
+    action=a.get('action','get');parent=node(hou,a['parent'],action!='get')
+    if not parent.isNetwork():raise ValueError('Parent must be a network')
+    def row(box):return {'name':box.name(),'comment':box.comment(),'nodes':[n.path() for n in box.nodes(recurse=False)]}
+    if action=='get':return {'boxes':[row(b) for b in parent.networkBoxes()]}
+    if action not in ('create','add','remove'):raise ValueError('action must be get, create, add or remove')
+    name=a.get('name','');paths=a.get('nodes');comment=a.get('comment','')
+    if not isinstance(name,str) or not name.isidentifier():raise ValueError('Simple network box name required')
+    if not isinstance(comment,str) or len(comment)>2000:raise ValueError('Comment limit is 2000 characters')
+    if not isinstance(paths,list) or not 1<=len(paths)<=1000:raise ValueError('Choose 1..1000 child nodes')
+    selected=[node(hou,x) for x in paths]
+    if any(n.parent()!=parent for n in selected):raise ValueError('Every node must be an immediate child of parent')
+    box=parent.findNetworkBox(name)
+    if action=='create':
+        if box is not None:raise ValueError('Network box name already exists')
+    elif box is None:raise ValueError('Network box no longer exists')
+    # Do not silently move nodes away from another box.
+    if action!='remove' and any(n.parentNetworkBox() not in (None,box) for n in selected):raise ValueError('Node belongs to another network box')
+    if action=='remove' and any(n not in box.nodes(recurse=False) for n in selected):raise ValueError('Node is not a direct member of this box')
+    if action=='create':box=parent.createNetworkBox(name);box.setComment(comment)
+    for n in selected:
+        if action=='remove':box.removeItem(n)
+        else:box.addItem(n)
+    box.fitAroundContents()
+    return row(box)

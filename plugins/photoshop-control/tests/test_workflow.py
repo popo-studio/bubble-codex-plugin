@@ -28,5 +28,26 @@ class WorkflowTests(unittest.TestCase):
  def test_existing_alpha_not_overwritten(self):self.assertFalse(self.run_host('save_selection',dict(name='Mask'),"d.channels=[{name:'Mask'}]")['result']['ok'])
  def test_invalid_color_rejected_before_script(self):
   with self.assertRaises(ValueError):workflow.build('set_text_style',dict(layer_id=2,color='red'))
+ def test_explicit_unlock_and_relock(self):
+  self.assertFalse(self.run_host('layer_lock',dict(layer_id=2,locked=False),'l.allLocked=true')['result']['data']['locked'])
+  self.assertTrue(self.run_host('layer_lock',dict(layer_id=2,locked=True))['result']['data']['locked'])
+ def test_unlock_never_changes_locked_parent_or_background(self):
+  for setup in ['l.isBackgroundLayer=true','l.parent={typename:"LayerSet",allLocked:true,parent:d}']:
+   self.assertFalse(self.run_host('layer_lock',dict(layer_id=2,locked=False),setup)['result']['ok'])
+ def test_clipping_requires_lower_sibling_and_can_release(self):
+  self.assertFalse(self.run_host('clipping_mask',dict(layer_id=2,enabled=True))['result']['ok'])
+  self.assertTrue(self.run_host('clipping_mask',dict(layer_id=2,enabled=True),'d.layers.push({id:3})')['result']['data']['clipped'])
+  self.assertFalse(self.run_host('clipping_mask',dict(layer_id=2,enabled=False),'l.grouped=true')['result']['data']['clipped'])
+ def test_alpha_channel_rename_delete_and_protected_components(self):
+  setup="ChannelType.MASKEDAREA=1;ChannelType.SELECTEDAREA=2;d.channels=[{name:'Mask',kind:1,remove:function(){events.push('delete-alpha');}}]"
+  self.assertEqual(self.run_host('channels',dict(action='rename',name='Mask',new_name='Saved'),setup)['result']['data']['name'],'Saved')
+  self.assertEqual(self.run_host('channels',dict(action='delete',name='Mask'),setup)['events'],['delete-alpha'])
+  for kind in (0,3):
+   r=self.run_host('channels',dict(action='delete',name='Mask'),setup+f';d.channels[0].kind={kind}')
+   self.assertFalse(r['result']['ok']);self.assertEqual(r['events'],[])
+ def test_channels_list_and_ambiguous_name_refused(self):
+  setup="ChannelType.MASKEDAREA=1;ChannelType.SELECTEDAREA=2;d.channels=[{name:'RGB',kind:0},{name:'Mask',kind:1},{name:'Mask',kind:2}]"
+  self.assertEqual([r['alpha'] for r in self.run_host('channels',dict(action='list'),setup)['result']['data']['channels']],[False,True,True])
+  self.assertFalse(self.run_host('channels',dict(action='delete',name='Mask'),setup)['result']['ok'])
 
 if __name__=='__main__':unittest.main()

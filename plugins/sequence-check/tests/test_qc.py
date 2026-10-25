@@ -1,4 +1,6 @@
 import pathlib
+import csv
+import json
 import sys
 import tempfile
 import unittest
@@ -84,5 +86,38 @@ class SequenceTests(unittest.TestCase):
         (self.root / 'nested').mkdir()
         Image.new('RGB', (2, 2)).save(self.root / 'nested' / 'x.1.png')
         self.assertEqual(qc.collect(str(self.root)), [])
+
+    def test_step_negative_frames_and_expected_layout(self):
+        for n in (-2, 0, 1, 4):
+            self.png(f'shot.{n}.png')
+        row = qc.inspect(str(self.root), 'shot.*', -2, 4, 2, True, 8, 8, ['R', 'A'])['data'][0]
+        self.assertEqual(row['missing_frames'], [2])
+        self.assertEqual(row['off_step_frames'], [1])
+        self.assertEqual(row['frames'][0]['frame'], -2)
+        self.assertEqual(row['frames'][0]['expected_layout_issues'], [
+            {'part': 0, 'issue': 'dimensions', 'actual': [5, 4]}, {'issue': 'missing_channels', 'channels': ['A']}])
+        self.assertEqual(len(qc.discover(str(self.root))['data']), 2)
+        for kwargs in ({'frame_step': 2}, {'expected_start': -1, 'expected_end': 1},
+                       {'expected_width': 8}, {'required_channels': []}, {'frame_step': True}):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                qc.inspect(str(self.root), **kwargs)
+
+    def test_report_preview_json_and_exclusive_csv_formula_neutralization(self):
+        self.png('=danger.1.png')
+        source = (self.root / '=danger.1.png').read_bytes()
+        target = self.root / 'report.json'
+        preview = qc.write_report(str(self.root), str(target))
+        self.assertFalse(preview['written']); self.assertFalse(target.exists())
+        actual = qc.write_report(str(self.root), str(target), confirmed=True)
+        self.assertEqual(preview['sha256'], actual['sha256'])
+        self.assertEqual(json.loads(target.read_text(encoding='utf-8'))['matched_files'], 1)
+        with self.assertRaises(ValueError): qc.write_report(str(self.root), str(target), confirmed=True)
+        csv_path = self.root / 'report.csv'
+        qc.write_report(str(self.root), str(csv_path), confirmed=True)
+        with csv_path.open(encoding='utf-8-sig', newline='') as stream:
+            rows = list(csv.reader(stream))
+        self.assertEqual(rows[2][1], "'=danger.1.png")
+        self.assertEqual((self.root / '=danger.1.png').read_bytes(), source)
+        with self.assertRaises(ValueError): qc.write_report(str(self.root), str(self.root / 'none.json'), pattern='missing*', confirmed=True)
 
 if __name__ == '__main__': unittest.main()

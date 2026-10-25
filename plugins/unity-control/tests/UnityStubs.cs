@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Web.Script.Serialization;
 
@@ -17,14 +18,17 @@ namespace UnityEngine
     public class Component : Object { }
     public class Transform : Component, IEnumerable<Transform>
     {
-        public Transform parent; public Vector3 position,localScale=new Vector3(1,1,1);
+        public Transform parent; public Vector3 position,eulerAngles,localScale=new Vector3(1,1,1);
         public GameObject gameObject;
-        public IEnumerator<Transform> GetEnumerator() { return new List<Transform>().GetEnumerator(); }
+        public IEnumerator<Transform> GetEnumerator() { return UnityEngine.SceneManagement.Scene.Roots.Where(go=>go.transform.parent==this).Select(go=>go.transform).GetEnumerator(); }
+        public bool IsChildOf(Transform ancestor){for(var t=this;t!=null;t=t.parent)if(t==ancestor)return true;return false;}
         IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
     }
     public class GameObject : Object
     {
         public Transform transform = new Transform(); public bool activeSelf=true;
+        public bool activeInHierarchy {get{return activeSelf && (!transform.parent || transform.parent.gameObject.activeInHierarchy);}}
+        public void SetActive(bool value){activeSelf=value;}
         public GameObject(string n="Test"){name=n;transform.gameObject=this;SceneManagement.Scene.Roots.Add(this);}
         public static GameObject CreatePrimitive(PrimitiveType type){return new GameObject(type.ToString());}
         public SceneManagement.Scene scene = new SceneManagement.Scene();
@@ -54,7 +58,7 @@ namespace UnityEngine.SceneManagement
         public bool isDirty { get { return Dirty; } }
         public bool isLoaded { get { return true; } }
         public int rootCount { get { return 0; } }
-        public UnityEngine.GameObject[] GetRootGameObjects() { return Roots.ToArray(); }
+        public UnityEngine.GameObject[] GetRootGameObjects() { return Roots.Where(go=>!go.transform.parent).ToArray(); }
     }
     public static class SceneManager
     {
@@ -89,8 +93,8 @@ namespace UnityEditor
         public static void Reload() { beforeAssemblyReload?.Invoke(); }
     }
     public static class EditorUtility {public static UnityEngine.Object InstanceIDToObject(int id){UnityEngine.Object o;UnityEngine.Object.Registry.TryGetValue(id,out o);return o;} public static bool IsPersistent(UnityEngine.Object o){return false;}}
-    public static class Undo {public static void RegisterCreatedObjectUndo(UnityEngine.Object o,string n){} public static void RecordObject(UnityEngine.Object o,string n){} public static void DestroyObjectImmediate(UnityEngine.Object o){UnityEngine.Object.Registry.Remove(o.GetInstanceID());UnityEngine.SceneManagement.Scene.Roots.Remove(o as UnityEngine.GameObject);}}
-    public static class PrefabUtility {public static void RecordPrefabInstancePropertyModifications(UnityEngine.Object o){}}
+    public static class Undo {public static void SetTransformParent(UnityEngine.Transform t,UnityEngine.Transform parent,string name){t.parent=parent;}public static void RegisterCreatedObjectUndo(UnityEngine.Object o,string n){} public static void RecordObject(UnityEngine.Object o,string n){} public static void DestroyObjectImmediate(UnityEngine.Object o){UnityEngine.Object.Registry.Remove(o.GetInstanceID());UnityEngine.SceneManagement.Scene.Roots.Remove(o as UnityEngine.GameObject);}}
+    public static class PrefabUtility {public static bool IsPartOfPrefabInstance(UnityEngine.Object o){return false;}public static void RecordPrefabInstancePropertyModifications(UnityEngine.Object o){}}
     public class EditorBuildSettingsScene {public string path;}
     public static class EditorBuildSettings {public static EditorBuildSettingsScene[] scenes=new EditorBuildSettingsScene[0];}
     public static class Selection { public static UnityEngine.GameObject activeGameObject; public static UnityEngine.Object[] objects = new UnityEngine.Object[0]; }

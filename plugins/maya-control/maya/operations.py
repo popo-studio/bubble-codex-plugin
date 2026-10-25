@@ -3,9 +3,16 @@ import hashlib
 import json
 import math
 import os
+import secrets
 from pathlib import Path
 
 GENERATION = 0
+SESSION_NONCE = secrets.token_hex(32)
+
+
+def new_session():
+    global SESSION_NONCE
+    SESSION_NONCE = secrets.token_hex(32)
 
 
 def finite(value):
@@ -32,9 +39,9 @@ def snapshot(cmds):
     if len(nodes) > 50000:
         raise ValueError('Scene exceeds the 50000-node structural snapshot limit')
     scene = {'path': cmds.file(q=True, sceneName=True), 'modified': bool(cmds.file(q=True, modified=True))}
-    raw = [GENERATION, scene, nodes]
+    raw = [SESSION_NONCE, GENERATION, scene, nodes]
     return {'scene': scene, 'snapshot': hashlib.sha256(json.dumps(raw, sort_keys=True).encode()).hexdigest(),
-            'guard_scope': 'scene path, dirty flag, node identities, bridge scene generation; not every attribute edit',
+            'guard_scope': 'bridge session, scene path, dirty flag, node identities, bridge scene generation; not every attribute edit',
             'node_count': len(nodes)}
 
 
@@ -52,7 +59,7 @@ def dispatch(op, a):
     if op == 'state':
         state['render'] = {key: cmds.getAttr('defaultRenderGlobals.' + key) for key in ['currentRenderer', 'startFrame', 'endFrame']}
         return state
-    reads = op == 'query' or (op in ('attribute', 'timeline', 'connections') and a.get('action', 'get') == 'get')
+    reads = op == 'query' or (op in ('attribute', 'timeline', 'connections', 'keyframes') and a.get('action', 'get') == 'get')
     if not reads:
         if type(a.get('pid')) is not int or a['pid'] != os.getpid():
             raise ValueError('An explicit current process PID is required for changes')
@@ -166,5 +173,97 @@ def dispatch(op, a):
             cmds.playbackOptions(minTime=start, maxTime=end); cmds.currentTime(frame)
         elif a.get('action', 'get') != 'get': raise ValueError('action must be get or set')
         result = {'start': cmds.playbackOptions(q=True,minTime=True), 'end': cmds.playbackOptions(q=True,maxTime=True), 'frame': cmds.currentTime(q=True)}
+    elif op == 'hierarchy':
+        result = hierarchy(cmds, a)
+    elif op == 'keyframes':
+        result = keyframes(cmds, a)
+    elif op == 'transfer':
+        result = transfer(cmds, a)
     else: raise ValueError('Unsupported structured operation')
     return {'result': result, **snapshot(cmds)}
+
+
+def hierarchy(cmds, a):
+    child = editable(cmds, a['node'])
+    parent = editable(cmds, a['parent']) if a.get('parent') else None
+    if cmds.nodeType(child) != 'transform' or (parent and cmds.nodeType(parent) != 'transform'):
+        raise ValueError('Hierarchy edits support ordinary transforms, not joints or shapes')
+    if len(cmds.listRelatives(child, allParents=True, fullPath=True) or []) > 1:
+        raise ValueError('Instanced transforms require specialist handling')
+    if parent == child or (parent and parent.startswith(child + '|')):
+        raise ValueError('Cannot parent a node below itself or its descendants')
+    current = cmds.listRelatives(child, parent=True, fullPath=True) or []
+    if current == ([parent] if parent else []):
+        return {'node': child, 'parent': parent, 'changed': False}
+    destination = (parent or '') + '|' + child.rsplit('|', 1)[-1]
+    if cmds.objExists(destination):
+        raise ValueError('Destination sibling name exists; refusing automatic rename')
+    for attr in ('translateX','translateY','translateZ','rotateX','rotateY','rotateZ','scaleX','scaleY','scaleZ'):
+        if not cmds.getAttr(child+'.'+attr, settable=True) or cmds.listConnections(child+'.'+attr, source=True, destination=False):
+            raise ValueError('Reparenting locked, animated or connected transforms is unsupported')
+    moved = cmds.parent(child, parent, absolute=True) if parent else cmds.parent(child, world=True, absolute=True)
+    return {'node': node(cmds, moved[0]), 'parent': parent, 'changed': True, 'space': 'world transform preserved'}
+
+
+def keyframes(cmds, a):
+    n = node(cmds, a['node']); attr = name(a['attribute'])
+    if '.' in attr or '[' in attr:
+        raise ValueError('One direct scalar attribute is required')
+    plug = n+'.'+attr
+    if cmds.getAttr(plug, type=True) not in ('double', 'float', 'long', 'short', 'byte', 'bool', 'enum', 'doubleLinear', 'doubleAngle'):
+        raise ValueError('Only numeric scalar attributes support this tool')
+    sources = cmds.listConnections(plug, source=True, destination=False) or []
+    if len(sources) > 1 or any(cmds.nodeType(s) not in ('animCurveTA','animCurveTL','animCurveTT','animCurveTU') for s in sources):
+        raise ValueError('Driven, layered or non-time animation requires specialist handling')
+    times = cmds.keyframe(plug, query=True, timeChange=True) or []
+    values = cmds.keyframe(plug, query=True, valueChange=True) or []
+    if len(times) != len(values) or len(times) > 2000:
+        raise ValueError('Unsupported key data or more than 2000 keys')
+    keys = [{'frame': t, 'value': v} for t, v in zip(times, values)]
+    revision = hashlib.sha256(json.dumps(keys, sort_keys=True).encode()).hexdigest()
+    action = a.get('action', 'get')
+    if action == 'get': return {'keys': keys, 'revision': revision}
+    if action not in ('set','delete'): raise ValueError('action must be get, set or delete')
+    editable(cmds, n)
+    if a.get('expected_keys') != revision: raise ValueError('Key list changed; read keyframes again')
+    if cmds.getAttr(plug, lock=True): raise ValueError('Attribute is locked')
+    frame = finite(a['frame']); existing = frame in times
+    if action == 'set':
+        value = finite(a['value'])
+        if existing and a.get('overwrite') is not True: raise ValueError('Existing key requires overwrite=true')
+        cmds.setKeyframe(n, attribute=attr, time=frame, value=value, insertBlend=False, shape=False, inTangentType='linear', outTangentType='linear')
+    else:
+        if a.get('confirm_delete') is not True or not existing: raise ValueError('Deletion requires an existing exact frame and confirm_delete=true')
+        cmds.cutKey(n, attribute=attr, time=(frame,frame), animation='objects', option='keys', clear=True, shape=False)
+    return keyframes(cmds, {**a, 'action':'get'})
+
+
+def transfer(cmds, a):
+    action = a['action']; p = Path(a.get('path',''))
+    if action not in ('import','export') or not p.is_absolute() or p.suffix.lower() not in ('.ma','.mb'):
+        raise ValueError('Use import/export with an absolute .ma/.mb path')
+    typ = 'mayaAscii' if p.suffix.lower()=='.ma' else 'mayaBinary'
+    if action == 'import':
+        namespace = a.get('namespace','')
+        if not p.is_file() or not isinstance(namespace,str) or not namespace.isidentifier() or cmds.namespace(exists=namespace):
+            raise ValueError('Existing scene and a new simple namespace required')
+    else:
+        if not p.parent.is_dir() or (p.exists() and a.get('overwrite') is not True):
+            raise ValueError('Existing parent and explicit overwrite authorization required')
+        current = cmds.file(query=True,sceneName=True)
+        if current and Path(current).resolve() == p.resolve(): raise ValueError('Cannot export over the current scene file')
+        paths = a.get('nodes',[])
+        if not isinstance(paths,list) or not 1 <= len(paths) <= 1000: raise ValueError('Choose 1..1000 exact nodes to export')
+        selected = [node(cmds,n) for n in paths]
+    before = cmds.ls(selection=True,long=True) or []
+    try:
+        if action == 'import':
+            created = cmds.file(str(p), i=True, type=typ, namespace=namespace, mergeNamespacesOnClash=False, returnNewNodes=True, executeScriptNodes=False, loadReferenceDepth='none', prompt=False) or []
+            return {'path':str(p),'created_nodes':created[:1000],'truncated':len(created)>1000,'note':'Script nodes disabled; installed plugins/callbacks may still run. References are not loaded.'}
+        cmds.select(selected,replace=True)
+        cmds.file(str(p),exportSelected=True,type=typ,force=a.get('overwrite') is True,prompt=False)
+        return {'path':str(p),'exported_nodes':selected,'note':'Native Maya export can include connected dependencies.'}
+    finally:
+        alive=[n for n in before if cmds.objExists(n)]
+        if alive:cmds.select(alive,replace=True)
+        else:cmds.select(clear=True)

@@ -19,7 +19,7 @@ import client
 
 def main():
     data = Path(os.environ.get("UNITY_EDITOR_DATA", "C:/Program Files/Unity/Hub/Editor/6000.1.0f1/Editor/Data"))
-    scratch_root = ROOT.parents[1] / ".test-runtime"
+    scratch_root = ROOT / ".test-runtime"
     scratch_root.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="unity-protocol-", dir=scratch_root) as directory:
         scratch = Path(directory)
@@ -61,6 +61,21 @@ def main():
             object_id=created['data']['objects'][0]['id']
             changed=edit('transform',object_id=object_id,position=[1,2,3],scale=[2,2,2])
             assert changed['ok'] and changed['data']['objects'][0]['position']==[1,2,3],changed
+            rotated=edit('transform',object_id=object_id,rotation=[10,20,30])
+            assert rotated['ok'] and rotated['data']['objects'][0]['rotation']==[10,20,30],rotated
+            parent=edit('create',kind='empty',name='Parent')['data']['objects'][0]['id']
+            attached=edit('parent',object_id=object_id,parent_id=parent)
+            assert attached['ok'] and attached['data']['objects'][0]['parent_id']==parent,attached
+            assert attached['data']['objects'][0]['position']==[1,2,3]
+            assert not edit('parent',object_id=parent,parent_id=object_id)['ok']
+            assert not edit('parent',object_id=object_id,parent_id=preview_id)['ok']
+            assert not edit('active',object_id=object_id)['ok']
+            inactive=edit('active',object_id=parent,active=False,has_active=True)
+            assert inactive['ok'] and not inactive['data']['objects'][0]['active'],inactive
+            child=client.request('inspect_object',dict(object_id=object_id,expected_scene=scene_token),pid=pid)['data']['objects'][0]
+            assert child['active'] and not child['active_in_hierarchy'],child
+            detached=edit('parent',object_id=object_id,parent_id=0)
+            assert detached['ok'] and detached['data']['objects'][0]['parent_id']==0 and detached['data']['objects'][0]['active_in_hierarchy'],detached
             assert not client.request('scene_action',dict(action='new',expected_scene=scene_token),pid=pid)['ok'], 'Dirty scene was discarded'
             assert edit('rename',object_id=object_id,name='Renamed')['ok']
             assert edit('duplicate',object_id=object_id)['ok']

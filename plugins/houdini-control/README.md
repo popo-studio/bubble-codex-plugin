@@ -1,6 +1,6 @@
 # Bubble Houdini Control
 
-Current Codex package: **0.2.1**. Software-side bridge: **0.2.0**, unchanged by this runtime dependency patch.
+Current Codex package: **0.3.0**. Software-side bridge: **0.3.0**. Update the owned host bridge through setup, then restart/reload the application once.
 面向 Houdini 20.5 的本机 Codex 插件，提供 Python 执行、场景信息、文件依赖检查与多实例文件名选择。软件侧仅使用内置 Python；Codex 端依赖 `uv` 和 Python ≥3.10，锁定 MCP 1.x。
 
 ## 安装与使用
@@ -68,6 +68,17 @@ Native acceptance lives in `tests/structured_host_smoke.py`: run only in a fresh
 batch process. It creates its own temporary scene and tests creation/query, parameter write,
 stale guards, selection, timeline, save/overwrite refusal, delete confirmation, and reopening.
 
-## Runtime security patch 0.2.1
 
-The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.
+## 日常操作补全 0.3.0
+
+- `houdini_keyframes`：数值 scalar parm 的关键帧查询、写入、删除；先 get 并传 `expected_keys=revision`，覆盖已有帧和删除需明确标记。新键 linear，保护锁定/引用参数、Python 和非标准插值表达式；不处理 CHOP/复杂驱动动画。
+- `houdini_graph_transfer`：显式 network 子节点导出 `.cpio`，导入指定可编辑 network，返回实际新增节点。同名节点遵循 Houdini 原生重命名；不打包外部文件/HDA定义；可信用户授权输入可能触发原生加载回调，失败可能已有部分内容，禁止盲重试。
+- `houdini_network_box`：列出/创建 network box、加入/移除显式同级节点，创建支持注释。禁止偷偷移动其他 box 的成员；remove 仅移出框，不删除节点。修改需最新 snapshot，不进入锁定 HDA。
+
+API：[Parm](https://www.sidefx.com/docs/houdini/hom/hou/Parm.html)、[Keyframe](https://www.sidefx.com/docs/houdini/hom/hou/Keyframe.html)、[OpNode serialization](https://www.sidefx.com/docs/houdini/hom/hou/OpNode.html)、[NetworkBox](https://www.sidefx.com/docs/houdini/hom/hou/NetworkBox.html)。
+
+实机：Houdini 20.5.487 独立 hython，使用带 `__HVER__` 的临时用户配置，已通过关键帧往返、旧revision/覆盖拒绝、network box 成员保护和 `.cpio` 跨 network 导入导出。没有连接现有 GUI 场景。
+
+当前 MCP 工具共 20 个。优先使用上述结构化工具；每次写入仍须选定实例并传最新场景身份。Maya/Nuke/Houdini 的 snapshot 包含随机桥接 session 身份，重启或重新连接后的旧 snapshot 无效；它不覆盖每个属性编辑。
+
+此版本保留已修复的依赖锁，不升级第三方依赖。软件侧 payload 已改变，需要通过 setup 预览并更新；不会自动更改用户启动配置。安装/卸载所有权、冲突保护、多实例选择逻辑继续生效。

@@ -60,11 +60,11 @@ Official APIs used: [embedded packages](https://docs.unity3d.com/6000.1/Document
 
 GitHub 发布后需刷新已注册的 Codex 插件市场，并重新加载聊天或重启 Codex。软件/项目中的桥接独立保存，需预览差异、经同意后更新，再重启或使用该软件支持的刷新方式。完整卸载请先通过本插件工具卸载软件端桥接，再从 Codex 移除插件；只卸载 Codex 插件会保留软件端配置。Windows 旧版缓存被占用时，先停掉明确属于该插件的旧 MCP 进程，再重试，勿关闭创作软件或批量删除配置。
 
-## Structured editing in 0.2.0
+## Structured editing in 0.3.0
 
 Prefer `unity_list_objects`, `unity_inspect_object`, `unity_object_action`, `unity_scene_action`, and `unity_settings` for supported routine work instead of generating scripts. List objects first and retain both the explicit PID and returned `scene_token`; pass that token as `expected_scene`. IDs are GameObject instance IDs, guarded by loaded/active scene handles and a random epoch invalidated by scene open/close/new events; they are not portable asset GUIDs. Re-query after scene/level changes or reconnect.
 
-The object action supports create, select, duplicate, rename, delete, and position/scale transforms. Creation kinds: cube, sphere, plane, capsule, cylinder, quad, empty. Transforms use host world position and local scale; this release does not provide rotation, reparenting, animation/keyframe editing or arbitrary property assignment. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
+The object action supports create, select, duplicate, rename, delete, position/rotation/scale transforms, parent/detach, and active-state changes. Creation kinds: cube, sphere, plane, capsule, cylinder, quad, empty. Transforms use world position and local scale and world Euler rotation degrees `[x,y,z]`. Parenting preserves world transform and rejects cycles and cross-scene/level targets. Use `parent_id=0` to detach. Prefab instance hierarchy changes are refused. `active` requires an explicit boolean; inspection distinguishes activeSelf from activeInHierarchy. Activating/deactivating can run existing lifecycle callbacks. Animation/keyframes and arbitrary property editing remain outside these structured tools. Inspection returns hierarchy and component/modifier/material metadata, not a complete serialized property editor. Delete only when authorized. Errors and timeouts may follow partial work; never retry mutations automatically.
 
 New/open refuse dirty affected scenes (Unreal also refuses dirty content packages), without implicitly saving or discarding anything. Save requires an explicit destination; replacing any existing file requires `overwrite=true` and user authorization. Unity new/open replaces all loaded scenes after checking every scene for unsaved changes. No build or render starts from the settings query.
 
@@ -77,3 +77,9 @@ Validation: 17 Python regressions, actual Unity 6000.1 assembly compilation, and
 ## Runtime security patch 0.2.1
 
 The Codex package updates its locked Python dependencies. Software-side bridge code and its version remain unchanged; existing owned bridge installations do not require reinstalling for this dependency-only update. Reload the Codex plugin to start the patched runtime.
+
+Version0.3.0 also updates the software-side bridge payload to0.3.0; update the owned bridge and restart/reload the application after upgrading. The previous0.2.1 dependency-only update note above describes that older release.
+
+New API references: [Undo.SetTransformParent](https://docs.unity.cn/6000.1/Documentation/ScriptReference/Undo.SetTransformParent.html), [Transform.SetParent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Transform.SetParent.html), [PrefabUtility.IsPartOfPrefabInstance](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/PrefabUtility.IsPartOfPrefabInstance.html), [GameObject.SetActive](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GameObject.SetActive.html).
+
+0.3.0 validation: rotation/parent/cycle/cross-scene/active state additionally pass the production C# TCP fixture; the updated production file compiles against actual Unity6000.1.0f1 assemblies. Native Editor runtime acceptance is still pending.
