@@ -1,4 +1,4 @@
-# Bubble Plugin Doctor 0.1.7
+# Bubble Plugin Doctor 0.1.8
 
 集中检查 Bubble 插件包、软件桥接文件和实例连接，提供修复、更新、卸载流程。全部工具只读；维护操作转交 Codex 官方工具及对应软件插件，沿用它们的预览和确认机制。
 
@@ -16,7 +16,7 @@
 | `doctor_check_log` | 指定日志尾部最多 256 KiB 的已知错误分类；不返回原始日志 |
 | `doctor_repair_guidance` | 修复/更新/卸载步骤，不执行写操作 |
 
-支持九个软件插件及 Deadline、Sequence Check、Asset Package、Plugin Doctor。各缓存版本均展示；不会把缓存存在误报为“已启用”或“工具已加载”。启用状态和实际工具发现需要 Codex 宿主确认。本地来源版本不代表远端最新版本，不自动联网刷新市场。
+支持十二个软件插件及 Deadline、Sequence Check、Asset Package、Plugin Doctor。各缓存版本均展示；不会把缓存存在误报为“已启用”或“工具已加载”。启用状态和实际工具发现需要 Codex 宿主确认。本地来源版本不代表远端最新版本，不自动联网刷新市场。
 
 PR 的 Codex 插件包为 0.4.1，软件侧桥接仍为 0.4.0，使用签名 CEP 后台扩展，在 PR 启动后自动发现当前用户的 Codex 连接；日常无需打开面板或输入配对码。首次安装或更新软件侧桥接后可能需要重启 PR；仅更新 Codex 包的依赖不需要重装或重启软件侧桥接。多个实例按会话和项目路径选择；诊断中心不再要求 Creative Cloud / UPIA 或重复配对。
 
@@ -46,3 +46,7 @@ uv run --locked tests/stdio_smoke.py
 ## Runtime security patch 0.1.7
 
 The Codex package updates its locked Python dependencies. This does not change external software configuration or existing data. Reload the Codex plugin to start the patched runtime.
+
+## 0.1.8 integration
+
+Blender uses the bounded authenticated socket diagnostics; bridge integrity takes its user scripts directory. Cinema4D and Resolve use their own setup_status/list_sessions tools and never a guessed socket registry. Cinema4D uses Maxon2027 native MCP registrations; Resolve uses the Studio21+ scripting SDK. No host bridge installation is prescribed for either. Sequence Check’s explicitly selected Python3.13 launcher is recognized as standard.

@@ -1,0 +1,6 @@
+[project]
+name = "bubble-cinema4d-control"
+version = "0.1.0"
+description = "Local adapter for Cinema 4D's supported native MCP server"
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.28,<2", "certifi>=2026.10.19"]

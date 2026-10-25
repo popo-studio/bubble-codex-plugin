@@ -9,7 +9,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity", "deadline", "premiere", "photoshop", "after-effects")} | {
+NAMES = {f"{name}-control" for name in ("maya", "nuke", "houdini", "max", "unreal", "unity", "deadline", "premiere", "photoshop", "after-effects", "blender", "cinema4d", "resolve")} | {
     "sequence-check", "asset-package", "plugin-doctor"}
 
 

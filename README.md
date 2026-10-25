@@ -1,6 +1,6 @@
 # Bubble Codex Plugins
 
-一个 Git 仓库维护自己的 Codex 插件市场。十三个插件可独立安装：九个连接本机创作软件，另四个提供渲染管理、序列检查、素材打包和插件诊断。
+一个 Git 仓库维护自己的 Codex 插件市场。十六个插件可独立安装：十二个连接本机创作软件，另四个提供渲染管理、序列检查、素材打包和插件诊断。
 
 | 插件 | 目标版本 | 执行能力 | 安装范围 |
 | --- | --- | --- | --- |
@@ -13,6 +13,9 @@
 | [Bubble Premiere](plugins/premiere-control/README.md) | Windows Premiere Pro 26.x | 项目、序列、时间线、素材检查与支持的项目操作 | 用户目录签名 CEP 扩展，无 CC/UPIA |
 | [Bubble After Effects](plugins/after-effects-control/README.md) | Windows After Effects 26.x | 项目检查、合成、素材、图层、变换、保存与授权 JSX | 启动脚本自动连接，多实例按项目选择 |
 | [Bubble Photoshop](plugins/photoshop-control/README.md) | Windows Photoshop 26.2+，原生 COM | 文档、PSD/图片输出、画布调整、图层与文字管理、ExtendScript | 仅安装 Codex 插件，无 PS 端桥接 |
+| [Bubble Blender](plugins/blender-control/README.md) | Blender 4.5 LTS / 5.2 LTS | 场景、对象、材质、相机、灯光、时间范围、渲染设置、Python 与依赖检查 | 所选版本用户 scripts 目录，启动后自动连接 |
+| [Bubble Cinema 4D](plugins/cinema4d-control/README.md) | Cinema 4D 2027 完整版 GUI | 发现并调用 Maxon 内置 MCP 实际提供的工具 | 首次启用原生 MCP 并登记导出的连接配置，无 Bubble 软件端桥接 |
+| [Bubble DaVinci Resolve](plugins/resolve-control/README.md) | Windows Resolve Studio 21+ | 项目、媒体、时间线、标记、渲染设置与授权 Python | 首次启用 Local 外部脚本，无软件端桥接 |
 | [Bubble Deadline](plugins/deadline-control/README.md) | 现有 Deadline 10 客户端 | 任务查询、日志检查、预览后提交/重提 | 无软件侧桥接 |
 | [Bubble Sequence Check](plugins/sequence-check/README.md) | 本地图片序列 / EXR | 缺帧、损坏、通道、尺寸与像素异常检查 | 无软件侧桥接 |
 | [Bubble Asset Package](plugins/asset-package/README.md) | 明确的依赖路径清单 | 预览、复制到新目录、SHA256 校验 | 无软件侧桥接 |
@@ -20,7 +23,7 @@
 
 检查范围各有区别：DCC 插件检查场景与文件引用；Unreal 检查 Asset Registry 的直接依赖；Unity 检查已加载场景中的缺失脚本与序列化引用。结果会标明跳过项、截断和覆盖限制。
 
-九个软件现在均提供常用结构化编辑工具，优先通过插件完成操作。具体覆盖范围、版本和限制见 [功能清单](FEATURES.md)。多个实例先列出文件名和路径供选择，写入继续绑定所选实例与目标状态。
+创作软件操作优先通过插件完成。具体覆盖范围、版本和限制见 [功能清单](FEATURES.md)。支持独立会话的软件先列出实例和文件供选择；C4D 按已登记的原生连接选择后读取场景，Resolve 原生 API 无法按 PID 路由，多进程时列出并拒绝操作，直到用户只保留目标实例。
 
 ## 添加市场
 
@@ -34,7 +37,7 @@
 
 也可以使用本地仓库 `D:\Workspace\Bubble\bubble-codex-plugins` 作为来源，Git 引用留空。仓库需同时包含 `.agents/plugins/marketplace.json` 与 `plugins/`，不要填写截图示例中的 `plugins/codex`。SSH 来源需要本机 Git 有仓库访问权限。
 
-在市场中安装所需插件，再请求“连接 Nuke”或“连接这个 Unity 项目”。Codex 端需要 `uv`；一般插件使用 Python ≥3.10，序列检查使用独立的 Python 3.13 环境，由 uv 查找或下载。安装后的服务通过 `launch-<version>.py` 启动，依赖由相邻的 `.py.lock` 锁定，运行环境位于插件目录外。开发环境依赖由 `uv.lock` 锁定，不改动创作软件自身的 Python。
+在市场中安装所需插件，再请求“连接 Nuke”或“连接这个 Unity 项目”。Codex 端需要 `uv`；一般插件使用 Python ≥3.10，序列检查使用独立 Python 3.13，Resolve 使用 64 位 Python 3.10/3.11，由 uv 查找或下载。安装后的服务通过 `launch-<version>.py` 启动，依赖由相邻的 `.py.lock` 锁定，运行环境位于插件目录外。开发环境依赖由 `uv.lock` 锁定，不改动创作软件自身的 Python。
 
 2026-10-22 依赖安全补丁更新了 11 个 Codex 插件包，修复 certifi、Pillow 和 OpenEXR 的已知漏洞；PS、AE 已使用修复后的依赖。本次软件侧桥接未变化，无需因此重装桥接或重启创作软件。依赖范围和回归证据见 [安全更新验收](SECURITY_VALIDATION.md)。
 
@@ -82,6 +85,16 @@ AE 0.3.0 使用软件自身的 Startup 脚本与定时任务自动连接。插�
 
 桥接独立于 Codex 插件缓存。更新市场插件后，需要再次预览并确认软件侧更新。卸载 Codex 插件不会自动删除软件侧桥接，应先运行该插件的卸载流程；用户修改过的文件会报告冲突并保留。完整流程及 Windows 缓存占用处理见 [更新与卸载](UPDATING.md)。
 
+## Blender、Cinema 4D 与 Resolve
+
+Blender 0.1.0 将自有启动模块安装到明确选择的用户 scripts 目录。确认安装并重启后自动连接，每个实例有独立端口和令牌；同名文件要求进一步选择。完整移除时先卸载桥接再移除 Codex 插件。已在本机 Blender 4.5.3 LTS 的隔离配置中验证真实双进程自动启动、插件创建/读取/保存和关闭所选实例后拒绝回退；5.2 LTS 仍待原生验收。
+
+C4D 0.1.0 使用新版软件内置 MCP，首次在 Preferences > MCP 启用，并把 Clients > Other 导出的 JSON 保存到私人位置。插件登记配置文件路径和指纹；后续连接使用保存的条目，无需反复输入配对码。实际工具取决于 C4D 启用的组和权限，Python 权限也由 C4D 管理。连接失效需明确重连并重新检查场景，不自动重放操作。没有额外 Bubble 软件端插件或申请插件 ID 的步骤。移除登记不会关闭 Maxon 自己的服务或删除导出的配置。
+
+Resolve 0.1.0 使用 Studio 21+ 的官方外部 Python API，首次需要将 External scripting using 设为 Local。此后直接连接已运行的软件，不打开面板、不安装桥接。免费版不支持本插件使用的外部脚本流程。SDK 没有公开的任意 PID 选择接口，多进程时会拒绝调用。创建/打开项目要求当前没有已打开项目，避免隐式关闭未保存工作；结构化工具不启动渲染。
+
+本机未安装 C4D 2027 和 Resolve Studio 21；这两者已做协议/接口替身及 Codex 加载测试，原生连接和操作需装好软件后验收。详细证据与限制见 [新增软件验收](NEW_HOSTS_VALIDATION.md)。
+
 ## 验收
 
 刷新市场并安装所需 DCC 插件，然后分别完成：
@@ -95,7 +108,7 @@ AE 0.3.0 使用软件自身的 Startup 脚本与定时任务自动连接。插�
 
 Unity 自定义脚本需先经过 Unity 编译，再调用其中的静态方法。现有项目编译错误可能阻止桥接加载。Unreal 需要内置 Python Script Plugin；项目禁用它时按设置说明处理。本机没有 3ds Max，尚未实机验证。真实 GUI 重启、多窗口和生产项目检查由用户验收，自动化测试不代替这些步骤。
 
-九个软件图标使用产品资源，四个流程插件使用原创 SVG；来源见 [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md)。本项目是独立第三方集成。
+十二个软件图标使用产品资源，四个流程插件使用原创 SVG；来源见 [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md)。本项目是独立第三方集成。
 
 ## 开发与测试
 
@@ -110,7 +123,7 @@ uv run --locked tests/stdio_smoke.py
 
 本次结果见 [验证记录](VALIDATION.md)。其他插件的具体验证命令和实机验证限制见各自 README。单元测试和软件宿主测试使用临时配置/项目；网络测试需允许本机回环连接。不要提交虚拟环境、用户场景、会话令牌或软件用户配置。
 
-发布前还需用 **桌面应用实际使用的 Codex 后端** 验证插件加载。`tests/codex_plugin_smoke.py --codex <codex.exe绝对路径>` 默认只读取插件，检查十三个 MCP 服务及旧版 `cwd` 故障对照。加 `--install` 后会实际安装或更新十三个 Codex 插件，创建不持久化的测试会话，发现工具并调用只读的实例列表或状态；结束时卸载原先未安装的插件，保留已有插件的更新。它不安装软件侧桥接、不运行模型回合，也不提交渲染任务。此项会修改 Codex 插件安装状态，应在已授权的测试环境执行。
+发布前还需用 **桌面应用实际使用的 Codex 后端** 验证插件加载。`tests/codex_plugin_smoke.py --codex <codex.exe绝对路径>` 默认只读取插件，检查市场中全部 MCP 服务及旧版 `cwd` 故障对照。加 `--install` 后会实际安装或更新全部 Codex 插件，创建不持久化的测试会话，发现工具并调用只读的实例列表或状态；结束时卸载原先未安装的插件，保留已有插件的更新。它不安装软件侧桥接、不运行模型回合，也不提交渲染任务。此项会修改 Codex 插件安装状态，应在已授权的测试环境执行。
 
 `tests/launcher_smoke.py` 另验证服务从插件目录启动后迁出，并在连接期间删除临时插件副本。两种测试都需要通过，独立 MCP SDK 的测试无法替代 Codex 插件加载测试。
 

@@ -1,0 +1,38 @@
+{
+  "name": "resolve-control",
+  "version": "0.1.0",
+  "description": "Inspect and control existing Windows DaVinci Resolve Studio 21+ through its official external Python API.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "resolve",
+    "video",
+    "editing",
+    "dcc"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Bubble DaVinci Resolve",
+        "shortDescription": "Resolve 项目、媒体与时间线检查",
+        "longDescription": "Windows native external scripting for Resolve Studio 21+. Connects after Local scripting is enabled. Lists running instances and refuses unsafe multi-process routing. No Resolve-side bridge installation.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 Resolve 并检查当前项目",
+          "查看时间线与渲染队列"
+        ],
+        "logo": "./assets/icon.png",
+        "composerIcon": "./assets/icon.png"
+      },
+      "onboardingSkill": "./skills/resolve-setup/SKILL.md"
+    }
+  }
+}

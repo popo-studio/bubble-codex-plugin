@@ -1,0 +1,38 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "cinema4d-control",
+  "version": "0.1.0",
+  "description": "Control a local Cinema 4D session, execute Python, and inspect scene dependencies.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "repository": "https://github.com/popo-studio/bubble-codex-plugin",
+  "keywords": [
+    "cinema4d",
+    "3d",
+    "dcc",
+    "scene-inspection"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/cinema4d-setup/SKILL.md",
+      "interface": {
+        "displayName": "Bubble Cinema 4D",
+        "shortDescription": "Cinema 4D 脚本执行与场景检查",
+        "longDescription": "Connect Cinema 4D 2027 through Maxon's built-in MCP server. Register an approved native client config, select a connection, discover native tools and perform authorized scene operations.",
+        "developerName": "popo-studio",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "连接 Cinema 4D 并查看当前场景",
+          "检查场景中的缺失贴图和引用"
+        ],
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg"
+      }
+    }
+  }
+}

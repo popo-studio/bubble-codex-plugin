@@ -53,6 +53,12 @@ AE 0.2.0 面向 26.x，需要安装所选 AE 程序目录中的自有 Startup �
 
 ## 卸载范围
 
+Blender 使用所选版本用户 scripts 中的自有 Startup 模块，完整卸载先调用 `blender_uninstall_bridge` 预览/移除拥有且未改动的文件，再退出或重启 Blender，最后卸载 Codex 插件。更新亦需单独预览桥接更新；不同 Blender 配置分别处理，不删除用户场景、偏好和未知文件。
+
+C4D 使用 Maxon 内置 MCP。更新只需更新 Codex 插件；官方导出配置有变化时重新预览登记，旧指纹不再获准连接。完整移除时先断开会话、用 `cinema4d_configure(action="remove")` 预览/移除对应连接登记，再卸载 Codex 插件。原始配置文件和 Maxon 偏好保留；用户不再需要原生 MCP 时可在 C4D 自行关闭。移除 Codex 插件不会卸载 Maxon 内置功能。
+
+Resolve 无 Bubble 软件端桥接，更新/卸载 Codex 插件即可。官方 SDK、项目库和 Local 外部脚本偏好保留；插件不会为卸载关闭软件或项目。其 worker 源码在服务启动时迁出插件目录，避免运行中卸载后再调用找不到源文件。实际 SDK 和原生库仍由 Resolve 安装提供。
+
 Deadline、Sequence Check、Asset Package、Plugin Doctor 没有软件侧桥接，直接通过 Codex 卸载即可。不会修改或删除农场任务、已生成的交付包、用户图片、日志以及 uv 共享缓存。它们也沿用版本化启动器与包外依赖环境，发布检查包括运行中卸载。
 
 **只移除 Codex 集成**：在 Codex 卸载对应插件，或使用 `codex plugin remove maya-control@bubble-plugins` 等精确选择器。此操作删除 Codex 安装缓存和注册状态，不等于删除 Maya 用户配置或 Unreal/Unity 项目里的桥接。

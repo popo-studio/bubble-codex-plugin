@@ -22,7 +22,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 STATUS_TOOLS = {"deadline-control": "deadline_status", "sequence-check": "sequence_status",
-                "asset-package": "package_status", "plugin-doctor": "doctor_status"}
+                "asset-package": "package_status", "plugin-doctor": "doctor_status", "cinema4d-control": "cinema4d_setup_status", "resolve-control": "resolve_setup_status"}
 
 
 def server_name(name):
@@ -134,7 +134,10 @@ def assert_session_result(response, app, session_list=True):
                     payload = candidate
                     break
     assert isinstance(payload, dict), (app, "missing application result")
-    assert payload.get("ok") is True, (app, "read-only probe failed")
+    if app == "cinema4d" and not session_list:
+        assert "error" not in payload and isinstance(payload.get("connections"), list) and isinstance(payload.get("revision"), str), (app, "invalid native registry result")
+    else:
+        assert payload.get("ok") is True, (app, "read-only probe failed")
     if session_list:
         assert isinstance(payload.get("data"), list), (app, "invalid session list")
 

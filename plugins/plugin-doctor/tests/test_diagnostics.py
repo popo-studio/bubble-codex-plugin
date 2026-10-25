@@ -51,6 +51,26 @@ class DiagnosticsTests(unittest.TestCase):
                     self.assertNotIn("obtain a fresh pairing code", " ".join(result["data"]["steps"]))
             self.assertFalse(d.sessions(app)["ok"])
 
+    def test_native_connectors_have_separate_guidance(self):
+        for app in ('cinema4d','resolve'):
+            self.assertIn(app+'-control',d.PLUGINS)
+            with patch.object(d.socket,'create_connection',side_effect=AssertionError('No socket probing')):
+                self.assertFalse(d.sessions(app)['ok'])
+                text=' '.join(d.guidance(app+'-control','repair')['data']['steps'])
+                self.assertIn(app+'_setup_status',text);self.assertIn(app+'_list_sessions',text)
+                self.assertNotIn(app+'_install_bridge',text)
+    def test_sequence_python313_is_standard(self):
+        source=ROOT.parent/'sequence-check';target=self.root/'sequence'
+        shutil.copytree(source,target,ignore=shutil.ignore_patterns('.venv','__pycache__','.test-runtime'))
+        result=d.package_check(str(target));self.assertTrue(result['data']['healthy'],result)
+        p=target/'mcp.json';v=json.loads(p.read_text(encoding='utf-8'));next(iter(v['mcpServers'].values()))['args'][2]='3.99';p.write_text(json.dumps(v))
+        self.assertIn('nonstandard_launcher',d.package_check(str(target))['data']['issues'])
+    def test_blender_bridge_receipt_relative_to_scripts_root(self):
+        data=b'fixture';self.write('modules/bubble_blender_runtime/installation.json',{'owner':'bubble-blender-control','version':'0.1.0','files':{'startup/bubble_blender.py':hashlib.sha256(data).hexdigest()}})
+        p=self.root/'startup/bubble_blender.py';p.parent.mkdir();p.write_bytes(data)
+        self.assertTrue(d.bridge_check('blender',str(self.root))['data']['intact'])
+        self.assertIn('blender',d.APPS)
+
     def test_current_package(self):
         result = d.package_check(str(ROOT))
         self.assertTrue(result["ok"], result)

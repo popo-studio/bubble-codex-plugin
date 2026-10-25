@@ -11,10 +11,10 @@ import stat
 import sys
 import time
 
-APPS = ("maya", "nuke", "houdini", "max", "unreal", "unity")
+APPS = ("maya", "nuke", "houdini", "max", "unreal", "unity", "blender")
 ADOBE_APPS = ("premiere", "photoshop", "after-effects")
 PLUGINS = tuple(a + "-control" for a in (*APPS, *ADOBE_APPS)) + (
-    "deadline-control", "sequence-check", "asset-package", "plugin-doctor")
+    "deadline-control", "sequence-check", "asset-package", "plugin-doctor", "cinema4d-control", "resolve-control")
 MAX_JSON = 256 * 1024
 MAX_PACKAGES = 100
 
@@ -69,7 +69,7 @@ def children(path, limit):
 
 
 def status():
-    return {"ok": True, "data": {"version": "0.1.7", "mode": "read-only",
+    return {"ok": True, "data": {"version": "0.1.8", "mode": "read-only",
         "python_version": sys.version.split()[0], "uv_available": bool(shutil.which("uv")),
         "supported_plugins": list(PLUGINS)},
         "note": "Disk/cache observations do not prove Codex enabled state or tool loading. Use Codex's own tool discovery for that."}
@@ -102,6 +102,7 @@ def package_check(package_path):
             if {k: v for k, v in config.items() if k != "type"} != overlay.get(key):
                 issues.append("mcp_config_mismatch")
             expected = ["run", "--no-project", "--no-config", "--directory", "/", "--locked", "--script", "${PLUGIN_ROOT}/launch-%s.py" % version]
+            if name == "sequence-check":expected[1:1] = ["--python", "3.13"]
             if config.get("command") != "uv" or config.get("args") != expected:
                 issues.append("nonstandard_launcher")
             if "cwd" in config or "cwd" in overlay.get(key, {}):
@@ -167,7 +168,7 @@ def bridge_check(app, runtime_directory):
         if app not in APPS:
             raise ValueError("Choose a supported DCC application")
         root = absolute(runtime_directory)
-        metadata = read_json(root / (".bubble-installation.json" if app == "unity" else "installation.json"))
+        metadata = read_json(root / ("modules/bubble_blender_runtime/installation.json" if app == "blender" else ".bubble-installation.json" if app == "unity" else "installation.json"))
         if metadata.get("owner") != "bubble-%s-control" % app:
             raise ValueError("Ownership does not match the selected plugin")
         files = metadata.get("files")
@@ -223,7 +224,7 @@ def _probe(row):
         if response.get("ok") is True and isinstance(data, dict):
             safe["status"] = "reachable"
             # Never echo arbitrary payloads/errors, including an echoed token.
-            for field in ("path", "project_path", "maya_version", "nuke_version", "houdini_version", "max_version", "unreal_version", "unity_version"):
+            for field in ("path", "project_path", "maya_version", "nuke_version", "houdini_version", "max_version", "unreal_version", "unity_version", "blender_version"):
                 value = data.get(field)
                 if isinstance(value, str):
                     safe[field] = value.replace(row["token"], "[redacted]")[:2048]
@@ -300,6 +301,16 @@ def guidance(plugin_name, action):
     if action in ("repair", "update"):
         steps = ["Inspect the exact package with doctor_check_package and use Codex tool discovery to verify runtime loading.",
             "Use the supported Codex marketplace refresh/install UI or CLI for the actual registered source; do not edit installed cache/config files."]
+    if app == "cinema4d":
+        steps.extend(["Use cinema4d_setup_status and cinema4d_list_sessions; this adapter uses Cinema 4D 2027 built-in MCP, not a Bubble socket bridge.",
+            "Preview named registration with cinema4d_configure using the exact Maxon-exported MCP configuration; authorize registration explicitly. Never guess ports, edit vendor preferences or install a host plugin.",
+            "Disconnect the exact session and remove its named registration through cinema4d_configure before Codex uninstall if full cleanup is requested. Preserve exported config and projects."])
+    if app == "resolve":
+        steps.extend(["Use resolve_setup_status and resolve_list_sessions for the native Resolve Studio 21+ scripting SDK. Do not scan Bubble socket registries or install a host bridge.",
+            "The user must enable Local external scripting in Resolve preferences when required; never change preferences automatically. Select the exact session/project, and do not switch after disconnection.",
+            "Codex package removal does not remove vendor SDK files, projects or preferences. No Bubble software-side installation is required."])
+    if app == "blender":
+        steps.append("Blender uses an owned Startup module in the exact user scripts directory; confirm actual installed profile (4.5 or5.2), save work and restart after authorized bridge installation. doctor_check_bridge expects the user scripts directory, not its nested runtime folder.")
     if app == "premiere":
         steps.extend([
             "Use premiere_installation_status to distinguish signed CEP release files, user-profile installation and an actually connected Premiere 26.x background extension.",

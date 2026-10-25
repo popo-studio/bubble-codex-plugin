@@ -44,7 +44,7 @@ wheels = [
 
 [[package]]
 name = "bubble-plugin-doctor"
-version = "0.1.7"
+version = "0.1.8"
 source = { virtual = "." }
 dependencies = [
     { name = "certifi" },

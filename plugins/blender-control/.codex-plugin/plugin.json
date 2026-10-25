@@ -1,0 +1,32 @@
+{
+  "name": "blender-control",
+  "version": "0.1.0",
+  "description": "Control local Blender, execute Python, and inspect scene dependencies.",
+  "author": {
+    "name": "popo-studio"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Bubble Blender",
+    "shortDescription": "Blender 脚本执行与场景检查",
+    "longDescription": "Install the Blender 4.5 LTS / 5.2 LTS bridge with your permission, connect automatically after Blender restarts, inspect scene resources, and run requested Python scripts.",
+    "developerName": "popo-studio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "连接 Blender 并查看当前场景",
+      "检查场景中的缺失贴图和引用"
+    ],
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/blender-setup/SKILL.md"
+    }
+  }
+}
